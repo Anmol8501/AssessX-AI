@@ -4,11 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-**No application code exists yet.** This repository currently contains only documentation. Phase 1 (see below) has not started. There are no build, lint, test or run commands until the first scaffolding lands — this section must be updated in the same change that adds them.
+Phase 1 is in progress. Only the public website exists so far; there is no backend or desktop client yet.
 
-Current contents: `README.md`, `Workflow.txt` (empty), `docs/` (three source PDFs, `Roadmap.md`, `PROJECT-CONTEXT.md`).
+| Path | What it is | Commands (run inside the directory) |
+|---|---|---|
+| `apps/web/` | Public landing/download site — React 19, TypeScript, Vite 8, Tailwind 4 | `npm install` · `npm run dev` (:5173) · `npm run build` (runs `tsc -b` then bundles) · `npm run preview` (:4173) · `npm run lint` (oxlint) |
 
-Two structural notes: the project lives in a nested `AssessX-AI-main/` directory rather than at the workspace root, and it is **not yet a git repository**. Both are worth fixing before the first commit.
+`apps/web/README.md` documents the download-URL configuration (`src/config/download.ts`, `VITE_ASSESSX_DOWNLOAD_*` env vars). No test runner is configured yet; add one with the first feature that needs it.
+
+Other contents: `README.md`, `Workflow.txt` (empty), `docs/` (three source PDFs, `Roadmap.md`, `PROJECT-CONTEXT.md`).
+
+The project lives in a nested `AssessX-AI-main/` directory below the workspace folder; the git root is `AssessX-AI-main/`.
 
 ## Source of truth
 
