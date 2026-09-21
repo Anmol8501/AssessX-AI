@@ -114,6 +114,8 @@ TRD §50–57 is the authoritative sequence. Implement the current phase only.
 
 **Current milestone: `Download → Install → Login → Dashboard`** (phase 1).
 
+**Working development sequence:** `docs/DEVELOPMENT-ROADMAP.md` (agreed 2026-09-21) is the order the team actually builds in — nine phases, with Phase 1 split into **1A App Shell → 1B Auth + RBAC → 1C Production Foundation**. It records where it diverges from the TRD ordering. Build only the stage the user names; do not start the next stage unprompted. **Current stage: Phase 1A, not started.**
+
 Never respond to a large feature request by building the whole platform. Break work into architecture → backend → frontend → AI → testing → integration and implement incrementally.
 
 ## Blocking open decisions
