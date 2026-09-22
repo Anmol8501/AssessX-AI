@@ -1,7 +1,7 @@
 # AssessX Development Roadmap
 
 **Status:** Working development plan agreed on 2026-09-21. This is the sequence the team is building in.
-**Current stage:** Phase 1A — not started. Each stage begins only when explicitly requested; do not start the next stage on your own.
+**Current stage:** Phase 1 complete (1A, 1B, 1C — `apps/desktop/`, `backend/`, `infrastructure/`); Phase 2 not started. Each stage begins only when explicitly requested; do not start the next stage on your own.
 
 The public website (`apps/web/`) is only the public download/marketing page. The actual AssessX product is the **Windows application**. From this point forward, "build AssessX" means the app; the website is the download/marketing surface only.
 
