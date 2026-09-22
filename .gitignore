@@ -1,0 +1,48 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.development
+!.env.production.example
+*.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Tauri / Rust build output
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# Test artefacts
+test-results/
+playwright-report/
+coverage/
+htmlcov/
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+*.bak
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

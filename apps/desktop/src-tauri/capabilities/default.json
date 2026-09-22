@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Baseline capability for the main AssessX window. Phase 1A needs no plugin permissions; extend deliberately per phase.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
