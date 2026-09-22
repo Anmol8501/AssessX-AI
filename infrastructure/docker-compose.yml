@@ -1,0 +1,48 @@
+# Local development services for AssessX (TRD §37).
+#
+#   docker compose -f infrastructure/docker-compose.yml up -d            # PostgreSQL only (default)
+#   docker compose -f infrastructure/docker-compose.yml --profile api up  # + the API in a container
+#
+# Phase 1C: PostgreSQL, plus an optional containerised API. Redis and the worker are added
+# when a phase needs them. The Windows desktop app is never containerised.
+# Host port 5433 avoids clashing with a locally installed PostgreSQL.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: assessx-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-assessx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assessx}   # development only — never reuse in production
+      POSTGRES_DB: ${POSTGRES_DB:-assessx}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - assessx-postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-assessx} -d ${POSTGRES_DB:-assessx}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    profiles: ["api"]
+    build:
+      context: ../backend
+    container_name: assessx-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-assessx}:${POSTGRES_PASSWORD:-assessx}@postgres:5432/${POSTGRES_DB:-assessx}
+      SECRET_KEY: ${SECRET_KEY:-change-me-development-only}
+      CORS_ORIGINS: http://localhost:1420,http://tauri.localhost,https://tauri.localhost
+      LOG_FORMAT: console
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+volumes:
+  assessx-postgres-data:
