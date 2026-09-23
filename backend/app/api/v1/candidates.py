@@ -7,7 +7,6 @@ from app.core.errors import NotFound
 from app.schemas.assignment import CandidateCreate, CandidateSummary, MyAssessment
 from app.schemas.user import UserPublic
 from app.services.assignments import AssignmentService, CandidateService
-from app.services.attempts import AttemptService
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -23,14 +22,27 @@ def my_assessments(user: CandidateUser, db: DbSession) -> list[MyAssessment]:
     """The signed-in candidate's assigned assessments.
 
     Scoped to `user.id` from the session — a candidate can never request another candidate's list.
-    Carries no questions and no answer keys; those reach the candidate only through an attempt.
-    `active_attempt_id` is what lets a card offer Resume instead of Start, and is resolved for the
-    whole list in one query.
+    Carries no questions or answer keys: taking an exam arrives in Phase 3.
     """
     rows = AssignmentService(db).list_for_candidate(user.id)
-    active = AttemptService(db).active_attempt_ids(user)
     return [
-        MyAssessment.of(assignment, question_count, active.get(assignment.assessment_id))
+        MyAssessment(
+            assignment_id=assignment.id,
+            assessment_id=assignment.assessment.id,
+            title=assignment.assessment.title,
+            description=assignment.assessment.description,
+            instructions=assignment.assessment.instructions,
+            duration_minutes=assignment.assessment.duration_minutes,
+            total_marks=assignment.assessment.total_marks,
+            passing_marks=assignment.assessment.passing_marks,
+            question_count=question_count,
+            max_attempts=assignment.assessment.max_attempts,
+            availability_start=assignment.assessment.availability_start,
+            availability_end=assignment.assessment.availability_end,
+            status=assignment.status,
+            assessment_status=assignment.assessment.status,
+            assigned_at=assignment.assigned_at,
+        )
         for assignment, question_count in rows
     ]
 
