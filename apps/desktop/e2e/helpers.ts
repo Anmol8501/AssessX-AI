@@ -81,6 +81,9 @@ export async function signIn(
   account: Account,
   options: { remember?: boolean; answer?: string } = {},
 ) {
+  // Leave any login screen first: the form fetches its challenge when it mounts, so signing in
+  // twice in one page would otherwise keep the challenge issued before the route was armed.
+  if (hashOf(page).startsWith('#/login')) await page.goto('/#/welcome')
   const answer = options.answer ?? (await armSolvableChallenge(page, request))
   await page.goto('/#/login')
   await page.getByRole('tab', { name: account.kind === 'candidate' ? 'Candidate' : 'Administrator' }).click()
@@ -109,4 +112,28 @@ export function hashOf(page: Page): string {
 
 export function storedToken(page: Page): Promise<string | null> {
   return page.evaluate((key) => localStorage.getItem(key) ?? sessionStorage.getItem(key), TOKEN_KEY)
+}
+
+export type BuilderStepName = 'Basic information' | 'Questions' | 'Settings' | 'Review' | 'Assign'
+
+/** Switches the assessment builder to a step. Scoped to the stepper so "+ Add Question" cannot match. */
+export async function builderStep(page: Page, name: BuilderStepName) {
+  await page
+    .getByRole('navigation', { name: 'Assessment builder steps' })
+    .getByRole('button', { name: new RegExp(name) })
+    .click()
+}
+
+/** Signs in through the API and returns the bearer token. Used where no UI session is needed. */
+export async function apiToken(request: APIRequestContext, account: Account): Promise<string> {
+  const solved = (await (await request.post(`${API_BASE_URL}/api/v1/dev/login-challenges`)).json()) as SolvedChallenge
+  const body =
+    account.kind === 'candidate'
+      ? { roll_number: account.rollNumber, email: account.email, password: account.password }
+      : { username: account.username, email: account.email, password: account.password }
+  const response = await request.post(`${API_BASE_URL}/api/v1/auth/login/${account.kind}`, {
+    data: { ...body, challenge_id: solved.challenge_id, challenge_answer: solved.answer },
+  })
+  if (!response.ok()) throw new Error(`api sign-in failed: ${response.status()} ${await response.text()}`)
+  return (await response.json()).token as string
 }

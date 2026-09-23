@@ -2,7 +2,9 @@ import { createHashRouter, Navigate } from 'react-router'
 import { AdminShell } from '@/features/admin/AdminShell'
 import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage'
 import { AdminResultsPage } from '@/features/admin/pages/AdminResultsPage'
-import { AssessmentsPage } from '@/features/admin/pages/AssessmentsPage'
+import { AssessmentBuilderPage } from '@/features/assessments/pages/AssessmentBuilderPage'
+import { AssessmentsPage } from '@/features/assessments/pages/AssessmentsPage'
+import { CreateAssessmentPage } from '@/features/assessments/pages/CreateAssessmentPage'
 import { CandidatesPage } from '@/features/admin/pages/CandidatesPage'
 import { MonitoringPage } from '@/features/admin/pages/MonitoringPage'
 import { SettingsPage } from '@/features/admin/pages/SettingsPage'
@@ -47,6 +49,8 @@ export const router = createHashRouter([
             children: [
               { index: true, element: <AdminDashboardPage /> },
               { path: 'assessments', element: <AssessmentsPage /> },
+              { path: 'assessments/new', element: <CreateAssessmentPage /> },
+              { path: 'assessments/:assessmentId', element: <AssessmentBuilderPage /> },
               { path: 'candidates', element: <CandidatesPage /> },
               { path: 'monitoring', element: <MonitoringPage /> },
               { path: 'results', element: <AdminResultsPage /> },
