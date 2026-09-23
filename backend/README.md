@@ -3,7 +3,7 @@
 FastAPI modular monolith (TRD §4, §49): Python 3.12+ · FastAPI · Pydantic · SQLAlchemy 2 ·
 Alembic · PostgreSQL. Business logic lives in `app/services`, never in route handlers.
 
-## Current stage — Phase 1C: production foundation (auth + authorization stable)
+## Current stage — Phase 2C: publishing & candidate assignment
 
 Endpoints (all under `/api/v1`, TRD §26):
 
@@ -14,8 +14,23 @@ Endpoints (all under `/api/v1`, TRD §26):
 | POST | `/auth/login/admin` | anyone | Username + email + password + security check → bearer token + public user |
 | GET | `/auth/me` | signed in | The authenticated user |
 | POST | `/auth/logout` | signed in | Revoke the current session (204) |
-| GET | `/users?role=` | ADMIN | List accounts (first admin-protected resource) |
+| GET | `/users?role=` | ADMIN | List accounts |
+| GET POST | `/assessments` | ADMIN | List / create assessments (created as `DRAFT`) |
+| GET PATCH DELETE | `/assessments/{id}` | ADMIN | Read (questions, settings, readiness) / update basic info **and settings** / delete |
+| POST | `/assessments/{id}/ready` | ADMIN | DRAFT → READY; refused with the outstanding issues when incomplete |
+| POST | `/assessments/{id}/draft` | ADMIN | READY → DRAFT so editing can continue |
+| POST | `/assessments/{id}/publish` | ADMIN | READY → PUBLISHED; re-runs the readiness check first, then locks the assessment |
+| POST | `/assessments/{id}/unpublish` | ADMIN | PUBLISHED → READY; refused with 409 while any candidate holds it |
+| GET POST | `/assessments/{id}/questions` | ADMIN | List / add questions (position assigned automatically) |
+| GET PATCH DELETE | `/assessments/{id}/questions/{qid}` | ADMIN | Read / update / delete, scoped to that assessment |
+| POST | `/assessments/{id}/questions/reorder` | ADMIN | Explicit order; the body lists every question exactly once |
+| POST | `/assessments/{id}/questions/{qid}/duplicate` | ADMIN | Copies the question (answer key included) after the original |
+| GET POST | `/assessments/{id}/assignments` | ADMIN | Who holds the assessment / assign candidates (already-assigned ones are reported, not rejected) |
+| DELETE | `/assessments/{id}/assignments/{candidate_id}` | ADMIN | Unassign one candidate |
+| GET POST | `/candidates` | ADMIN | List demo candidates (with assignment counts) / create one with an initial password |
+| GET | `/candidates/{id}` | ADMIN | One candidate |
 | GET | `/candidates/me` | CANDIDATE | The signed-in candidate's own profile |
+| GET | `/candidates/me/assessments` | CANDIDATE | The candidate's own assigned exams — never questions or answer keys |
 | POST | `/dev/login-challenges` | **non-production only** | Issue a challenge *with* its answer, for automated tests |
 | GET | `/health` | anyone | Unversioned liveness (containers / load balancers), no dependency checks |
 | GET | `/api/v1/health` | anyone | Liveness + database probe: `{"status":"ok","database":"ok"}`, 503 `degraded` when the DB is down |
@@ -56,12 +71,65 @@ sign-in success/failure, sign-out and database errors are logged at INFO/WARNING
 hashes, tokens and challenge answers are never logged — `SENSITIVE_KEYS` strips them from
 structured fields and a test asserts the log stream stays clean.
 
-### Data model (migrations `0001`, `0002`)
+### Assessment authoring (Phase 2A)
+
+- `Assessment` — title, description, instructions, duration, total/passing marks, `status` (only
+  `DRAFT` so far; the rest of the lifecycle is Phase 2B/2C), `created_by`. Named "assessment" per the
+  Phase 2 plan; TRD §5 calls this entity `Exam` (divergence recorded in `docs/PHASE-2-PLAN.md`).
+- `Question` — belongs to one assessment, `MCQ` / `MULTIPLE_SELECT` / `TRUE_FALSE`, marks, position,
+  optional explanation. `QuestionOption` rows hold the text and `is_correct`; keeping them in a table
+  rather than JSON means a candidate-facing shape can omit the answer key at query level (OQ-17).
+- Type rules are enforced server-side in `app/schemas/question.py` and re-checked on update: MCQ and
+  true/false need exactly one correct option, multiple-select at least one, options must be distinct
+  and at least two, and true/false must be exactly `True` / `False`.
+- No organization association (product owner's decision: standalone showcase deployment).
+### Builder and lifecycle (Phase 2B)
+
+- **Settings** on `assessments`: `max_attempts`, `randomize_questions`, `randomize_options`,
+  `show_results`, `question_navigation` (`FREE` / `SEQUENTIAL` — no source document defines the modes,
+  so these are the minimum the exam engine needs), `availability_start` / `availability_end`. They are
+  stored and validated only; nothing opens or closes an exam automatically.
+- **Lifecycle:** `DRAFT` ⇄ `READY`. `app/services/readiness.py` is the single check behind both the
+  review screen's issue list and the transition itself, so the UI can never show "ready" for something
+  the backend would refuse. It covers title, duration, marks (including questions summing to the
+  configured total), settings, at least one question, every question's text/marks/options/answer key,
+  and gap-free ordering.
+- **Ordering** is explicit and persisted: `position` is renumbered 0..n-1 after every add, delete,
+  duplicate or reorder.
+- Deliberately absent from 2B: attempts, answers, proctoring.
+
+### Publishing and assignment (Phase 2C)
+
+- **Lifecycle:** `DRAFT` ⇄ `READY` → `PUBLISHED`. Publishing re-runs `readiness.py` at the moment
+  of the transition, so an assessment cannot be published on the strength of a stale check, and a
+  `DRAFT` is refused outright (422).
+- **Published means locked.** `AssessmentService` refuses every write to a published assessment —
+  basic information, settings, questions, options and ordering alike — so the candidates holding it
+  always see the same exam. The desktop UI mirrors the rule, but the backend is what enforces it.
+- **Unpublishing** returns it to `READY` and is refused with 409 while any candidate holds it;
+  unassign everybody first. This keeps an assignment from silently pointing at an editable exam.
+- **Assignment** is a row in `assessment_assignments`, unique per `(assessment_id, candidate_id)`.
+  Assigning a candidate twice is not an error: the response separates what was created from who was
+  already assigned. Only `PUBLISHED` assessments can be assigned, and only active candidates.
+- **Candidate accounts** are created by an administrator with an initial password (`POST
+  /candidates`) — there is no self-registration and no email delivery in this build, so no
+  invitation or reset flow exists yet. The role is always `CANDIDATE`; it is never taken from the
+  client.
+- **Scoping:** `/candidates/me/assessments` reads the candidate id from the session, never from the
+  request, and returns the exam's shape (title, instructions, duration, marks, question *count*,
+  availability) without questions, options or answer keys (OQ-17).
+- Deliberately absent: attempts, answers, scoring, results, notifications, bulk import, scheduling
+  that opens or closes an exam automatically.
+
+### Data model (migrations `0001`–`0005`)
 
 `users` (id UUID, name, email unique, password_hash, role ∈ {ADMIN, CANDIDATE} with CHECK, is_active,
 timestamps; migration `0002` adds `roll_number` for candidates and `username` for administrators — each unique,
-each required for exactly its role via a CHECK constraint) · `auth_sessions` · `login_challenges`. No
-exam/proctoring tables yet.
+each required for exactly its role via a CHECK constraint) · `auth_sessions` · `login_challenges` ·
+`assessments` (status CHECK ∈ {DRAFT, READY, PUBLISHED}, settings columns, `published_at`) ·
+`questions` · `question_options` · `assessment_assignments` (unique `(assessment_id, candidate_id)`;
+cascades from both the assessment and the candidate, but `assigned_by` is RESTRICT so an
+administrator who assigned work cannot be deleted out from under it). No proctoring tables yet.
 
 ## Running locally
 
@@ -113,7 +181,13 @@ schema, migration head + model/migration drift (`compare_metadata`) + downgrade/
 error shapes (404, 405, 422 for query/body, masked 500), request ids, log hygiene (no passwords,
 hashes or tokens in the log stream), candidate/admin login in every failure mode, tokens
 (missing/garbage/expired/revoked), logout, remember-me, role gates in both directions, the
-single-use challenge, and that the dev router is absent in production.
+single-use challenge, that the dev router is absent in production, and the Phase 2A authoring rules
+(CRUD, per-type answer-key validation, cross-assessment scoping, cascade delete, admin-only access) and
+the Phase 2B builder (settings persistence and validation, readiness, DRAFT ⇄ READY, reorder,
+duplicate), and the Phase 2C publishing rules (publish/unpublish transitions, the published lock on
+every write path, assignment de-duplication, active-candidate and role checks, candidate creation
+conflicts, per-candidate scoping of `/candidates/me/assessments`, and that no answer key reaches a
+candidate).
 
 ## Layout
 
@@ -121,15 +195,20 @@ single-use challenge, and that the dev router is absent in production.
 app/
   main.py            create_app(): CORS, error handlers, routers
   core/              config (pydantic-settings), database session, security (argon2/HMAC), errors, logging
-  models/            SQLAlchemy models (Base, User, AuthSession, LoginChallenge)
+  models/            SQLAlchemy models (Base, User, AuthSession, LoginChallenge, Assessment,
+                     Question, QuestionOption, AssessmentAssignment)
   schemas/           Pydantic request/response models (UserPublic never carries secrets)
   repositories/      query layer
-  services/          AuthService, UserService, LoginChallengeService — the business rules
+  services/          AuthService, UserService, LoginChallengeService, AssessmentService,
+                     QuestionService, CandidateService, AssignmentService — the business rules
   api/deps.py        DbSession, CurrentUser, require_roles, AdminUser, CandidateUser
-  api/v1/            auth, users, candidates routers; router.py mounts them at /api/v1
+  api/v1/            auth, users, candidates, assessments routers; router.py mounts them at /api/v1
   api/dev.py         development-only helpers (never mounted in production)
   cli.py             `python -m app.cli serve` · `python -m app.cli seed-dev-users`
-alembic/             migrations (0001 users/sessions/challenges · 0002 roll_number + username)
+alembic/             migrations (0001 users/sessions/challenges · 0002 roll_number + username ·
+                     0003 assessments/questions/question_options ·
+                     0004 assessment settings + READY status ·
+                     0005 assessment_assignments + PUBLISHED status)
 tests/               pytest suite
 Dockerfile           development/CI image (migrate, then serve)
 ```

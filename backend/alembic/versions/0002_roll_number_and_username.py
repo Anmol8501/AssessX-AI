@@ -22,9 +22,12 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("username", sa.String(length=50), nullable=True))
     # Rows created before this revision get placeholder identifiers so the constraint below
     # holds; real values are set by administrators (or `seed-dev-users` for dev accounts).
-    op.execute("UPDATE users SET username = 'admin-' || left(id::text, 8) WHERE role = 'ADMIN' AND username IS NULL")
     op.execute(
-        "UPDATE users SET roll_number = 'TEMP-' || left(id::text, 8) WHERE role = 'CANDIDATE' AND roll_number IS NULL"
+        "UPDATE users SET username = 'admin-' || left(id::text, 8) WHERE role = 'ADMIN' AND username IS NULL"
+    )
+    op.execute(
+        "UPDATE users SET roll_number = 'TEMP-' || left(id::text, 8) "
+        "WHERE role = 'CANDIDATE' AND roll_number IS NULL"
     )
     op.create_unique_constraint("uq_users_roll_number", "users", ["roll_number"])
     op.create_unique_constraint("uq_users_username", "users", ["username"])
