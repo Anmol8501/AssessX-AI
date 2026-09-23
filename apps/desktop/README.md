@@ -9,7 +9,7 @@ Stack: Tauri 2 (Rust shell, WebView2) · React 19 · TypeScript · Vite 8 ·
 Tailwind CSS 4 · React Router 7. Design tokens mirror the public site so the
 two surfaces read as one product.
 
-## Current stage — Phase 1B: real authentication + role-based application
+## Current stage — Phase 2C: publishing & candidate assignment
 
 ```
 Launch → startup session check → Welcome → Login (backend) → Admin shell | Candidate shell
@@ -34,7 +34,30 @@ Launch → startup session check → Welcome → Login (backend) → Admin shell
 - Admin dashboard lists accounts from the admin-only `GET /api/v1/users`; the candidate profile
   loads from the candidate-only `GET /api/v1/candidates/me`.
 
-Still deliberately absent: exams, proctoring, organisation settings. Those screens render
+Assessment builder (Phase 2A/2B/2C): the admin **Assessments** area lists assessments and creates them;
+opening one shows a five-step builder — **Basic information · Questions · Settings · Review · Assign**. Each
+step saves explicitly, so moving between them never loses saved work, and the stepper marks any step
+with outstanding readiness issues. Questions can be added, edited, previewed, duplicated, reordered
+(move up/down, persisted server-side) and deleted. Settings cover attempts, navigation, randomisation,
+results and an optional availability window — stored configuration only. Review summarises everything
+and lists every reason the assessment cannot be marked **Ready**; the DRAFT ⇄ READY transition is
+decided by the backend. Validation mirrors the backend for fast feedback; the server is authoritative.
+
+Publishing and assignment (Phase 2C): Review offers **Publish assessment** once every readiness check
+passes, behind a confirmation that spells out what publishing locks. A published assessment is
+read-only — the basic information and settings forms show a locked notice and disable saving, and the
+question list drops its add/edit/duplicate/delete/reorder controls — because the backend refuses those
+writes; the UI only avoids offering what would fail. **Unpublish** returns it to Ready and is refused
+while any candidate holds it. The **Assign** step lists who already holds the assessment and lets the
+admin search and tick active candidates to assign, or unassign one behind a confirmation; before
+publishing it explains that publishing comes first. Candidates themselves are created on the admin
+**Candidates** page (name, roll number, email, initial password) — there is no self-registration and no
+invitation email in this build. The candidate's dashboard shows the same assignments as an **Upcoming assessments** list (soonest scheduled first), and the **My Exams** page lists their own assigned exams with
+duration, marks, attempts, availability and instructions; **Start Exam** is deliberately disabled and
+says that taking an exam arrives in Phase 3, and the API never sends a candidate the questions or the
+answer key. The dashboard's **Completed** card stays empty on purpose: nothing is submitted or skipped until exams can be taken in Phase 3.
+
+Still deliberately absent: exam attempts, scoring, results, proctoring, organisation settings. Those screens render
 "coming soon" states naming their phase — never fake data.
 
 API location: `VITE_API_BASE_URL`. Development reads the committed `.env.development`
@@ -75,10 +98,13 @@ src/
     startup/    loading screen, welcome page (blue geometry + MonitorDemo animation), startup gate
     auth/       login page, security-check widget, security showcase
     admin/      admin shell, nav, pages
-    candidate/  candidate shell, nav, pages
+    assessments/ authoring: list, create, builder/ (steps, basic info, questions, settings,
+                 review, assignments, locked notice, preview) and the question form
+    candidate/  candidate shell, nav, pages (My Exams reads /candidates/me/assessments)
   pages/        not-found
 src-tauri/      Rust shell, tauri.conf.json, capabilities, icons
-e2e/            Playwright end-to-end tests (all Phase 1B definition-of-done cases)
+e2e/            Playwright end-to-end tests (Phase 1B sign-in cases, 2A authoring, 2B builder,
+                2C publish → assign → candidate sees it)
 ```
 
 Routing uses hash history so it behaves identically in the Vite dev server and
@@ -95,7 +121,8 @@ product's claim is evidence plus human review, not an AI verdict.
 
 ### End-to-end tests
 
-`e2e/auth.spec.ts` drives the real UI against the real backend. To make the sign-in security
+`e2e/auth.spec.ts`, `assessments.spec.ts`, `builder.spec.ts` and `publishing.spec.ts` drive the real UI
+against the real backend. To make the sign-in security
 check solvable, the tests call the backend's development-only `POST /api/v1/dev/login-challenges`
 (which returns a challenge together with its answer — never mounted in production) and serve that
 challenge to the UI; the backend still verifies the typed answer for real.

@@ -16,6 +16,9 @@ class UserRepository:
     def get_by_email(self, email: str) -> User | None:
         return self.db.scalar(select(User).where(func.lower(User.email) == email.lower()))
 
+    def get_by_roll_number(self, roll_number: str) -> User | None:
+        return self.db.scalar(select(User).where(func.lower(User.roll_number) == roll_number.lower()))
+
     def list(self, *, role: UserRole | None = None) -> list[User]:
         query = select(User).order_by(User.created_at)
         if role is not None:

@@ -29,6 +29,14 @@ class AppError(Exception):
         self.details = details
 
 
+class ValidationFailed(AppError):
+    """Raised by services for rules Pydantic cannot express (cross-field, cross-row)."""
+
+    status_code = 422
+    code = "validation_error"
+    message = "The request is invalid."
+
+
 class Unauthorized(AppError):
     """Missing, invalid or expired authentication."""
 

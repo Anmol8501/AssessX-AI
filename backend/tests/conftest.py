@@ -55,7 +55,12 @@ def _migrate_test_database() -> Iterator[None]:
     command.upgrade(config, "head")
     yield
     with engine.connect() as conn:
-        conn.execute(text("TRUNCATE TABLE auth_sessions, login_challenges, users"))
+        conn.execute(
+            text(
+                "TRUNCATE TABLE question_options, questions, assessments, "
+                "auth_sessions, login_challenges, users CASCADE"
+            )
+        )
         conn.commit()
 
 
@@ -186,6 +191,12 @@ class Helpers:
             response = self.login_candidate(
                 email, password, roll_number=INACTIVE_ROLL if "inactive" in email else CANDIDATE_ROLL
             )
+        assert response.status_code == 200, response.text
+        return response.json()["token"]
+
+    def token_for_candidate(self, email: str, password: str, roll_number: str) -> str:
+        """A token for a candidate created during the test (not one of the fixtures)."""
+        response = self.login_candidate(email, password, roll_number=roll_number)
         assert response.status_code == 200, response.text
         return response.json()["token"]
 

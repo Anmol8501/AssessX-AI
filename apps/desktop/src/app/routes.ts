@@ -10,6 +10,8 @@ export const routes = {
     root: '/admin',
     dashboard: '/admin',
     assessments: '/admin/assessments',
+    assessmentNew: '/admin/assessments/new',
+    assessmentDetail: (id: string) => `/admin/assessments/${id}`,
     candidates: '/admin/candidates',
     monitoring: '/admin/monitoring',
     results: '/admin/results',
