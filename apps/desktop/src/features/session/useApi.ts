@@ -12,7 +12,7 @@ export function useApi() {
   const { expire } = useSession()
 
   return useCallback(
-    async <T,>(path: string, options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal } = {}) => {
+    async <T,>(path: string, options: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal } = {}) => {
       try {
         return await apiRequest<T>(path, { ...options, token: tokenStorage.get() })
       } catch (error) {

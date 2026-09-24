@@ -15,6 +15,7 @@ export const routes = {
     candidates: '/admin/candidates',
     monitoring: '/admin/monitoring',
     results: '/admin/results',
+    assessmentResults: (assessmentId: string) => `/admin/results/${assessmentId}`,
     settings: '/admin/settings',
   },
 
@@ -22,6 +23,9 @@ export const routes = {
     root: '/candidate',
     dashboard: '/candidate',
     exams: '/candidate/exams',
+    examDetail: (assessmentId: string) => `/candidate/exams/${assessmentId}`,
+    /** The exam itself. Rendered outside the application shell — see app/router.tsx. */
+    attempt: (assessmentId: string) => `/candidate/exams/${assessmentId}/attempt`,
     results: '/candidate/results',
     profile: '/candidate/profile',
   },

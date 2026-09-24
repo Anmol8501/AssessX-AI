@@ -1,12 +1,16 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.models.assessment import AssessmentStatus
 from app.models.assignment import AssignmentStatus
+from app.models.attempt import AttemptStatus
 from app.schemas.common import Email
+
+if TYPE_CHECKING:
+    from app.models.assignment import AssessmentAssignment
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=120)]
 RollNumber = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -66,8 +70,8 @@ class AssignmentResult(BaseModel):
 class MyAssessment(BaseModel):
     """A candidate's view of an assessment assigned to them.
 
-    Deliberately omits questions and answer keys: a candidate sees only what an exam card needs
-    until the exam runtime exists (Phase 3).
+    Deliberately omits questions and answer keys: this is what an exam card needs, nothing more.
+    Questions reach the candidate only through an attempt, in the shapes in `schemas/attempt.py`.
     """
 
     assignment_id: uuid.UUID
@@ -85,3 +89,39 @@ class MyAssessment(BaseModel):
     status: AssignmentStatus
     assessment_status: AssessmentStatus
     assigned_at: datetime
+    #: The candidate's open attempt at this assessment, if any - the Resume case.
+    active_attempt_id: uuid.UUID | None = None
+    #: The newest attempt's state, so a card can say "Submitted" rather than offering a fresh
+    #: start. `None` when the candidate has never attempted this exam.
+    latest_attempt_status: AttemptStatus | None = None
+
+    @classmethod
+    def of(
+        cls,
+        assignment: "AssessmentAssignment",
+        question_count: int,
+        active_attempt_id: uuid.UUID | None = None,
+        latest_attempt_status: AttemptStatus | None = None,
+    ) -> "MyAssessment":
+        """Builds the card from an assignment. Shared by the My Exams list and the details screen
+        so the two can never drift apart."""
+        assessment = assignment.assessment
+        return cls(
+            assignment_id=assignment.id,
+            assessment_id=assessment.id,
+            title=assessment.title,
+            description=assessment.description,
+            instructions=assessment.instructions,
+            duration_minutes=assessment.duration_minutes,
+            total_marks=assessment.total_marks,
+            passing_marks=assessment.passing_marks,
+            question_count=question_count,
+            max_attempts=assessment.max_attempts,
+            availability_start=assessment.availability_start,
+            availability_end=assessment.availability_end,
+            status=assignment.status,
+            assessment_status=assessment.status,
+            assigned_at=assignment.assigned_at,
+            active_attempt_id=active_attempt_id,
+            latest_attempt_status=latest_attempt_status,
+        )

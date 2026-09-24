@@ -132,8 +132,9 @@ test('admin publishes, creates a candidate, assigns them, and the candidate sees
 
   await expect(page.getByRole('heading', { name: title })).toBeVisible()
   await expect(page.getByText('Which structure is first-in')).toHaveCount(0) // no questions leak
-  await expect(page.getByRole('button', { name: 'Start Exam' })).toBeDisabled()
-  await expect(page.getByText('Taking an exam arrives in Phase 3.').first()).toBeVisible()
+  // Phase 3A turned this card into the way into the exam; taking one is covered by exam.spec.ts.
+  await expect(page.getByRole('link', { name: 'View Details' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Resume Exam' })).toHaveCount(0) // nothing started yet
 })
 
 test('a draft cannot be published and an assessment somebody holds cannot be unpublished', async ({ page, request }) => {

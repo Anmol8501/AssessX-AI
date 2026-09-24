@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.dev import router as dev_router
 from app.api.v1.router import api_v1
 from app.core.config import get_settings
-from app.core.database import check_database
+from app.core.database import DatabaseSessionMiddleware, check_database
 from app.core.errors import register_exception_handlers
 from app.core.logging import RequestContextMiddleware, configure_logging
 
@@ -43,13 +43,18 @@ def create_app() -> FastAPI:
         redoc_url=None,
         lifespan=lifespan,
     )
+    # Added first, so it sits closest to the application and commits before anything else sees
+    # the response. See `app/core/database.py`.
+    app.add_middleware(DatabaseSessionMiddleware)
     # Outermost so every request — including CORS preflights and errors — gets an id and a log line.
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=False,  # bearer tokens, not cookies
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        # PUT is how a candidate's answer is upserted (Phase 3A); without it the browser's
+        # preflight is refused and every save fails from the desktop client.
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )

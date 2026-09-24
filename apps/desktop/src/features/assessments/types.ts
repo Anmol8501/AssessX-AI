@@ -1,4 +1,7 @@
-/** Wire shapes for `/api/v1/assessments` (see `backend/app/schemas`). Admin-only in Phase 2A. */
+/** Wire shapes for `/api/v1/assessments` (see `backend/app/schemas`). Mostly admin-only. */
+
+// Type-only, so it is erased at compile time and the two modules do not form a runtime cycle.
+import type { AttemptStatus } from '@/features/exam/types'
 
 export type AssessmentStatus = 'DRAFT' | 'READY' | 'PUBLISHED'
 
@@ -8,12 +11,12 @@ export const STATUS_LABEL: Record<AssessmentStatus, string> = {
   PUBLISHED: 'Published',
 }
 
-/** How a candidate may move through questions. Stored now; honoured by the exam runtime later. */
+/** How a candidate may move through questions. Honoured by the exam screen. */
 export type QuestionNavigation = 'FREE' | 'SEQUENTIAL'
 
 export const NAVIGATION_LABEL: Record<QuestionNavigation, string> = {
-  FREE: 'Free — any question, any order',
-  SEQUENTIAL: 'Sequential — one question at a time',
+  FREE: 'Free — candidates can go back and change an earlier answer',
+  SEQUENTIAL: 'One-way — candidates move forward only and cannot return to a previous question',
 }
 
 export interface AssessmentSettings {
@@ -123,7 +126,7 @@ export interface QuestionInput {
   options: QuestionOptionInput[]
 }
 
-/** Assignment status. STARTED/COMPLETED etc. arrive with the exam attempt in Phase 3. */
+/** Assignment status. The attempt has its own status — see `features/exam/types.ts`. */
 export type AssignmentStatus = 'ASSIGNED'
 
 export interface Assignment {
@@ -175,4 +178,8 @@ export interface MyAssessment {
   status: AssignmentStatus
   assessment_status: AssessmentStatus
   assigned_at: string
+  /** The candidate's open attempt, if any. Non-null means Resume rather than Start. */
+  active_attempt_id: string | null
+  /** The newest attempt's state, so a card can say "Submitted" instead of offering a fresh start. */
+  latest_attempt_status: AttemptStatus | null
 }
