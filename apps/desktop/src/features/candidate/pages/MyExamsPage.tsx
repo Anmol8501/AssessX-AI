@@ -1,6 +1,7 @@
-import { ClockIcon, InfoIcon, LockIcon } from '@/components/icons'
+import { routes } from '@/app/routes'
+import { ClockIcon } from '@/components/icons'
 import {
-  Button,
+  ButtonLink,
   Card,
   CardBody,
   CardHeader,
@@ -8,25 +9,17 @@ import {
   ErrorState,
   LoadingState,
   PageHeader,
-  StatusBadge,
 } from '@/components/ui'
 import type { MyAssessment } from '@/features/assessments/types'
+import { AttemptBadge } from '@/features/exam/AttemptBadge'
+import { formatWindow } from '@/features/exam/format'
 import { useMyAssessments } from '../useMyAssessments'
 
-function formatWindow(start: string | null, end: string | null): string {
-  const format = (value: string) => {
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-  }
-  if (start && end) return `${format(start)} — ${format(end)}`
-  if (start) return `From ${format(start)}`
-  if (end) return `Until ${format(end)}`
-  return 'No scheduled window'
-}
-
 /**
- * The candidate's assigned exams. Starting an exam is Phase 3 — the action here is
- * deliberately disabled rather than faked.
+ * The candidate's assigned exams, and the way into each one.
+ *
+ * Whether a card offers Start or Resume comes from `active_attempt_id` on the server's own
+ * response, so a card cannot promise a fresh start when an attempt is already under way.
  */
 export function MyExamsPage() {
   const { state, reload } = useMyAssessments()
@@ -67,12 +60,15 @@ export function MyExamsPage() {
 }
 
 function ExamCard({ exam }: { exam: MyAssessment }) {
+  const inProgress = exam.active_attempt_id !== null
+  const finished = exam.latest_attempt_status === 'SUBMITTED' || exam.latest_attempt_status === 'TIME_EXPIRED'
+
   return (
     <Card>
       <CardHeader
         title={exam.title}
         description={exam.description ?? undefined}
-        actions={<StatusBadge tone="accent">Assigned</StatusBadge>}
+        actions={<AttemptBadge resuming={inProgress} status={exam.latest_attempt_status} />}
       />
       <CardBody className="space-y-4">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
@@ -89,21 +85,16 @@ function ExamCard({ exam }: { exam: MyAssessment }) {
           {exam.max_attempts} {exam.max_attempts === 1 ? 'attempt' : 'attempts'} allowed
         </p>
 
-        {exam.instructions && (
-          <div className="border-line bg-surface rounded-md border px-3 py-2.5">
-            <p className="text-ink text-[12.5px] font-semibold">Instructions</p>
-            <p className="text-ink-muted mt-1 text-[13px] whitespace-pre-line">{exam.instructions}</p>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-ink-subtle flex items-start gap-2 text-[12.5px]">
-            <InfoIcon className="mt-0.5 shrink-0 text-[14px]" />
-            Taking an exam arrives in Phase 3. Nothing can be started yet.
-          </p>
-          <Button disabled title="Available in a later phase" leadingIcon={<LockIcon className="text-[15px]" />}>
-            Start Exam
-          </Button>
+        <div className="flex items-center justify-end gap-3">
+          <ButtonLink
+            to={routes.candidate.examDetail(exam.assessment_id)}
+            variant={inProgress || finished ? 'secondary' : 'primary'}
+          >
+            View Details
+          </ButtonLink>
+          {inProgress && <ButtonLink to={routes.candidate.attempt(exam.assessment_id)}>Resume Exam</ButtonLink>}
+          {/* A finished exam cannot be restarted, so the way in is the result, not the paper. */}
+          {finished && <ButtonLink to={routes.candidate.attempt(exam.assessment_id)}>View Result</ButtonLink>}
         </div>
       </CardBody>
     </Card>

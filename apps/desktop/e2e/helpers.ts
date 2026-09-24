@@ -126,7 +126,13 @@ export async function builderStep(page: Page, name: BuilderStepName) {
 
 /** Signs in through the API and returns the bearer token. Used where no UI session is needed. */
 export async function apiToken(request: APIRequestContext, account: Account): Promise<string> {
-  const solved = (await (await request.post(`${API_BASE_URL}/api/v1/dev/login-challenges`)).json()) as SolvedChallenge
+  const challenge = await request.post(`${API_BASE_URL}/api/v1/dev/login-challenges`)
+  // Checked explicitly: otherwise a failed challenge request surfaces later as a confusing
+  // `challenge_invalid`, because `challenge_id` would be undefined.
+  if (!challenge.ok()) {
+    throw new Error(`dev challenge endpoint failed: ${challenge.status()} ${await challenge.text()}`)
+  }
+  const solved = (await challenge.json()) as SolvedChallenge
   const body =
     account.kind === 'candidate'
       ? { roll_number: account.rollNumber, email: account.email, password: account.password }

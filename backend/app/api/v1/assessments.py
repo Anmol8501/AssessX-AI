@@ -15,8 +15,10 @@ from app.schemas.assessment import (
 )
 from app.schemas.assignment import AssignCandidates, AssignmentOut, AssignmentResult
 from app.schemas.question import QuestionCreate, QuestionOut, QuestionUpdate
+from app.schemas.result import AdminResult, AssessmentResults
 from app.services.assessments import AssessmentService
 from app.services.assignments import AssignmentService
+from app.services.results import ResultService
 
 # Admin-only for the whole router: authoring is never available to a candidate. Candidate-facing
 # assessment views arrive in Phase 2C with their own shape (no answer keys).
@@ -136,6 +138,49 @@ def unassign_candidate(
 ) -> None:
     AssessmentService(db).get(assessment_id)
     AssignmentService(db).unassign(assessment_id, candidate_id)
+
+
+@router.get("/{assessment_id}/results", response_model=AssessmentResults)
+def assessment_results(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> AssessmentResults:
+    """Every candidate's result for one assessment.
+
+    Admin-only, like the rest of this router: a candidate calling it gets 403, and a candidate's
+    own result comes from `/api/v1/candidates/me/...` instead. Reading this also evaluates any
+    finished attempt that has not been scored yet, so nothing is silently missing from the table.
+
+    Scores only — no ranking, no analytics, no proctoring.
+    """
+    assessment = AssessmentService(db).get(assessment_id, with_questions=True)
+    results = ResultService(db).list_for_assessment(assessment_id)
+    return AssessmentResults(
+        assessment_id=assessment.id,
+        assessment_title=assessment.title,
+        total_marks=assessment.total_marks,
+        passing_marks=assessment.passing_marks,
+        assigned_count=len(assessment.assignments),
+        results=[
+            AdminResult(
+                attempt_id=result.attempt_id,
+                candidate_id=result.candidate_id,
+                candidate_name=result.candidate.name,
+                candidate_email=result.candidate.email,
+                candidate_roll_number=result.candidate.roll_number,
+                attempt_number=result.attempt.attempt_number,
+                attempt_status=result.attempt.status,
+                score=result.score,
+                maximum_score=result.maximum_score,
+                percentage=result.percentage,
+                passing_marks=result.passing_marks,
+                passed=result.passed,
+                correct_count=result.correct_count,
+                incorrect_count=result.incorrect_count,
+                unanswered_count=result.unanswered_count,
+                submitted_at=result.attempt.submitted_at,
+                evaluated_at=result.evaluated_at,
+            )
+            for result in results
+        ],
+    )
 
 
 @router.post("/{assessment_id}/draft", response_model=AssessmentDetail)

@@ -2,6 +2,7 @@ import { createHashRouter, Navigate } from 'react-router'
 import { AdminShell } from '@/features/admin/AdminShell'
 import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage'
 import { AdminResultsPage } from '@/features/admin/pages/AdminResultsPage'
+import { AssessmentResultsPage } from '@/features/admin/pages/AssessmentResultsPage'
 import { AssessmentBuilderPage } from '@/features/assessments/pages/AssessmentBuilderPage'
 import { AssessmentsPage } from '@/features/assessments/pages/AssessmentsPage'
 import { CreateAssessmentPage } from '@/features/assessments/pages/CreateAssessmentPage'
@@ -10,6 +11,8 @@ import { MonitoringPage } from '@/features/admin/pages/MonitoringPage'
 import { SettingsPage } from '@/features/admin/pages/SettingsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { CandidateShell } from '@/features/candidate/CandidateShell'
+import { ExamAttemptPage } from '@/features/exam/pages/ExamAttemptPage'
+import { ExamDetailsPage } from '@/features/exam/pages/ExamDetailsPage'
 import { CandidateDashboardPage } from '@/features/candidate/pages/CandidateDashboardPage'
 import { CandidateResultsPage } from '@/features/candidate/pages/CandidateResultsPage'
 import { MyExamsPage } from '@/features/candidate/pages/MyExamsPage'
@@ -54,6 +57,7 @@ export const router = createHashRouter([
               { path: 'candidates', element: <CandidatesPage /> },
               { path: 'monitoring', element: <MonitoringPage /> },
               { path: 'results', element: <AdminResultsPage /> },
+              { path: 'results/:assessmentId', element: <AssessmentResultsPage /> },
               { path: 'settings', element: <SettingsPage /> },
               { path: '*', element: <Navigate to={routes.admin.dashboard} replace /> },
             ],
@@ -64,12 +68,16 @@ export const router = createHashRouter([
       {
         element: <RequireRole role="CANDIDATE" />,
         children: [
+          // The exam runs outside the shell: no sidebar and no navigation while answering.
+          // Listed first, and more specific than the shell's catch-all child, so it wins the match.
+          { path: routes.candidate.attempt(':assessmentId'), element: <ExamAttemptPage /> },
           {
             path: routes.candidate.root,
             element: <CandidateShell />,
             children: [
               { index: true, element: <CandidateDashboardPage /> },
               { path: 'exams', element: <MyExamsPage /> },
+              { path: 'exams/:assessmentId', element: <ExamDetailsPage /> },
               { path: 'results', element: <CandidateResultsPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: '*', element: <Navigate to={routes.candidate.dashboard} replace /> },

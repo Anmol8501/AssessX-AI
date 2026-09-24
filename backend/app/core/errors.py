@@ -75,6 +75,18 @@ class Conflict(AppError):
     message = "That conflicts with existing data."
 
 
+class AttemptLocked(Conflict):
+    """The exam attempt has been submitted or has run out of time, so it can no longer change.
+
+    Its own code because the desktop client reacts to it rather than just reporting it: the exam
+    screen re-reads the attempt and shows the finished state instead of leaving the candidate
+    typing into a exam the server has already closed.
+    """
+
+    code = "attempt_locked"
+    message = "This attempt has been finalized and can no longer be changed."
+
+
 class DatabaseUnavailable(AppError):
     status_code = 503
     code = "database_unavailable"

@@ -213,6 +213,98 @@ tests/               pytest suite
 Dockerfile           development/CI image (migrate, then serve)
 ```
 
+### Taking an exam (Phase 3A)
+
+All candidate-only, all scoped to the signed-in user. No route accepts a candidate id — the
+session is the identity — and none of them returns an answer key.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/candidates/me/assessments/{assessment_id}` | Exam details, plus `can_start` / `start_blocked_reason` / `active_attempt_id` |
+| `POST` | `/api/v1/candidates/me/assessments/{assessment_id}/attempts` | Start the exam, or resume the attempt already under way |
+| `GET` | `/api/v1/candidates/me/attempts/{attempt_id}` | The attempt, its questions and every saved answer |
+| `PUT` | `/api/v1/candidates/me/attempts/{attempt_id}/answers/{question_id}` | Replace the selection for one question; an empty list clears it |
+
+- **`AssessmentAttempt`** — `assessment_id`, `candidate_id`, `assignment_id`, `attempt_number`,
+  `status` (`IN_PROGRESS` only), `started_at`. `uq_attempt_one_active_per_candidate` is a partial
+  unique index, so two concurrent "Start Exam" clicks cannot produce two attempts; the service
+  catches the loser's `IntegrityError` and resumes the winner.
+- **`AttemptAnswer`** — one row per attempt/question, unique on the pair. The row survives
+  clearing a selection, so "answered then cleared" stays distinguishable from "never opened".
+  Mark-for-review was removed in migration 0009 at the product owner's request.
+- **`AttemptAnswerOption`** — one row per selected option, with a real foreign key to
+  `question_options`. An option belonging to a different question cannot be stored at all.
+- **Answer-key boundary (OQ-17):** `CandidateQuestion` / `CandidateQuestionOption` in
+  `app/schemas/attempt.py` omit `is_correct` *and* `explanation`. Tests assert the serialised keys
+  exactly, so widening those shapes fails the suite.
+- **Starting** requires an assignment (404 otherwise — never 403, so exams cannot be enumerated),
+  a `PUBLISHED` assessment, an open availability window, and an unused attempt allowance.
+- Not here, by design: any timer or deadline, submission, scoring, results, and any admin view of
+  attempts. Those are Phase 3B and 3C.
+
+### The exam session (Phase 3B)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/candidates/me/attempts/{attempt_id}/session` | The authoritative clock, without the paper — what the countdown resynchronises against |
+| `POST` | `/api/v1/candidates/me/attempts/{attempt_id}/submit` | Finalizes the attempt |
+
+- **The clock is the server's.** `expires_at` is written once when the attempt is created, from
+  `started_at + duration_minutes`, and is never recomputed and never read from a request. No
+  endpoint accepts `started_at`, `expires_at` or a remaining time, so refreshing, reopening the
+  application or winding the system clock cannot extend an exam (FR-006).
+- **`server_time` is returned with every attempt and session response.** The client measures its
+  offset from it once and counts down locally; the countdown is presentation, and reaching zero
+  prompts a resync rather than deciding anything.
+- **Expiry needs no worker.** `AttemptService.settle()` runs on every candidate interaction —
+  reading the attempt, polling the session, saving an answer, opening My Exams, submitting — and
+  moves a lapsed attempt to `TIME_EXPIRED`. A client that sits open with a frozen timer, or never
+  runs at all, changes nothing. `finalized_at` is set to `expires_at`, the moment the exam actually
+  ended, rather than the later moment the server noticed.
+- **Submit versus expiry is decided under a row lock.** `submit()` takes the attempt
+  `FOR UPDATE` (with `of=`, because the model's eager-loaded relationships are outer joins that
+  PostgreSQL refuses to lock), settles it, and only then finalizes. A submit that arrives after the
+  deadline loses and the attempt stays `TIME_EXPIRED`; a second submit of an already-submitted
+  attempt returns it unchanged instead of failing.
+- **A finished attempt is immutable.** Answer saves are refused with
+  `409 attempt_locked`, a dedicated code so the desktop client shows the finished screen rather
+  than reporting a save failure.
+- Not here, by design: score, percentage, pass/fail, result records and any admin results view.
+  Those are Phase 3C.
+
+### Evaluation and results (Phase 3C)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/candidates/me/attempts/{attempt_id}/result` | The candidate's own result for one finished attempt |
+| `GET` | `/api/v1/candidates/me/results` | The candidate's released results |
+| `GET` | `/api/v1/assessments/{assessment_id}/results` | Admin-only: every candidate's score for one assessment |
+
+- **Scoring is exact-set matching**, identically for MCQ, multiple-select and true/false: the
+  selected options must equal the correct options. No partial credit, no negative marking. An
+  empty selection is *unanswered* rather than wrong — and that check runs first, so a malformed
+  question with no correct option cannot award marks for answering nothing.
+- **Marks come from the questions**, never from their count: the fixtures' 2 + 3 + 1 paper has a
+  maximum of 6, not 3.
+- **Pass/fail is decided on raw marks** against `assessments.passing_marks`, never on the rounded
+  percentage. The percentage is an exact `Numeric(5,2)`, computed once at the end rather than
+  rounded through intermediates, and a paper worth zero marks scores 0% instead of dividing by
+  zero.
+- **A result is a snapshot, not a view.** `attempt_results` holds one row per attempt
+  (`uq_attempt_result_attempt`), written inside the same transaction that finalizes the attempt,
+  and it is never recomputed. `passing_marks` is copied onto it, so the result records the rule it
+  was judged by. This matters because a published assessment is **not** currently immutable — see
+  *Known limitations*.
+- **Evaluation is idempotent.** `EvaluationService.ensure_result` returns an existing result
+  untouched; a concurrent second evaluation loses to the unique constraint and re-reads the
+  winner. Reading a finished-but-unscored attempt evaluates it lazily, which is how attempts that
+  finished before Phase 3C get results.
+- **`show_results` is honoured.** When an assessment withholds results, the attempt is still
+  evaluated and the administrator sees the score, but every candidate-facing number is `null`
+  rather than zero — a withheld result must never look like a failed one.
+- Candidates never receive an answer key. The breakdown reports each question's position, marks,
+  marks awarded and outcome; it never names the correct option.
+
 ## Known limitations (tracked, not hidden)
 
 - No `Organization` entity / `organization_id` on `users` yet. TRD §6 asks for tenant association from
@@ -221,3 +313,25 @@ Dockerfile           development/CI image (migrate, then serve)
 - No rate limiting, account lockout, password reset, MFA or audit log yet (TRD §28/§30, OQ-16).
 - Roles are ADMIN/CANDIDATE everywhere (product owner's decision 2026-09-22); the PRD's STUDENT/PROCTOR/INTERVIEWER/SUPER_ADMIN naming remains OQ-03 for the wider enum.
 - HTTPS is a deployment concern (Phase 9); tokens must only travel over TLS in production.
+- `randomize_questions` / `randomize_options` are stored but not applied: a randomised order has
+  to be fixed per attempt and persisted, or resuming reshuffles the paper (OQ-19, open).
+- One-way navigation (`question_navigation = SEQUENTIAL`) is a UI constraint, not a server one:
+  the API still accepts an answer for any question in the attempt. Not a security hole — a
+  candidate may answer their own questions — but enforcing the order server-side would need a
+  per-attempt cursor.
+- A candidate cannot leave a running exam through the UI, but nothing stops them closing the
+  application. The clock keeps running either way, so the exam still ends on time.
+- There is no background sweep, so an abandoned attempt stays `IN_PROGRESS` in the database
+  until someone touches it. Every candidate-facing read settles it first, so nothing incorrect
+  is ever served; only a direct database query sees the stale row.
+- **A published assessment is not immutable.** The UI hides editing, but the API still allows an
+  administrator to rename a published assessment, change a question's marks, flip its answer key
+  or delete it outright — including while candidates are sitting it. Phase 3C protects results by
+  storing them as a snapshot rather than recomputing, so an edit cannot rewrite a score a
+  candidate has already been shown, but the underlying gap is real and unresolved.
+- `show_results` is a boolean with no release mechanism: an assessment set to withhold results
+  withholds them forever, since nothing can later release them (OQ, recorded in
+  `docs/PHASE-3-PLAN.md`).
+- Any administrator can read any assessment's results. There is no per-assessment ownership in
+  this build — `created_by` is recorded but never checked — so "an admin cannot see another
+  admin's results" is not a property the current authorization model has.

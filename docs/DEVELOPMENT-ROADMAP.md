@@ -1,7 +1,7 @@
 # AssessX Development Roadmap
 
 **Status:** Working development plan agreed on 2026-09-21. This is the sequence the team is building in.
-**Current stage:** Phase 1 complete (1A, 1B, 1C — `apps/desktop/`, `backend/`, `infrastructure/`) and Phase 2 complete (2A authoring, 2B builder, 2C publishing & candidate assignment); Phase 3 (Exam Attempt) not started. Each stage begins only when explicitly requested; do not start the next stage on your own.
+**Current stage:** Phase 1 complete (1A, 1B, 1C — `apps/desktop/`, `backend/`, `infrastructure/`), Phase 2 complete (2A authoring, 2B builder, 2C publishing & candidate assignment) and Phase 3 complete (3A candidate exam experience, 3B session/timer/submission, 3C evaluation & results); Phase 4 (Basic Proctoring) not started. Each stage begins only when explicitly requested; do not start the next stage on your own.
 
 The public website (`apps/web/`) is only the public download/marketing page. The actual AssessX product is the **Windows application**. From this point forward, "build AssessX" means the app; the website is the download/marketing surface only.
 
@@ -59,7 +59,7 @@ The public website (`apps/web/`) is only the public download/marketing page. The
 |-------|------|------|
 | 1 | App Foundation | Startup → Login → Authentication → Admin/Candidate dashboards |
 | 2 | Assessment Creation | Admin → Create exam → Add questions → Configure exam → Assign candidates — detailed plan: [`PHASE-2-PLAN.md`](PHASE-2-PLAN.md) (2A foundation · 2B builder · 2C publishing & assignment) |
-| 3 | Exam Attempt | Candidate → Assigned exam → Instructions → Exam → Questions → Submit → Results |
+| 3 | Exam Attempt | Candidate → Assigned exam → Instructions → Exam → Questions → Submit → Results — detailed plan: [`PHASE-3-PLAN.md`](PHASE-3-PLAN.md) (3A candidate exam experience · 3B session, timer & submission · 3C evaluation & results) |
 | 4 | Basic Proctoring | Camera + microphone + fullscreen + session monitoring + permissions + basic events |
 | 5 | Live Admin Monitoring | Admin → 4×4 candidate video wall → click candidate → detailed live view |
 | 6 | AI Proctoring | Face presence → multiple people → phone/object detection → gaze/head movement → suspicious events |

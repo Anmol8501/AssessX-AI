@@ -125,7 +125,7 @@ test('admin builds an assessment end to end and marks it ready', async ({ page, 
   // --- Review and READY ----------------------------------------------------------------------
   await builderStep(page, 'Review')
   await expect(page.getByText('All checks passed.')).toBeVisible()
-  await expect(page.getByText('Sequential — one question at a time')).toBeVisible()
+  await expect(page.getByText(/One-way — candidates move forward only/)).toBeVisible()
   await page.getByRole('button', { name: 'Mark as Ready' }).click()
 
   await expect(page.getByRole('button', { name: 'Return to draft' })).toBeVisible()
