@@ -148,6 +148,7 @@ export function ReviewSection({
                 { label: 'Randomise questions', value: settings.randomize_questions ? 'Yes' : 'No' },
                 { label: 'Randomise options', value: settings.randomize_options ? 'Yes' : 'No' },
                 { label: 'Show results after submission', value: settings.show_results ? 'Yes' : 'No' },
+                { label: 'Proctoring', value: settings.proctoring_required ? 'Camera and microphone required' : 'Off' },
                 { label: 'Available from', value: formatDate(settings.availability_start) },
                 { label: 'Available until', value: formatDate(settings.availability_end) },
               ]}

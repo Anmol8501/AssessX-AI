@@ -27,7 +27,13 @@ export function ExamDetailsPage() {
   const { state, reload } = useExamDetail(assessmentId)
   const { start, busy, error } = useStartExam()
 
-  async function beginExam() {
+  async function beginExam(proctored: boolean) {
+    // A proctored exam is started from its proctoring check, after the camera and microphone are
+    // confirmed, so the clock does not run while the candidate sorts out a device.
+    if (proctored) {
+      navigate(routes.candidate.attempt(assessmentId))
+      return
+    }
     const attempt = await start(assessmentId)
     if (attempt) navigate(routes.candidate.attempt(assessmentId))
   }
@@ -78,6 +84,7 @@ export function ExamDetailsPage() {
               <Detail label="Passing marks" value={`${exam.passing_marks}`} />
               <Detail label="Attempts" value={`${exam.attempts_used} of ${exam.max_attempts} used`} />
               <Detail label="Availability" value={formatWindow(exam.availability_start, exam.availability_end)} />
+              <Detail label="Proctoring" value={exam.proctoring_required ? 'Camera and microphone' : 'Not proctored'} />
             </dl>
 
             <p className="text-ink-subtle flex items-start gap-2 text-[12.5px]">
@@ -99,7 +106,8 @@ export function ExamDetailsPage() {
               </p>
             )}
 
-            {/* Describes only what this build actually does. No proctoring claims: none is implemented. */}
+            {/* Describes only what this build actually does. Proctoring here means the device check
+                and a camera/microphone kept on — nothing is recorded or analysed in Phase 4A. */}
             <ul className="text-ink-muted list-disc space-y-1 pl-5 text-[13.5px]">
               <li>Read each question carefully and select your answer.</li>
               <li>
@@ -109,12 +117,17 @@ export function ExamDetailsPage() {
                 You can move between questions and change your answers.
               </li>
               <li>Each answer is saved as you make it, and the screen tells you when it has been saved.</li>
-              <li>You can mark a question for review and come back to it.</li>
               <li>
                 If you close the application, reopening this exam returns you to the same attempt —
                 with the same remaining time, not a fresh clock.
               </li>
               <li>Submit when you are finished. After that, and after the time runs out, answers are final.</li>
+              {exam.proctoring_required && (
+                <li>
+                  This exam is proctored. Before it starts you will be asked to allow camera and microphone access and to
+                  confirm both work. They stay on until the exam ends. Nothing is recorded.
+                </li>
+              )}
             </ul>
           </CardBody>
         </Card>
@@ -138,7 +151,9 @@ export function ExamDetailsPage() {
               ) : exam.can_start ? (
                 <p className="text-ink-muted flex items-start gap-2 text-[13px]">
                   <InfoIcon className="mt-0.5 shrink-0 text-[15px]" />
-                  Starting begins the clock. It runs for the full duration whether or not the application stays open.
+                  {exam.proctoring_required
+                    ? 'Next you will check your camera and microphone. The clock starts when you start the exam after that check.'
+                    : 'Starting begins the clock. It runs for the full duration whether or not the application stays open.'}
                 </p>
               ) : (
                 <p className="text-danger flex items-start gap-2 text-[13px]" role="status">
@@ -158,7 +173,11 @@ export function ExamDetailsPage() {
                 View Result
               </ButtonLink>
             ) : (
-              <Button onClick={() => void beginExam()} loading={busy} disabled={!resuming && !exam.can_start}>
+              <Button
+                onClick={() => void beginExam(exam.proctoring_required && !resuming)}
+                loading={busy}
+                disabled={!resuming && !exam.can_start}
+              >
                 {resuming ? 'Resume Exam' : 'Start Exam'}
               </Button>
             )}

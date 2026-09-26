@@ -12,6 +12,13 @@ from app.models.attempt import (
 from app.models.auth_session import AuthSession
 from app.models.base import Base
 from app.models.login_challenge import LoginChallenge
+from app.models.proctoring import DeviceState, ProctoringSession, ProctoringSessionStatus
+from app.models.proctoring_event import (
+    ProctoringEvent,
+    ProctoringEventCategory,
+    ProctoringEventSource,
+    ProctoringEventType,
+)
 from app.models.question import SINGLE_ANSWER_TYPES, Question, QuestionOption, QuestionType
 from app.models.result import AttemptResult
 from app.models.user import User, UserRole
@@ -30,7 +37,14 @@ __all__ = [
     "AttemptStatus",
     "AuthSession",
     "Base",
+    "DeviceState",
     "LoginChallenge",
+    "ProctoringEvent",
+    "ProctoringEventCategory",
+    "ProctoringEventSource",
+    "ProctoringEventType",
+    "ProctoringSession",
+    "ProctoringSessionStatus",
     "Question",
     "QuestionNavigation",
     "QuestionOption",

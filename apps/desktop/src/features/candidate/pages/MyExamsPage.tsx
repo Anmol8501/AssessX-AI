@@ -83,6 +83,12 @@ function ExamCard({ exam }: { exam: MyAssessment }) {
           {formatWindow(exam.availability_start, exam.availability_end)}
           <span aria-hidden> · </span>
           {exam.max_attempts} {exam.max_attempts === 1 ? 'attempt' : 'attempts'} allowed
+          {exam.proctoring_required && (
+            <>
+              <span aria-hidden> · </span>
+              Proctored — camera and microphone required
+            </>
+          )}
         </p>
 
         <div className="flex items-center justify-end gap-3">

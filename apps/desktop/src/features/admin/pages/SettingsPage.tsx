@@ -1,5 +1,6 @@
 import { Card, CardBody, CardHeader, ComingSoon, InfoList, PageHeader } from '@/components/ui'
 import { APP_VERSION } from '@/config/app'
+import { SecureKioskCard } from '@/features/admin/SecureKioskCard'
 import { API_BASE_URL } from '@/lib/api'
 
 export function SettingsPage() {
@@ -20,6 +21,8 @@ export function SettingsPage() {
             />
           </CardBody>
         </Card>
+
+        <SecureKioskCard />
 
         <Card>
           <CardHeader title="Organisation" description="Security policies, users and retention." />

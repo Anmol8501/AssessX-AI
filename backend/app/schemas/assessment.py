@@ -23,6 +23,10 @@ class AssessmentSettings(BaseModel):
     randomize_options: bool = False
     show_results: bool = False
     question_navigation: QuestionNavigation = QuestionNavigation.FREE
+    #: Phase 4A: candidates must pass a camera/microphone check and sit the exam under a
+    #: proctoring session. Deliberately one switch — the detailed secure-exam configuration
+    #: (fullscreen, shortcuts, clipboard) belongs to Phase 4B.
+    proctoring_required: bool = False
     availability_start: datetime | None = None
     availability_end: datetime | None = None
 
@@ -68,6 +72,7 @@ class AssessmentUpdate(BaseModel):
     randomize_options: bool | None = None
     show_results: bool | None = None
     question_navigation: QuestionNavigation | None = None
+    proctoring_required: bool | None = None
     availability_start: datetime | None = None
     availability_end: datetime | None = None
 

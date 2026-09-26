@@ -15,6 +15,7 @@ from app.models.assessment import QuestionNavigation
 from app.models.attempt import AttemptStatus
 from app.models.question import QuestionType
 from app.schemas.assignment import MyAssessment
+from app.schemas.proctoring import ProctoringSessionOut
 
 #: A generous ceiling on one question's selections; the per-question rules are stricter still.
 MAX_SELECTED_OPTIONS = 10
@@ -105,6 +106,11 @@ class AttemptDetail(BaseModel):
 
     questions: list[CandidateQuestion]
     answers: list[AttemptAnswerOut]
+
+    #: The attempt's proctoring session (Phase 4A), or `None` when this attempt is not proctored.
+    #: Per attempt rather than per assessment: it reflects the setting at the moment the attempt
+    #: started, so a later change to the assessment does not change a running exam.
+    proctoring: ProctoringSessionOut | None
 
 
 class ExamDetail(MyAssessment):

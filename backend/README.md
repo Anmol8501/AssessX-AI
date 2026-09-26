@@ -3,7 +3,9 @@
 FastAPI modular monolith (TRD §4, §49): Python 3.12+ · FastAPI · Pydantic · SQLAlchemy 2 ·
 Alembic · PostgreSQL. Business logic lives in `app/services`, never in route handlers.
 
-## Current stage — Phase 2C: publishing & candidate assignment
+## Current stage — Phase 4C: live admin monitoring (Phase 4 complete)
+
+Phases 1–3 are complete; Phase 4A is described in [Proctoring sessions (Phase 4A)](#proctoring-sessions-phase-4a) and Phase 4B in [Proctoring events (Phase 4B)](#proctoring-events-phase-4b) below. The table that follows lists the Phase 1–2 endpoints; the exam, results and proctoring endpoints have their own tables further down.
 
 Endpoints (all under `/api/v1`, TRD §26):
 
@@ -208,7 +210,10 @@ app/
 alembic/             migrations (0001 users/sessions/challenges · 0002 roll_number + username ·
                      0003 assessments/questions/question_options ·
                      0004 assessment settings + READY status ·
-                     0005 assessment_assignments + PUBLISHED status)
+                     0005 assessment_assignments + PUBLISHED status ·
+                     0006–0009 exam attempts, answers, timing, results ·
+                     0010 proctoring_sessions + assessments.proctoring_required ·
+                     0011 proctoring_events)
 tests/               pytest suite
 Dockerfile           development/CI image (migrate, then serve)
 ```
@@ -305,6 +310,91 @@ session is the identity — and none of them returns an answer key.
 - Candidates never receive an answer key. The breakdown reports each question's position, marks,
   marks awarded and outcome; it never names the correct option.
 
+### Proctoring sessions (Phase 4A)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/candidates/me/attempts/{attempt_id}/proctoring` | The attempt's proctoring session; 404 when the attempt is not proctored |
+| `POST` | `/api/v1/candidates/me/attempts/{attempt_id}/proctoring/activate` | Confirm camera + microphone (`{"camera": "READY", "microphone": "READY"}`) and start proctoring |
+| `PUT` | `/api/v1/candidates/me/attempts/{attempt_id}/proctoring/devices` | Record a change in camera/microphone availability during the exam |
+
+Plus one admin setting, `proctoring_required` (on `PATCH /assessments/{id}`, default `false`), and
+`proctoring_required` on the candidate's exam card/details and `proctoring` on `AttemptDetail`.
+
+- **`ProctoringSession`** (`proctoring_sessions`, TRD §5) — one per attempt (`attempt_id` unique,
+  `ON DELETE CASCADE`), `status` `NOT_STARTED → ACTIVE → ENDED`, `camera_state` /
+  `microphone_state` (`NOT_READY` · `READY` · `DENIED` · `UNAVAILABLE`), and server-written
+  `started_at`, `ended_at`, `devices_reported_at`. Check constraints hold the lifecycle in the
+  database too (an active session has a start; `ENDED` ⇔ `ended_at`; end ≥ start). No
+  `candidate_id` column: the attempt carries it, and every lookup goes through the attempt.
+- **Created with the attempt.** When a new attempt starts on an assessment with
+  `proctoring_required`, the session is inserted in the same savepoint. Its existence is what makes
+  that attempt proctored afterwards, so changing the setting later never affects a running exam.
+- **Activated by confirmed devices.** `activate` needs both devices `READY` (422 listing the ones
+  that are not). Repeating it on an active session — a resumed exam — refreshes device state and
+  keeps the original `started_at`. Activation and device reports lock the attempt row, so they
+  serialise with a submission or the deadline exactly as `submit` does.
+- **Answering waits for activation.** Saving an answer on a proctored attempt whose session is
+  still `NOT_STARTED` is refused with `409 proctoring_not_active`. Submitting is never blocked.
+- **Ended by the attempt, never by the client.** `AttemptService.settle()` (timeout) and
+  `submit()` call `ProctoringService.end_for()` in the same transaction that finalizes the
+  attempt; `ended_at` is the attempt's `finalized_at` (the deadline, for a timeout). Ending is
+  idempotent. There is deliberately no "end session" route.
+- **Nothing is judged and nothing is recorded.** Device state is what the desktop app *reports* it
+  could open; the server records it with its own timestamp and cannot verify it. No frames, audio
+  or images reach the server. A device lost mid-exam is logged (`Proctoring device not ready`) and
+  stored; it does not pause the clock, block answering or flag the candidate.
+- Logged (ids only, no names or emails): session created / activated / resumed / ended, activation
+  refused because devices were not ready, device lost / recovered.
+
+### Proctoring events (Phase 4B)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/candidates/me/attempts/{attempt_id}/proctoring/events` | Record one environment event the desktop app observed (201; 200 for a retry or a folded repeat) |
+| `GET` | `/api/v1/dev/attempts/{attempt_id}/proctoring-events` | **Development only, admin only** — read an attempt's events back (for the E2E suite). Absent in production |
+
+- **`ProctoringEvent`** (`proctoring_events`, TRD §5) — `session_id` (cascade), `event_type`,
+  server-derived `category` and `source`, `details` (JSONB), `client_event_id` (unique per
+  session, for idempotent retries), server `recorded_at`, optional `client_reported_at`. No
+  `updated_at`: append-only. Taxonomy and per-type field allow-list: `app/services/proctoring_events.py`.
+- **The server records** `SESSION_STARTED` / `SESSION_RESUMED` (activation), `SESSION_ENDED`
+  (finalization, at the attempt's `finalized_at`), and `CAMERA_*` / `MIC_*` `DISCONNECTED` /
+  `RECONNECTED` from the 4A device report. Clients cannot report these (422).
+- **The client reports** window, input, display and capability observations. The request forbids
+  unknown fields (`severity`, `candidate_id`, `recorded_at`, … → 422) and each event type accepts
+  only its listed metadata fields with fixed vocabularies — clipboard text, keystrokes, window
+  titles or process names cannot be stored.
+- Accepted only for the candidate's own attempt with an **active** session (404 for someone
+  else's or an unproctored attempt, `409 proctoring_not_active` before activation,
+  `409 attempt_locked` after the attempt ends). Identical events within 1 s are folded; a session
+  holds at most 5 000 (`429 event_limit_reached`).
+- No candidate route reads, updates or deletes events. What is enforced vs only detected on
+  Windows: `docs/PHASE-4-PLAN.md` → *4B — implementation record*.
+
+### Live admin monitoring (Phase 4C)
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/admin/monitoring/sessions` | Active proctored sessions + a factual summary (admin only) |
+| `GET` | `/api/v1/admin/monitoring/sessions/{attempt_id}` | One session's state + recent events (admin only) |
+| WS | `/api/v1/ws/admin/monitoring?token=` | Admin: `SESSION_*` / `PROCTORING_EVENT` deltas, and WebRTC answer/ICE relay |
+| WS | `/api/v1/ws/candidates/me/proctoring?token=&attempt_id=` | Candidate: WebRTC offer/ICE relay for its own active attempt |
+
+- **No migration.** Reuses `assessment_attempts`, `proctoring_sessions`, `proctoring_events`.
+  "Live" = an `IN_PROGRESS` attempt whose session is `ACTIVE`; unproctored/unactivated/finished
+  attempts do not appear (`repositories/monitoring.py`).
+- **Realtime is an in-process hub** (`app/realtime/`): the sync proctoring service publishes
+  best-effort deltas to connected admins after a candidate REST action; the database (via REST)
+  stays authoritative, so a reconnect + refetch reconciles anything missed. There is no Redis, so
+  this is **process-local** — no multi-instance horizontal realtime.
+- **Auth is server-side.** REST is `AdminUser`-only. The admin WS rejects a candidate/anonymous
+  token; the candidate WS is bound to its own token-resolved active attempt, so WebRTC signaling is
+  only relayed along a validated admin ↔ candidate pairing (no cross-candidate addressing).
+- **Media never touches REST/WS/DB.** Video/audio are WebRTC peer-to-peer; the WS carries signaling
+  and state only, and nothing is recorded. **Real WebRTC media is unverified** (see
+  `docs/PHASE-4-PLAN.md` → 4C).
+
 ## Known limitations (tracked, not hidden)
 
 - No `Organization` entity / `organization_id` on `users` yet. TRD §6 asks for tenant association from
@@ -332,6 +422,17 @@ session is the identity — and none of them returns an answer key.
 - `show_results` is a boolean with no release mechanism: an assessment set to withhold results
   withholds them forever, since nothing can later release them (OQ, recorded in
   `docs/PHASE-3-PLAN.md`).
+- Proctoring (Phase 4A) records **reported** device availability only. A modified client can
+  report `READY` without a working camera; nothing server-side can tell. The exam paper is also
+  returned when a proctored attempt is started, before the session is activated — only answering
+  waits for activation.
+- A proctoring session of an abandoned attempt reads `ACTIVE` in the database until the attempt is
+  settled (same lazy-expiry rule as attempts); every candidate-facing read settles it first.
+  `devices_reported_at` is stored but nothing acts on its age yet — heartbeat and "disconnected"
+  detection belong to live monitoring (Phase 4C).
+- Live monitoring realtime is process-local (in-memory hub, no Redis); real WebRTC media between
+  machines is unverified, and STUN/TURN is not deployed. Events still carry no severity, confidence
+  or evidence reference (FR-014) — those belong to the risk/evidence phases.
 - Any administrator can read any assessment's results. There is no per-assessment ownership in
   this build — `created_by` is recorded but never checked — so "an admin cannot see another
   admin's results" is not a property the current authorization model has.

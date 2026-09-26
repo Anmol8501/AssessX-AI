@@ -17,6 +17,19 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# Phase 4B: the low-level keyboard hook, window/system queries (lockdown), device-readiness process
+# enumeration (readiness) and the read-only kiosk edition check (kiosk). Already in the dependency
+# tree through Tauri; only the listed Win32 API surfaces are enabled.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
 # See https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
 codegen-units = 1

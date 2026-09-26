@@ -81,6 +81,34 @@ export interface AttemptDetail {
 
   questions: CandidateQuestion[]
   answers: AttemptAnswer[]
+
+  /**
+   * The attempt's proctoring session, or `null` when this attempt is not proctored. Fixed when the
+   * attempt started, so a later change to the assessment's setting does not affect it.
+   */
+  proctoring: ProctoringSession | null
+}
+
+/** The proctoring session's lifecycle. One direction only; `ENDED` follows the attempt ending. */
+export type ProctoringSessionStatus = 'NOT_STARTED' | 'ACTIVE' | 'ENDED'
+
+/**
+ * Device availability as the server records it. Availability only — never what the camera sees
+ * or the microphone hears. The client's richer local states map onto these
+ * (see `features/proctoring/devices.ts`).
+ */
+export type DeviceState = 'NOT_READY' | 'READY' | 'DENIED' | 'UNAVAILABLE'
+
+/** Wire shape of `backend/app/schemas/proctoring.py::ProctoringSessionOut`. Every time is the server's. */
+export interface ProctoringSession {
+  id: string
+  attempt_id: string
+  status: ProctoringSessionStatus
+  camera_state: DeviceState
+  microphone_state: DeviceState
+  started_at: string | null
+  ended_at: string | null
+  devices_reported_at: string | null
 }
 
 /** The exam details screen. The server decides whether the exam can be started, and says why not. */
