@@ -3,6 +3,10 @@
 //! Hosts the React UI inside a native window. Native capabilities are added as narrow Tauri
 //! commands registered here: Phase 4B's proctored-exam lockdown lives in `lockdown`, the pre-exam
 //! device-readiness check in `readiness`, and the read-only Secure Kiosk foundation in `kiosk`.
+//!
+//! In-app updates use the official updater plugin: the app checks the latest GitHub Release's
+//! `latest.json`, and installs an update only if its signature matches the public key in
+//! `tauri.conf.json` (see docs/RELEASING.md). `process` provides the relaunch after an update.
 
 mod kiosk;
 mod lockdown;
@@ -11,6 +15,8 @@ mod readiness;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(lockdown::Lockdown::default())
         .invoke_handler(tauri::generate_handler![
             lockdown::lockdown_engage,

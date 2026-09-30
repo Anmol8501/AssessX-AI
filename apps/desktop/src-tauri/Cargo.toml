@@ -1,6 +1,6 @@
 [package]
 name = "assessx-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "AssessX desktop application"
 edition = "2021"
 
@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tauri-plugin-updater = "~2.12.0"
+tauri-plugin-process = "~2.3.1"
 
 # Phase 4B: the low-level keyboard hook, window/system queries (lockdown), device-readiness process
 # enumeration (readiness) and the read-only kiosk edition check (kiosk). Already in the dependency
