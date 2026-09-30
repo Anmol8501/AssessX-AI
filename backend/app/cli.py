@@ -2,12 +2,16 @@
 
     python -m app.cli serve            # run the API with API_HOST / API_PORT from the environment
     python -m app.cli seed-dev-users   # create the documented development accounts
+    python -m app.cli create-admin --email … --name … --username …   # bootstrap a real administrator
 
 The seed command refuses to run when APP_ENV=production, so those credentials can never reach
-a real deployment.
+a real deployment. `create-admin` is how a deployment gets its first administrator (who then
+creates candidates in the app): the password is read from ASSESSX_ADMIN_PASSWORD or prompted for,
+never passed on the command line, and an existing account is never modified.
 """
 
 import argparse
+import getpass
 import os
 import sys
 from dataclasses import dataclass
@@ -102,6 +106,33 @@ def seed_dev_users() -> int:
     return 0
 
 
+#: Minimum length for a bootstrapped administrator's password.
+ADMIN_PASSWORD_MIN_LENGTH = 12
+
+
+def create_admin(email: str, name: str, username: str) -> int:
+    password = os.environ.get("ASSESSX_ADMIN_PASSWORD")
+    if password is None:
+        password = getpass.getpass("Administrator password: ")
+        if getpass.getpass("Repeat the password: ") != password:
+            print("The passwords do not match.", file=sys.stderr)
+            return 2
+    if len(password) < ADMIN_PASSWORD_MIN_LENGTH:
+        print(f"The password must be at least {ADMIN_PASSWORD_MIN_LENGTH} characters.", file=sys.stderr)
+        return 2
+    with SessionLocal() as db:
+        repo = UserRepository(db)
+        if repo.get_by_email(email.strip().lower()):
+            print(f"An account with {email} already exists; nothing was changed.", file=sys.stderr)
+            return 1
+        UserService(db).create(
+            name=name, email=email, password=password, role=UserRole.ADMIN, username=username
+        )
+        db.commit()
+    print(f"created  {email.strip().lower()}  (ADMIN, {username.strip().lower()})")
+    return 0
+
+
 def serve(reload: bool) -> int:
     import uvicorn
 
@@ -120,6 +151,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="assessx", description="AssessX backend developer commands")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("seed-dev-users", help="create the documented development accounts (non-production only)")
+    admin_parser = sub.add_parser(
+        "create-admin", help="create an administrator (password from ASSESSX_ADMIN_PASSWORD or a prompt)"
+    )
+    admin_parser.add_argument("--email", required=True)
+    admin_parser.add_argument("--name", required=True)
+    admin_parser.add_argument("--username", required=True, help="the administrator's sign-in username")
     serve_parser = sub.add_parser("serve", help="run the API using API_HOST / API_PORT")
     serve_parser.add_argument(
         "--reload", action="store_true", help="auto-reload on code changes (development)"
@@ -127,6 +164,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "seed-dev-users":
         return seed_dev_users()
+    if args.command == "create-admin":
+        return create_admin(args.email, args.name, args.username)
     if args.command == "serve":
         return serve(reload=args.reload)
     return 1

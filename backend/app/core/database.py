@@ -22,13 +22,16 @@ from starlette.requests import Request
 from app.core.config import get_settings
 
 
-def build_engine(url: str) -> Engine:
+def build_engine(url: str, pool_size: int = 5, max_overflow: int = 10) -> Engine:
     # pool_pre_ping drops stale connections (e.g. after a database restart) instead of
     # handing them to a request; pool_recycle keeps long-lived pools healthy behind proxies.
-    return create_engine(url, pool_pre_ping=True, pool_recycle=1800, pool_size=5, max_overflow=10)
+    return create_engine(
+        url, pool_pre_ping=True, pool_recycle=1800, pool_size=pool_size, max_overflow=max_overflow
+    )
 
 
-engine = build_engine(get_settings().database_url)
+_settings = get_settings()
+engine = build_engine(_settings.database_url, _settings.db_pool_size, _settings.db_max_overflow)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, class_=Session)
 
 

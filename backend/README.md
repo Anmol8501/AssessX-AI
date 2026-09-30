@@ -133,6 +133,13 @@ each required for exactly its role via a CHECK constraint) · `auth_sessions` ·
 cascades from both the assessment and the candidate, but `assigned_by` is RESTRICT so an
 administrator who assigned work cannot be deleted out from under it). No proctoring tables yet.
 
+## Deploying
+
+A zero-cost test deployment (Render Free + Supabase Free) is documented in
+[`docs/DEPLOYMENT-RENDER.md`](../docs/DEPLOYMENT-RENDER.md): Render settings, environment variables,
+migrations, the first administrator (`python -m app.cli create-admin`), and a local production-style
+run.
+
 ## Running locally
 
 ```bash
