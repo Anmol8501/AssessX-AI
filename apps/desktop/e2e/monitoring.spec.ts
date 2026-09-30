@@ -94,3 +94,66 @@ test('the monitoring wall loads and connects for an admin', async ({ browser, re
   })
   await admin.context().close()
 })
+
+test('live video connects, survives live updates, and the admin sees the candidate app go offline', async ({ browser, request }) => {
+  test.setTimeout(150_000)
+  const title = unique('Live Video Exam')
+  await seedExam(request, title, true)
+
+  // --- Candidate: an active proctored exam with a (synthetic) camera --------------------------------
+  const candidate = await newContextPage(browser, true)
+  await signIn(candidate, request, DEV_CANDIDATE)
+  await openDetails(candidate, title)
+  await candidate.getByRole('button', { name: 'Start Exam' }).click()
+  await candidate.getByRole('button', { name: 'Start Exam' }).click()
+  await expect(counter(candidate)).toHaveText('Question 1 of 2')
+
+  // --- Admin: counts every WATCH it sends (each one restarts the candidate's video offer) ------------
+  const adminContext = await browser.newContext({ viewport: { width: 1366, height: 900 } })
+  const admin = await adminContext.newPage()
+  await admin.addInitScript(() => {
+    const counter = { watch: 0 }
+    ;(window as unknown as { __signals: typeof counter }).__signals = counter
+    const send = WebSocket.prototype.send
+    WebSocket.prototype.send = function (data) {
+      if (typeof data === 'string' && data.includes('"type":"WATCH"')) counter.watch++
+      return send.call(this, data)
+    }
+  })
+  await admin.goto('/')
+  await signIn(admin, request, DEV_ADMIN)
+  await admin.getByRole('link', { name: 'Monitoring' }).click()
+  await expect(admin.getByText(title).first()).toBeVisible({ timeout: 15_000 })
+  await expect(admin.getByText('Candidate:').first().locator('..')).toContainText('Online', { timeout: 15_000 })
+
+  // --- Live video reaches the admin -------------------------------------------------------------------
+  await admin.getByText(title).first().click()
+  const dialog = admin.getByRole('dialog')
+  const liveVideo = () =>
+    admin.evaluate(() => {
+      const video = document.querySelector('[role="dialog"] video') as HTMLVideoElement | null
+      const track = (video?.srcObject as MediaStream | null)?.getVideoTracks()[0]
+      return !!video && track?.readyState === 'live' && video.videoWidth > 0 && !video.classList.contains('invisible')
+    })
+  await expect.poll(liveVideo, { timeout: 45_000 }).toBe(true)
+  const watches = await admin.evaluate(() => (window as unknown as { __signals: { watch: number } }).__signals.watch)
+
+  // --- A burst of live updates must not restart the video (it used to, on every re-render) ------------
+  await candidate.bringToFront()
+  for (let i = 0; i < 4; i++) {
+    await candidate.keyboard.press('Control+C') // COPY_ATTEMPT → PROCTORING_EVENT + SESSION_UPDATED
+    await candidate.waitForTimeout(1700)
+  }
+  await admin.bringToFront()
+  await expect(dialog.getByText('Copy blocked').first()).toBeVisible({ timeout: 15_000 })
+  expect(await liveVideo()).toBe(true)
+  expect(await admin.evaluate(() => (window as unknown as { __signals: { watch: number } }).__signals.watch)).toBe(watches)
+
+  // --- The candidate's app goes away: the admin sees it at once -----------------------------------------
+  await candidate.context().close()
+  await expect(dialog.getByText('Candidate app:').locator('..')).toContainText('Offline', { timeout: 15_000 })
+  await expect(dialog.getByText('Candidate app is offline')).toBeVisible()
+  await admin.getByRole('button', { name: 'Close' }).click()
+  await expect(admin.getByText('Candidate offline').first()).toBeVisible()
+  await adminContext.close()
+})

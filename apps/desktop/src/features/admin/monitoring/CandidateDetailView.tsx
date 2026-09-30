@@ -5,10 +5,10 @@ import { useApi } from '@/features/session'
 import { cn } from '@/lib/cn'
 import { AIMonitoringSection } from './AIMonitoringSection'
 import { eventLabel } from './events'
-import { deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
+import { candidatePresenceLabel, deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
 import { toEvent, type MonitoringEvent, type MonitoringSession } from './types'
 import { useMediaViewer } from './useMediaViewer'
-import type { MonitoringSignaling, Signal } from './useMonitoring'
+import { FALLBACK_POLL_MS, type MonitoringSignaling, type Signal } from './useMonitoring'
 import type { MediaState } from './webrtc'
 
 interface DetailProps {
@@ -34,19 +34,33 @@ const VIDEO_STATE_LABEL: Record<MediaState, string> = {
  */
 export function CandidateDetailView({ session, connection, signaling, onClose }: DetailProps) {
   const api = useApi()
-  const viewer = useMediaViewer(session.attemptId, true, signaling)
+  const live = connection === 'connected'
+  // Video is requested only over a live connection; when it returns after a drop, the viewer
+  // re-requests it on its own (the server forgets a watch when the admin's socket closes).
+  const viewer = useMediaViewer(session.attemptId, live, signaling)
   const [events, setEvents] = useState<MonitoringEvent[]>([])
   const [audioOn, setAudioOn] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
 
-  // Initial recent events over REST, then live PROCTORING_EVENT deltas prepended.
+  // Recent events over REST — on open, again whenever the live connection returns (to catch what was
+  // missed), and every few seconds while it is down — plus live PROCTORING_EVENT deltas prepended.
   useEffect(() => {
     let active = true
-    void api<{ recent_events: Record<string, unknown>[] }>(`/api/v1/admin/monitoring/sessions/${session.attemptId}`)
-      .then((detail) => {
-        if (active) setEvents(detail.recent_events.map(toEvent))
-      })
-      .catch(() => undefined)
+    const load = () =>
+      void api<{ recent_events: Record<string, unknown>[] }>(`/api/v1/admin/monitoring/sessions/${session.attemptId}`)
+        .then((detail) => {
+          if (active) setEvents(detail.recent_events.map(toEvent))
+        })
+        .catch(() => undefined)
+    load()
+    const timer = live ? null : window.setInterval(load, FALLBACK_POLL_MS)
+    return () => {
+      active = false
+      if (timer !== null) window.clearInterval(timer)
+    }
+  }, [api, session.attemptId, live])
+
+  useEffect(() => {
     const unsubscribe = signaling.subscribe(session.attemptId, (message: Signal) => {
       if (message.type === 'PROCTORING_EVENT' && message.event) {
         const event = toEvent(message.event as Record<string, unknown>)
@@ -54,11 +68,8 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
         setEvents((prev) => (prev.some((e) => e.id === event.id) ? prev : [event, ...prev].slice(0, 50)))
       }
     })
-    return () => {
-      active = false
-      unsubscribe()
-    }
-  }, [api, session.attemptId, signaling])
+    return unsubscribe
+  }, [session.attemptId, signaling])
 
   useEffect(() => {
     const element = video.current
@@ -81,7 +92,16 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
   const camera = deviceLabel(session.cameraState)
   const microphone = deviceLabel(session.microphoneState)
   const fullscreen = fullscreenLabel(session.fullscreen)
-  const showVideo = viewer.state === 'connected' && viewer.stream
+  // Once the candidate's app is offline, a still-open video connection shows only a frozen last
+  // frame until it times out; hide it rather than present stale video as live.
+  const showVideo = viewer.state === 'connected' && viewer.stream && session.candidateConnected
+  const presence = candidatePresenceLabel(session)
+  // Say *why* there is no video: the admin's own connection, the candidate's app, or the media path.
+  const videoMessage = !live
+    ? 'Reconnecting to the server…'
+    : !session.candidateConnected
+      ? 'Candidate app is offline'
+      : VIDEO_STATE_LABEL[viewer.state]
 
   return (
     <div
@@ -125,7 +145,7 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
                   className={cn('h-full w-full object-contain', !showVideo && 'invisible')}
                 />
                 {!showVideo && (
-                  <span className="absolute text-[13px] text-white/70">{VIDEO_STATE_LABEL[viewer.state]}</span>
+                  <span className="absolute text-[13px] text-white/70">{videoMessage}</span>
                 )}
               </div>
               <div className="mt-2 flex items-center justify-between">
@@ -148,6 +168,7 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
                 <Detail icon={<MicIcon />} label="Microphone" value={microphone.label} ok={microphone.ok} />
                 <Detail label="Fullscreen" value={fullscreen.label} ok={fullscreen.ok} />
                 <Detail label="Connection" value={connection === 'connected' ? 'Connected' : connection} ok={connection === 'connected'} />
+                <Detail label="Candidate app" value={presence.label} ok={presence.ok} />
               </dl>
 
               <AIMonitoringSection ai={session.ai} />

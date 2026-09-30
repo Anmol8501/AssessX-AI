@@ -2,7 +2,7 @@ import { CameraIcon, MicIcon, MonitoringIcon } from '@/components/icons'
 import { StatusBadge } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { aiStatusLabel } from './ai'
-import { deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
+import { candidatePresenceLabel, deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
 import type { MonitoringSession } from './types'
 
 interface TileProps {
@@ -24,6 +24,7 @@ export function CandidateMonitoringTile({ session, connection, onOpen }: TilePro
   const camera = deviceLabel(session.cameraState)
   const microphone = deviceLabel(session.microphoneState)
   const fullscreen = fullscreenLabel(session.fullscreen)
+  const presence = candidatePresenceLabel(session)
   const ai = aiStatusLabel(session.ai)
   const ongoing = session.ai.active.length
 
@@ -53,7 +54,8 @@ export function CandidateMonitoringTile({ session, connection, onOpen }: TilePro
         <Indicator icon={<CameraIcon />} label="Camera" value={camera.label} ok={camera.ok} />
         <Indicator icon={<MicIcon />} label="Mic" value={microphone.label} ok={microphone.ok} />
         <Indicator label="Fullscreen" value={fullscreen.label} ok={fullscreen.ok} />
-        <Indicator label="Session" value={connection === 'connected' ? 'Live' : 'Offline'} ok={connection === 'connected'} />
+        {/* The candidate's app connection (the admin's own connection is shown in the page header). */}
+        <Indicator label="Candidate" value={presence.label} ok={presence.ok} />
         {/* Phase 5C: the AI's own health, and how many factual observations are ongoing — no score. */}
         <Indicator label="AI" value={ai.label} ok={session.ai.status === 'RUNNING'} />
         <Indicator label="AI observations" value={ongoing === 0 ? 'None' : String(ongoing)} ok={ongoing === 0} />

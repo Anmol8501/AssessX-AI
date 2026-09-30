@@ -16,6 +16,7 @@ authoritative, so a missed message is corrected by the admin's periodic refresh/
 """
 
 import logging
+import re
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -32,6 +33,7 @@ from app.models.user import User, UserRole
 from app.realtime.hub import hub
 from app.realtime.messages import MessageType, message
 from app.services.auth import AuthService
+from app.services.monitoring import MonitoringService
 
 log = logging.getLogger("assessx.monitoring.ws")
 
@@ -73,6 +75,20 @@ def _authenticate(token: str | None) -> User | None:
 
 def _clean(value: object) -> bool:
     return isinstance(value, str) and 0 < len(value) <= _SDP_MAX
+
+
+_OFFER_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _offer_id(data: dict) -> dict[str, str]:
+    """The negotiation id the candidate put on its offer, relayed with every related message.
+
+    Offers, answers and ICE candidates carry it so each side can ignore messages that belong to an
+    older negotiation (a retry, a reconnect, a view reopened quickly) instead of applying an answer
+    to the wrong peer connection. Only a short opaque token is accepted; anything else is dropped.
+    """
+    value = data.get("offer_id")
+    return {"offer_id": value} if isinstance(value, str) and _OFFER_ID.match(value) else {}
 
 
 @router.websocket("/ws/admin/monitoring")
@@ -140,7 +156,8 @@ async def _handle_admin_message(ws: WebSocket, data: dict) -> None:
             return
         field = "sdp" if kind == MessageType.WEBRTC_ANSWER.value else "candidate"
         await hub.send_to_candidate(
-            attempt_id, message(MessageType(kind), attempt_id=str(attempt_id), **{field: payload})
+            attempt_id,
+            message(MessageType(kind), attempt_id=str(attempt_id), **{field: payload}, **_offer_id(data)),
         )
 
 
@@ -166,6 +183,11 @@ async def candidate_proctoring(ws: WebSocket) -> None:
     await ws.accept()
     await hub.add_candidate(attempt_id, ws)
     await ws.send_json(message(MessageType.CONNECTION_READY, role="candidate", attempt_id=str(attempt_id)))
+    # An admin may already be watching (the candidate app restarted or its network dropped): ask for
+    # a fresh offer so live video resumes without the admin having to reopen the view.
+    if hub.admins_watching(attempt_id):
+        await hub.send_to_candidate(attempt_id, message(MessageType.WATCH, attempt_id=str(attempt_id)))
+    await _broadcast_session(attempt_id)  # admins: the candidate app is online
     try:
         while True:
             data = await ws.receive_json()
@@ -175,7 +197,21 @@ async def candidate_proctoring(ws: WebSocket) -> None:
     except Exception:  # noqa: BLE001
         log.debug("Candidate proctoring socket error", exc_info=True)
     finally:
-        hub.remove_candidate(attempt_id, ws)
+        if hub.remove_candidate(attempt_id, ws):
+            await _broadcast_session(attempt_id)  # admins: the candidate app went offline
+
+
+async def _broadcast_session(attempt_id: uuid.UUID) -> None:
+    """Pushes the attempt's current tile (including candidate presence) to connected admins."""
+    if not hub.has_admins:
+        return
+    try:
+        with _session() as db:
+            delta = MonitoringService(db).session_delta(attempt_id)
+    except Exception:  # noqa: BLE001 — presence is best-effort; the admin's REST refresh is authoritative
+        log.debug("Presence broadcast skipped", exc_info=True)
+        return
+    await hub.broadcast_admins(delta)
 
 
 async def _handle_candidate_message(ws: WebSocket, attempt_id: uuid.UUID, data: dict) -> None:
@@ -188,7 +224,8 @@ async def _handle_candidate_message(ws: WebSocket, attempt_id: uuid.UUID, data: 
             return
         field = "sdp" if kind == MessageType.WEBRTC_OFFER.value else "candidate"
         await hub.relay_to_watchers(
-            attempt_id, message(MessageType(kind), attempt_id=str(attempt_id), **{field: payload})
+            attempt_id,
+            message(MessageType(kind), attempt_id=str(attempt_id), **{field: payload}, **_offer_id(data)),
         )
     elif kind == MessageType.PUBLISH_STATE.value:
         publishing = bool(data.get("publishing"))

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
-import { iceServers } from '@/features/admin/monitoring/webrtc'
+import { loadIceServers } from '@/features/admin/monitoring/webrtc'
 import type { MediaDevice } from '../useMediaDevice'
 
 const RECONNECT_MAX_MS = 8000
@@ -27,6 +27,10 @@ function wsUrl(token: string, attemptId: string): string {
  *
  * One viewer at a time: the live wall establishes video only from the admin's detail view, so a
  * candidate is watched by at most one admin. A second concurrent viewer is out of scope here.
+ *
+ * Every offer carries a fresh `offer_id`, echoed on the admin's answer and ICE candidates. Messages
+ * for any other id belong to an older negotiation (a retry, a reconnect, a view reopened quickly) and
+ * are ignored — applying them would point this connection at a peer that no longer exists.
  */
 export function useMediaPublisher(attemptId: string, camera: MediaDevice, microphone: MediaDevice): void {
   const cameraStream = camera.stream
@@ -46,14 +50,18 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
     let retry = 500
     let retryTimer: number | null = null
     let closed = false
+    let generation = 0 // only the newest publish() may install its peer connection
+    let offerId: string | null = null // the negotiation the current peer connection belongs to
 
     const send = (message: Signal) => {
       if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
     }
 
     const closePc = () => {
+      generation++ // also cancels a publish() still waiting for its ICE servers (e.g. after UNWATCH)
       pc?.close()
       pc = null
+      offerId = null
       pendingIce = []
     }
 
@@ -65,17 +73,24 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
         return
       }
       closePc()
-      const connection = new RTCPeerConnection({ iceServers: iceServers() })
+      const mine = ++generation
+      // STUN/TURN from the server, so video can reach an admin on another network.
+      const servers = await loadIceServers()
+      if (closed || mine !== generation) return
+      const connection = new RTCPeerConnection({ iceServers: servers })
+      const id = `${Date.now().toString(36)}-${mine}`
       pc = connection
+      offerId = id
       for (const track of tracks) connection.addTrack(track, cam ?? mic!)
       connection.onicecandidate = (event) => {
         if (event.candidate) {
-          send({ type: 'ICE_CANDIDATE', attempt_id: attemptId, candidate: JSON.stringify(event.candidate) })
+          send({ type: 'ICE_CANDIDATE', attempt_id: attemptId, candidate: JSON.stringify(event.candidate), offer_id: id })
         }
       }
       const offer = await connection.createOffer()
       await connection.setLocalDescription(offer)
-      send({ type: 'WEBRTC_OFFER', attempt_id: attemptId, sdp: offer.sdp ?? '' })
+      if (pc !== connection) return // superseded while the offer was being created
+      send({ type: 'WEBRTC_OFFER', attempt_id: attemptId, sdp: offer.sdp ?? '', offer_id: id })
     }
 
     const onSignal = (message: Signal) => {
@@ -86,9 +101,11 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
           } else if (message.type === 'UNWATCH') {
             closePc()
           } else if (message.type === 'WEBRTC_ANSWER' && typeof message.sdp === 'string' && pc) {
+            if (message.offer_id !== offerId) return // an answer to an older offer
             await pc.setRemoteDescription({ type: 'answer', sdp: message.sdp })
             for (const ice of pendingIce.splice(0)) await pc.addIceCandidate(ice).catch(() => undefined)
           } else if (message.type === 'ICE_CANDIDATE' && typeof message.candidate === 'string') {
+            if (message.offer_id !== offerId) return // belongs to an older negotiation
             const ice = JSON.parse(message.candidate) as RTCIceCandidateInit
             if (pc?.remoteDescription) await pc.addIceCandidate(ice).catch(() => undefined)
             else pendingIce.push(ice)

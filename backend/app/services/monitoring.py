@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.models.attempt import AssessmentAttempt
 from app.models.proctoring import DeviceState, ProctoringSession
 from app.models.proctoring_event import ProctoringEvent, ProctoringEventType
+from app.realtime.hub import hub
 from app.realtime.messages import MessageType, message
 from app.repositories.monitoring import MonitoringRepository
 from app.schemas.monitoring import (
@@ -95,6 +96,7 @@ class MonitoringService:
         self, session: ProctoringSession, events: list[ProctoringEvent] | None = None
     ) -> MonitoringSession:
         attempt: AssessmentAttempt = session.attempt
+        candidate_connected, presence_changed_at = hub.presence(attempt.id)
         return MonitoringSession(
             attempt_id=attempt.id,
             proctoring_session_id=session.id,
@@ -111,6 +113,8 @@ class MonitoringService:
             started_at=session.started_at,
             devices_reported_at=session.devices_reported_at,
             ai=derive_ai_state(self.repo.ai_events(session.id)),
+            candidate_connected=candidate_connected,
+            candidate_presence_changed_at=presence_changed_at,
         )
 
     def _fullscreen(self, session: ProctoringSession, events: list[ProctoringEvent] | None) -> bool | None:

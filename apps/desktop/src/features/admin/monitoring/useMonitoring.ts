@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApi } from '@/features/session'
 import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
@@ -33,6 +33,9 @@ export interface Monitoring {
   signaling: MonitoringSignaling
 }
 
+/** While the live connection is down, the wall is refreshed over REST this often. */
+export const FALLBACK_POLL_MS = 5000
+
 function wsUrl(token: string): string {
   const base = API_BASE_URL.replace(/^http/, 'ws')
   return `${base}/api/v1/ws/admin/monitoring?token=${encodeURIComponent(token)}`
@@ -53,7 +56,12 @@ function summarise(sessions: MonitoringSession[]): MonitoringSummary {
  * authoritative — a refetch after reconnect fixes anything missed while disconnected).
  *
  * The same WebSocket carries WebRTC signaling; `signaling` lets each tile's viewer exchange
- * offer/answer/ICE with its candidate, routed by attempt id.
+ * offer/answer/ICE with its candidate, routed by attempt id. `signaling` keeps one identity for the
+ * hook's lifetime: consumers key effects on it, and a new object per render used to tear down and
+ * re-request live video (and refetch events) on every live update.
+ *
+ * While the WebSocket is down, the wall is refetched every `FALLBACK_POLL_MS` so an admin still sees
+ * each candidate's state within seconds instead of a frozen wall.
  */
 export function useMonitoring(): Monitoring {
   const api = useApi()
@@ -171,21 +179,27 @@ export function useMonitoring(): Monitoring {
     })
   }, [fetchActive])
 
-  const signaling: MonitoringSignaling = {
-    send: useCallback((message: Signal) => {
-      const ws = socket.current
-      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message))
-    }, []),
-    subscribe: useCallback((attemptId: string, handler: (m: Signal) => void) => {
-      const set = handlers.current.get(attemptId) ?? new Set()
-      set.add(handler)
-      handlers.current.set(attemptId, set)
-      return () => {
-        set.delete(handler)
-        if (set.size === 0) handlers.current.delete(attemptId)
-      }
-    }, []),
-  }
+  // Fallback while the live connection is down: keep the wall current over REST.
+  useEffect(() => {
+    if (connection === 'connected') return
+    const timer = window.setInterval(() => void fetchActive().catch(() => undefined), FALLBACK_POLL_MS)
+    return () => window.clearInterval(timer)
+  }, [connection, fetchActive])
+
+  const send = useCallback((message: Signal) => {
+    const ws = socket.current
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message))
+  }, [])
+  const subscribe = useCallback((attemptId: string, handler: (m: Signal) => void) => {
+    const set = handlers.current.get(attemptId) ?? new Set()
+    set.add(handler)
+    handlers.current.set(attemptId, set)
+    return () => {
+      set.delete(handler)
+      if (set.size === 0) handlers.current.delete(attemptId)
+    }
+  }, [])
+  const signaling = useMemo<MonitoringSignaling>(() => ({ send, subscribe }), [send, subscribe])
 
   const list = [...sessions.values()]
   return { status, error, sessions: list, summary: summarise(list), connection, reload, signaling }

@@ -67,6 +67,11 @@ class MonitoringSession(BaseModel):
     devices_reported_at: datetime | None
     #: The on-device AI's current factual state (Phase 5C).
     ai: AIMonitoringState
+    #: Whether the candidate's app currently holds its live connection to the server — False when
+    #: the app was closed, the laptop slept or its network dropped. Live state, not persisted.
+    candidate_connected: bool = False
+    #: When that last changed (None if the server has not seen the candidate app since it started).
+    candidate_presence_changed_at: datetime | None = None
 
 
 class MonitoringSummary(BaseModel):

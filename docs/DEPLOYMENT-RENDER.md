@@ -74,6 +74,9 @@ into tickets/chat.
 | `DB_MAX_OVERFLOW` | `2` | recommended |
 | `LOG_LEVEL` | `INFO` | optional |
 | `SESSION_TTL_HOURS`, `SESSION_REMEMBER_TTL_DAYS`, `LOGIN_CHALLENGE_TTL_SECONDS` | defaults 12 / 30 / 300 | optional |
+| `STUN_URLS` | default `stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302` | optional |
+| `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` | a Cloudflare Realtime TURN key id and its API token — the token is *secret*. Enables the TURN relay for live video (see §7) | recommended for video across networks |
+| `TURN_CREDENTIAL_TTL_SECONDS` | default `14400` (4 h): lifetime of the TURN credentials issued to each app | optional |
 
 Do **not** set `TEST_DATABASE_URL`, `DEV_*_PASSWORD`, `API_HOST` or `API_PORT` on Render.
 
@@ -158,20 +161,37 @@ lines — without this, session tokens would be stored in Render's logs.
 
 1. `apps/desktop/.env.production` (git-ignored): `VITE_API_BASE_URL=https://<service>.onrender.com`.
    The WebSocket URL is derived from it (`https` → `wss`).
-2. The desktop Content-Security-Policy must allow the API origin. Its `connect-src` currently lists
-   only the local API, so build with a config override rather than editing `tauri.conf.json` — save
-   as e.g. `apps/desktop/src-tauri/tauri.render.conf.json` (no secrets; it only names the API host),
-   keeping every other directive of `tauri.conf.json` as it is:
+2. The desktop Content-Security-Policy (`src-tauri/tauri.conf.json`, `connect-src`) must allow the API
+   **twice** — `https://<service>.onrender.com` for REST **and** `wss://<service>.onrender.com` for the
+   live-monitoring WebSockets. In WebView2 an `https://` source does not cover `wss://`; with only the
+   first, REST works but the admin wall stays "Reconnecting…", candidates show as offline and live
+   video never connects. The committed CSP lists the deployed API (`assessx-backend-0nw6`) both ways.
+   **The build now enforces this:** `npm run build` / `npm run tauri:build` stop with an error naming
+   the missing source if `VITE_API_BASE_URL`'s `https`/`wss` (or `http`/`ws`) origin is not allowed.
+3. **Live video between laptops (Phase 4C WebRTC).** The app asks the API for its ICE servers
+   (`GET /api/v1/realtime/ice-servers`, signed-in users only):
+   * **STUN** is always included, so two laptops on different ordinary networks (home Wi-Fi) can
+     connect directly.
+   * **TURN** relays the video when a network forbids a direct connection — common on mobile hotspots,
+     campus/office Wi-Fi and carrier-grade NAT. It is enabled by setting `CLOUDFLARE_TURN_KEY_ID` and
+     `CLOUDFLARE_TURN_API_TOKEN` on Render (Cloudflare dashboard → Realtime → TURN Server → create a
+     key; check Cloudflare's current pricing/free allowance there). The API token stays on the server;
+     each app receives short-lived TURN credentials (`TURN_CREDENTIAL_TTL_SECONDS`), so nothing secret
+     is built into the installer and no rebuild is needed to switch TURN on. **TURN has not been tested
+     against Cloudflare from this repository** (only with a simulated Cloudflare reply).
+   * `VITE_ICE_SERVERS` (desktop build) still overrides the server's list, for development only.
 
-   ```json
-   { "app": { "security": { "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://<service>.onrender.com wss://<service>.onrender.com" } } }
-   ```
+   Events, the monitoring wall, candidate presence and the AI state do not depend on video.
 
-   and build: `npm run tauri:build -- --config src-tauri/tauri.render.conf.json`.
-3. **Live video between laptops (Phase 4C WebRTC)** only works across different networks with a STUN
-   server, and behind strict NAT only with TURN. Set `VITE_ICE_SERVERS` in the same `.env.production`,
-   e.g. `[{"urls":"stun:stun.l.google.com:19302"}]`. TURN has not been tested, and a free TURN service
-   is not part of this setup. Events, the monitoring wall and the AI state do not depend on video.
+**Live-monitoring reliability** (what the admin sees when something drops):
+* **Candidate app online/offline** is pushed to admins the moment the candidate's app connects or
+  disconnects (app closed, laptop asleep, network lost) — tile headline "Candidate offline", and
+  "Candidate app: Offline for …" in the detail view, where stale video is hidden.
+* **Admin connection down:** the wall and the detail view's events refresh over REST every 5 s until
+  the live connection returns; video is re-requested automatically when it does.
+* **Video:** a failed or stalled connection is renegotiated automatically (up to 3 times); every
+  negotiation carries an id so an answer is never applied to the wrong one; a candidate app that
+  reconnects while an admin is watching is asked for fresh video.
 
 ## 8. Free-tier behaviour to expect
 

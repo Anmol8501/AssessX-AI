@@ -8,6 +8,7 @@ from app.api.v1 import (
     candidates,
     health,
     proctoring,
+    realtime,
     users,
     ws,
 )
@@ -21,4 +22,5 @@ api_v1.include_router(candidates.router)
 api_v1.include_router(attempts.router)
 api_v1.include_router(proctoring.router)
 api_v1.include_router(admin_monitoring.router)
+api_v1.include_router(realtime.router)
 api_v1.include_router(ws.router)

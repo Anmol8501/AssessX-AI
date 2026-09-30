@@ -31,6 +31,10 @@ export interface MonitoringSession {
   devicesReportedAt: string | null
   /** The on-device AI's factual state (Phase 5C). */
   ai: AIMonitoringState
+  /** Whether the candidate's app holds its live connection (false: app closed, laptop asleep, network down). */
+  candidateConnected: boolean
+  /** When that last changed, or null if the server has not seen the candidate app since it started. */
+  candidatePresenceChangedAt: string | null
 }
 
 export type AIStatus = 'INITIALIZING' | 'RUNNING' | 'DEGRADED' | 'ERROR' | 'STOPPED'
@@ -126,6 +130,8 @@ export function toSession(raw: Record<string, unknown>): MonitoringSession {
     startedAt: (raw.started_at as string | null) ?? null,
     devicesReportedAt: (raw.devices_reported_at as string | null) ?? null,
     ai: toAI(raw.ai as Record<string, unknown> | undefined),
+    candidateConnected: raw.candidate_connected === true,
+    candidatePresenceChangedAt: (raw.candidate_presence_changed_at as string | null | undefined) ?? null,
   }
 }
 

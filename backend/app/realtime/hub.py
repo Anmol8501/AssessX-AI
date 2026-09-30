@@ -5,7 +5,9 @@ Holds two kinds of live connections and moves typed messages between them:
 * **admins** watching the live wall — they receive session deltas and proctoring events, and they
   exchange WebRTC signaling with a candidate they choose to watch;
 * **candidates** whose proctored exam is in progress — one signaling connection each, keyed by
-  attempt id, used only to negotiate their own live media.
+  attempt id, used only to negotiate their own live media. Whether that connection is open is the
+  candidate app's **presence** (online / offline, and since when), which the admin views show so an
+  app that was closed or lost its network is visible straight away. Presence is live state only.
 
 Two rules keep it safe:
 
@@ -24,10 +26,13 @@ loop). The hub captures the running loop lazily so the sync path has somewhere t
 import asyncio
 import logging
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from starlette.websockets import WebSocket, WebSocketState
+
+from app.models.base import utcnow
 
 log = logging.getLogger("assessx.monitoring.hub")
 
@@ -39,6 +44,8 @@ class MonitoringHub:
         self._candidates: dict[UUID, WebSocket] = {}
         #: attempt_id → the set of admin connections currently watching that candidate's media
         self._watchers: dict[UUID, set[WebSocket]] = defaultdict(set)
+        #: attempt_id → when the candidate app last connected or disconnected (this process's view)
+        self._presence_changed: dict[UUID, datetime] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
 
     # -- lifecycle -----------------------------------------------------------------------
@@ -65,11 +72,24 @@ class MonitoringHub:
     async def add_candidate(self, attempt_id: UUID, ws: WebSocket) -> None:
         self._remember_loop()
         # A reconnect replaces any stale connection for the same attempt.
+        if attempt_id not in self._candidates:
+            self._presence_changed[attempt_id] = utcnow()
         self._candidates[attempt_id] = ws
 
-    def remove_candidate(self, attempt_id: UUID, ws: WebSocket) -> None:
-        if self._candidates.get(attempt_id) is ws:
-            del self._candidates[attempt_id]
+    def remove_candidate(self, attempt_id: UUID, ws: WebSocket) -> bool:
+        """Forgets the candidate's connection; True if the candidate app is now offline.
+
+        A stale socket closing after its replacement already connected changes nothing.
+        """
+        if self._candidates.get(attempt_id) is not ws:
+            return False
+        del self._candidates[attempt_id]
+        self._presence_changed[attempt_id] = utcnow()
+        return True
+
+    def presence(self, attempt_id: UUID) -> tuple[bool, datetime | None]:
+        """Whether the candidate app is connected now, and since when (None if never seen by this process)."""
+        return attempt_id in self._candidates, self._presence_changed.get(attempt_id)
 
     # -- admin watching a candidate's media ----------------------------------------------
 

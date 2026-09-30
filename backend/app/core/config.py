@@ -45,6 +45,17 @@ class Settings(BaseSettings):
         "http://tauri.localhost",
         "https://tauri.localhost",
     ]
+    # WebRTC (live video between an admin and a candidate). STUN lets two laptops on different
+    # networks find each other; TURN relays the video when a network forbids a direct connection.
+    # TURN is optional and uses Cloudflare Realtime TURN: the key id and its API token stay on the
+    # server, which issues short-lived TURN credentials to signed-in apps (never built into an app).
+    stun_urls: Annotated[list[str], NoDecode] = [
+        "stun:stun.cloudflare.com:3478",
+        "stun:stun.l.google.com:19302",
+    ]
+    cloudflare_turn_key_id: str | None = None
+    cloudflare_turn_api_token: str | None = None
+    turn_credential_ttl_seconds: int = Field(default=14400, ge=300, le=172800)
     session_ttl_hours: int = 12
     session_remember_ttl_days: int = 30
     login_challenge_ttl_seconds: int = 300
@@ -76,6 +87,13 @@ class Settings(BaseSettings):
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+    @field_validator("stun_urls", mode="before")
+    @classmethod
+    def _split_stun_urls(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [url.strip() for url in value.split(",") if url.strip()]
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod
