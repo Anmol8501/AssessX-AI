@@ -1,0 +1,9 @@
+{
+  "name": "assessx-model-evaluation",
+  "private": true,
+  "description": "Phase 5B object-detector model evaluation (isolated from the app's dependencies).",
+  "type": "module",
+  "dependencies": {
+    "onnxruntime-web": "1.30.0"
+  }
+}

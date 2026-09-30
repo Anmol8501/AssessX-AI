@@ -5,6 +5,7 @@
  * "suspicious" or "risk" language anywhere — interpretation is not part of Phase 4C.
  */
 
+import { aiEventLabel } from './ai'
 import type { MonitoringEvent } from './types'
 
 const LABELS: Record<string, string> = {
@@ -43,6 +44,9 @@ const LABELS: Record<string, string> = {
 }
 
 export function eventLabel(event: MonitoringEvent): string {
+  // Phase 5C: AI observation episodes and AI health have their own factual wording.
+  const ai = aiEventLabel(event.eventType, event.metadata)
+  if (ai !== null) return ai
   const base = LABELS[event.eventType] ?? event.eventType.replaceAll('_', ' ').toLowerCase()
   // A couple of events read better with their one factual detail appended.
   const meta = event.metadata

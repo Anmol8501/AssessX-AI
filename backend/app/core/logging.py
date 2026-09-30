@@ -12,6 +12,7 @@ Nothing here or in the call sites logs passwords, hashes or tokens; see `SENSITI
 import contextvars
 import json
 import logging
+import re
 import sys
 import time
 import uuid
@@ -38,6 +39,24 @@ def _extra_fields(record: logging.LogRecord) -> dict[str, Any]:
         for key, value in record.__dict__.items()
         if key not in _STANDARD_ATTRS and key.lower() not in SENSITIVE_KEYS
     }
+
+
+#: A credential passed in a URL query string. The monitoring WebSockets authenticate with
+#: `?token=<session token>` (browsers cannot set headers on a WebSocket), and uvicorn logs every
+#: accepted WebSocket with its full query string on `uvicorn.error` at INFO.
+_SECRET_QUERY = re.compile(r"(?i)([?&](?:token|access_token)=)[^&\s\"']+")
+_REDACTED = r"\g<1>[REDACTED]"
+
+
+class SecretQueryRedactionFilter(logging.Filter):
+    """Redacts `token=` query values from any log line before it is written, whoever logged it."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = _SECRET_QUERY.sub(_REDACTED, message)
+        if redacted != message:
+            record.msg, record.args = redacted, ()
+        return True
 
 
 class RequestIdFilter(logging.Filter):
@@ -81,16 +100,21 @@ def configure_logging(level: str = "INFO", log_format: str = "console") -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter() if log_format == "json" else ConsoleFormatter())
     handler.addFilter(RequestIdFilter())
+    handler.addFilter(SecretQueryRedactionFilter())
 
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level.upper())
 
-    # Uvicorn's own access log duplicates our request log; keep its error channel.
+    # Uvicorn's own access log duplicates our request log; keep its error channel. When started with
+    # the `uvicorn` CLI (as on Render), uvicorn has already attached its own handler to the parent
+    # "uvicorn" logger, which would print its lines — including WebSocket URLs with `?token=` —
+    # unformatted and unredacted. Both are routed through the handler above instead.
     logging.getLogger("uvicorn.access").disabled = True
-    logging.getLogger("uvicorn.error").propagate = True
-    logging.getLogger("uvicorn.error").handlers.clear()
+    for name in ("uvicorn", "uvicorn.error"):
+        logging.getLogger(name).handlers.clear()
+        logging.getLogger(name).propagate = True
 
 
 class RequestContextMiddleware:

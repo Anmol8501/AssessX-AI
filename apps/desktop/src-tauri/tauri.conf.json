@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:8000 http://localhost:8000"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:8000 http://localhost:8000"
     }
   },
   "bundle": {
@@ -38,6 +38,12 @@
     ],
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" }
+    },
+    "resources": {
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../third-party/YOLOX-LICENSE.txt": "third-party/YOLOX-LICENSE.txt",
+      "../third-party/onnxruntime-LICENSE.txt": "third-party/onnxruntime-LICENSE.txt",
+      "../third-party/onnxruntime-ThirdPartyNotices.txt": "third-party/onnxruntime-ThirdPartyNotices.txt"
     }
   }
 }

@@ -170,18 +170,25 @@ export async function openDetails(page: Page, title: string) {
   await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible()
 }
 
-/** What the server recorded for an attempt, oldest first (development-only, admin-only view). */
-export async function recordedEvents(request: APIRequestContext, attemptId: string) {
+/**
+ * What the server recorded for an attempt, oldest first (development-only, admin-only view).
+ *
+ * The on-device AI runs in every proctored exam and, since Phase 5C, records its own AI_OBSERVATION
+ * episodes and AI_HEALTH status. The Phase 4 specs assert exact sequences of *their* events, so AI
+ * events are left out unless `ai: true` — they are asserted in `ai-events.spec.ts`.
+ */
+export async function recordedEvents(request: APIRequestContext, attemptId: string, options: { ai?: boolean } = {}) {
   const token = await apiToken(request, DEV_ADMIN)
   const response = await request.get(`${API_BASE_URL}/api/v1/dev/attempts/${attemptId}/proctoring-events`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   expect(response.ok()).toBeTruthy()
-  return (await response.json()) as Array<{
+  const events = (await response.json()) as Array<{
     event_type: string
     category: string
     source: string
     metadata: Record<string, unknown>
     recorded_at: string
   }>
+  return options.ai ? events : events.filter((e) => e.category !== 'AI_OBSERVATION' && e.category !== 'AI_HEALTH')
 }

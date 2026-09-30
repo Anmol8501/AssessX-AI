@@ -14,7 +14,7 @@ Phase 1 is complete: 1A (app shell), 1B (backend authentication + role-based app
 
 `apps/web/README.md` documents the download-URL configuration. `apps/desktop/README.md` documents the app layout and the session/auth architecture. `backend/README.md` documents endpoints, the auth/session design, dev accounts (`admin@assessx.local` username `admin`, `candidate@assessx.local` roll `DEV2026001`, `inactive@assessx.local` — non-production only) and known limitations. Tests: `backend/tests` (pytest, real HTTP against PostgreSQL via migrations) and `apps/desktop/e2e` (Playwright against the live backend).
 
-Other contents: `README.md`, `DEVELOPMENT.md` (setup guide), `Workflow.txt` (empty), `docs/` (three source PDFs, `Roadmap.md`, `DEVELOPMENT-ROADMAP.md`, `PHASE-2-PLAN.md`, `PHASE-3-PLAN.md` and `PHASE-4-PLAN.md` — the Phase 2 and 3 plans (implemented) and the Phase 4 plan (4A/4B/4B.5/4C implemented — Phase 4 complete; `docs/security/` for device readiness and kiosk), `PROJECT-CONTEXT.md`), `infrastructure/` (docker-compose for PostgreSQL + optional API).
+Other contents: `README.md`, `DEVELOPMENT.md` (setup guide), `Workflow.txt` (empty), `docs/` (three source PDFs, `Roadmap.md`, `DEVELOPMENT-ROADMAP.md`, `PHASE-2-PLAN.md`, `PHASE-3-PLAN.md`, `PHASE-4-PLAN.md` and `PHASE-5-PLAN.md` — the Phase 2/3 plans (implemented), the Phase 4 plan (4A/4B/4B.5/4C implemented — Phase 4 complete; `docs/security/` for device readiness and kiosk), the AI-proctoring plan the product owner calls "Phase 5" (`PHASE-5-PLAN.md`) with **5A and 5B implemented** (`PHASE-5A-AI-FOUNDATION.md` — the on-device perception foundation; `PHASE-5B-AI-DETECTORS.md` — MediaPipe detectors in a Web Worker, observations only; phone detection partial — blocked by validation; `PHASE-5C-AI-EVENT-INTEGRATION.md` — AI observations as debounced, factual episode events with live admin AI monitoring; no phone event, no risk), `PROJECT-CONTEXT.md`), `infrastructure/` (docker-compose for PostgreSQL + optional API).
 
 The project lives in a nested `AssessX-AI-main/` directory below the workspace folder; the git root is `AssessX-AI-main/`.
 
@@ -116,7 +116,7 @@ TRD §50–57 is the authoritative sequence. Implement the current phase only.
 
 **Current milestone: `Download → Install → Login → Dashboard`** (phase 1).
 
-**Working development sequence:** `docs/DEVELOPMENT-ROADMAP.md` (agreed 2026-09-21) is the order the team actually builds in — nine phases, with Phase 1 split into **1A App Shell → 1B Auth + RBAC → 1C Production Foundation**. It records where it diverges from the TRD ordering. Build only the stage the user names; do not start the next stage unprompted. **Current stage: Phases 1–3 complete; Phase 4 complete (4A, 4B, 4B.5, 4C); Phase 5 not started.**
+**Working development sequence:** `docs/DEVELOPMENT-ROADMAP.md` (agreed 2026-09-21) is the order the team actually builds in — nine phases, with Phase 1 split into **1A App Shell → 1B Auth + RBAC → 1C Production Foundation**. It records where it diverges from the TRD ordering. Build only the stage the user names; do not start the next stage unprompted. **Current stage: Phases 1–3 complete; Phase 4 complete (4A, 4B, 4B.5, 4C); Phase 5A (AI proctoring foundation), 5B (core AI detectors) and 5C (AI event integration) implemented; risk/evidence not started.**
 
 Never respond to a large feature request by building the whole platform. Break work into architecture → backend → frontend → AI → testing → integration and implement incrementally.
 

@@ -7,7 +7,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.core.config import get_settings
+from app.core.config import get_settings, normalize_database_url
 from app.models import Base
 
 config = context.config
@@ -15,7 +15,8 @@ if config.config_file_name is not None:
     # Never disable the application loggers of a process that runs migrations in-process.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-database_url = os.environ.get("ALEMBIC_DATABASE_URL") or get_settings().database_url
+# The override is normalised like DATABASE_URL, so a provider's `postgres://…` URL works for both.
+database_url = normalize_database_url(os.environ.get("ALEMBIC_DATABASE_URL") or get_settings().database_url)
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 target_metadata = Base.metadata

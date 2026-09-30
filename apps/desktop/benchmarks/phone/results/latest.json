@@ -1,0 +1,7531 @@
+{
+ "runtime": "@mediapipe/tasks-vision 1.0.1",
+ "model": "efficientdet_lite0.tflite float16 v1",
+ "delegate": "CPU",
+ "results": [
+  {
+   "file": "000000001268.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.002036372950819672,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.07687611877918243,
+   "phoneBox": {
+    "x": 0.8359375,
+    "y": 0.405152224824356,
+    "width": 0.0515625,
+    "height": 0.06791569086651054
+   },
+   "objectMs": 374.39999997615814
+  },
+  {
+   "file": "000000001296.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.035508328454332556,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.5327483415603638,
+   "phoneBox": {
+    "x": 0.6838407494145199,
+    "y": 0.228125,
+    "width": 0.18969555035128804,
+    "height": 0.2109375
+   },
+   "objectMs": 235.90000000596046
+  },
+  {
+   "file": "000000005060.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0007160791015625001,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.05542788282036781,
+   "phoneBox": {
+    "x": 0.63125,
+    "y": 0.7140625,
+    "width": 0.07083333333333333,
+    "height": 0.046875
+   },
+   "objectMs": 233.90000000596046
+  },
+  {
+   "file": "000000006763.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0045391632,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.1202317476272583,
+   "phoneBox": {
+    "x": 0.08266666666666667,
+    "y": 0.888,
+    "width": 0.09333333333333334,
+    "height": 0.044
+   },
+   "objectMs": 241.40000000596046
+  },
+  {
+   "file": "000000006771.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.005022320330796253,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.045319609344005585,
+   "phoneBox": {
+    "x": 0.1890625,
+    "y": 0.43559718969555034,
+    "width": 0.1546875,
+    "height": 0.17096018735362997
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000012670.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.000559205972546729,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.022883722558617592,
+   "phoneBox": {
+    "x": 0.409375,
+    "y": 0.9766355140186916,
+    "width": 0.121875,
+    "height": 0.014018691588785047
+   },
+   "objectMs": 226.59999999403954
+  },
+  {
+   "file": "000000014038.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.002314419642857143,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.04712090268731117,
+   "phoneBox": {
+    "x": 0.690625,
+    "y": 0.5620608899297423,
+    "width": 0.053125,
+    "height": 0.05620608899297424
+   },
+   "objectMs": 233.19999998807907
+  },
+  {
+   "file": "000000015335.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.0024470703125000002,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.04066941514611244,
+   "phoneBox": {
+    "x": 0.5765625,
+    "y": 0.9354166666666667,
+    "width": 0.078125,
+    "height": 0.05625
+   },
+   "objectMs": 231.09999999403954
+  },
+  {
+   "file": "000000016598.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.027932455543933053,
+   "width": 478,
+   "height": 640,
+   "phoneScore": 0.7033432722091675,
+   "phoneBox": {
+    "x": 0.7112970711297071,
+    "y": 0.2375,
+    "width": 0.1589958158995816,
+    "height": 0.2328125
+   },
+   "objectMs": 233.5
+  },
+  {
+   "file": "000000022623.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.93332689453125,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.3918123245239258,
+   "phoneBox": {
+    "x": 0,
+    "y": 0,
+    "width": 1,
+    "height": 0.9916666666666667
+   },
+   "objectMs": 235.90000000596046
+  },
+  {
+   "file": "000000026465.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.019536759466666664,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.7493485808372498,
+   "phoneBox": {
+    "x": 0.076,
+    "y": 0.7706666666666667,
+    "width": 0.18,
+    "height": 0.2
+   },
+   "objectMs": 237.89999997615814
+  },
+  {
+   "file": "000000031296.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00015055147058823528,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.062209345400333405,
+   "phoneBox": {
+    "x": 0.5765625,
+    "y": 0.40941176470588236,
+    "width": 0.0234375,
+    "height": 0.042352941176470586
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000032887.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.00006721940104166667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.014201374724507332,
+   "phoneBox": {
+    "x": 0.6375,
+    "y": 0.35,
+    "width": 0.1109375,
+    "height": 0.19583333333333333
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000035279.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.024381204103671707,
+   "width": 640,
+   "height": 463,
+   "phoneScore": 0.3378656804561615,
+   "phoneBox": {
+    "x": 0.63125,
+    "y": 0.42116630669546434,
+    "width": 0.1640625,
+    "height": 0.1447084233261339
+   },
+   "objectMs": 233.5
+  },
+  {
+   "file": "000000036660.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.06307979442724458,
+   "width": 500,
+   "height": 323,
+   "phoneScore": 0.756538987159729,
+   "phoneBox": {
+    "x": 0.366,
+    "y": 0.4117647058823529,
+    "width": 0.174,
+    "height": 0.29411764705882354
+   },
+   "objectMs": 228.69999998807907
+  },
+  {
+   "file": "000000036936.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.003963516398514852,
+   "width": 640,
+   "height": 404,
+   "phoneScore": 0.05283191055059433,
+   "phoneBox": {
+    "x": 0.3921875,
+    "y": 0.9306930693069307,
+    "width": 0.0578125,
+    "height": 0.06188118811881188
+   },
+   "objectMs": 230.2999999821186
+  },
+  {
+   "file": "000000042528.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0877953355429293,
+   "width": 640,
+   "height": 495,
+   "phoneScore": 0.5881181955337524,
+   "phoneBox": {
+    "x": 0.6625,
+    "y": 0.3595959595959596,
+    "width": 0.159375,
+    "height": 0.4686868686868687
+   },
+   "objectMs": 229.2000000178814
+  },
+  {
+   "file": "000000046031.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.007317503580729167,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.16992689669132233,
+   "phoneBox": {
+    "x": 0.16875,
+    "y": 0.49583333333333335,
+    "width": 0.0671875,
+    "height": 0.10833333333333334
+   },
+   "objectMs": 225.90000000596046
+  },
+  {
+   "file": "000000048564.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.013424817769320842,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.3653334379196167,
+   "phoneBox": {
+    "x": 0.16627634660421545,
+    "y": 0.175,
+    "width": 0.20140515222482436,
+    "height": 0.209375
+   },
+   "objectMs": 233.19999998807907
+  },
+  {
+   "file": "000000050811.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0031567306301652893,
+   "width": 640,
+   "height": 605,
+   "phoneScore": 0.17386536300182343,
+   "phoneBox": {
+    "x": 0.0015625,
+    "y": 0.7702479338842976,
+    "width": 0.0703125,
+    "height": 0.05454545454545454
+   },
+   "objectMs": 231.09999999403954
+  },
+  {
+   "file": "000000052413.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.17887461066666668,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.12958882749080658,
+   "phoneBox": {
+    "x": 0.408,
+    "y": 0.2693333333333333,
+    "width": 0.296,
+    "height": 0.6026666666666667
+   },
+   "objectMs": 258.30000001192093
+  },
+  {
+   "file": "000000053909.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.5081147819010416,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.7426633834838867,
+   "phoneBox": {
+    "x": 0.17083333333333334,
+    "y": 0.0734375,
+    "width": 0.5916666666666667,
+    "height": 0.7765625
+   },
+   "objectMs": 247.59999999403954
+  },
+  {
+   "file": "000000056344.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.005376173177083334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.49780645966529846,
+   "phoneBox": {
+    "x": 0.6875,
+    "y": 0.6625,
+    "width": 0.1953125,
+    "height": 0.22083333333333333
+   },
+   "objectMs": 238.80000001192093
+  },
+  {
+   "file": "000000059598.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.012190718750000001,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.5751529932022095,
+   "phoneBox": {
+    "x": 0.103125,
+    "y": 0.5729166666666666,
+    "width": 0.15,
+    "height": 0.058333333333333334
+   },
+   "objectMs": 241.7000000178814
+  },
+  {
+   "file": "000000060507.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00003596713992974239,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.03275895491242409,
+   "phoneBox": {
+    "x": 0.3625,
+    "y": 0.3981264637002342,
+    "width": 0.01875,
+    "height": 0.02810304449648712
+   },
+   "objectMs": 238.80000001192093
+  },
+  {
+   "file": "000000062808.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.012934929833679833,
+   "width": 640,
+   "height": 481,
+   "phoneScore": 0.09921341389417648,
+   "phoneBox": {
+    "x": 0.75,
+    "y": 0.23284823284823286,
+    "width": 0.1359375,
+    "height": 0.0893970893970894
+   },
+   "objectMs": 254.60000002384186
+  },
+  {
+   "file": "000000066771.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.015415211588541667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.4719705879688263,
+   "phoneBox": {
+    "x": 0.5765625,
+    "y": 0.4354166666666667,
+    "width": 0.1,
+    "height": 0.14375
+   },
+   "objectMs": 241.90000000596046
+  },
+  {
+   "file": "000000071938.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.07135632812500001,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.8510725498199463,
+   "phoneBox": {
+    "x": 0.4015625,
+    "y": 0.24375,
+    "width": 0.209375,
+    "height": 0.34791666666666665
+   },
+   "objectMs": 240
+  },
+  {
+   "file": "000000073153.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0008270447892271663,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.04092034697532654,
+   "phoneBox": {
+    "x": 0.8079625292740047,
+    "y": 0.39375,
+    "width": 0.0702576112412178,
+    "height": 0.075
+   },
+   "objectMs": 229.7000000178814
+  },
+  {
+   "file": "000000073533.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.012871487630208333,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.10045788437128067,
+   "phoneBox": {
+    "x": 0.7453125,
+    "y": 0.7604166666666666,
+    "width": 0.1046875,
+    "height": 0.09583333333333334
+   },
+   "objectMs": 235.40000000596046
+  },
+  {
+   "file": "000000074256.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.002641533854166667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.17703521251678467,
+   "phoneBox": {
+    "x": 0.1,
+    "y": 0.5416666666666666,
+    "width": 0.071875,
+    "height": 0.058333333333333334
+   },
+   "objectMs": 237.90000000596046
+  },
+  {
+   "file": "000000076416.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.016195817708333334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.017570434138178825,
+   "phoneBox": {
+    "x": 0.24375,
+    "y": 0.575,
+    "width": 0.0484375,
+    "height": 0.06458333333333334
+   },
+   "objectMs": 229
+  },
+  {
+   "file": "000000076625.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00012287988281249997,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.07562436908483505,
+   "phoneBox": {
+    "x": 0.9359375,
+    "y": 0.6770833333333334,
+    "width": 0.0140625,
+    "height": 0.025
+   },
+   "objectMs": 218.69999998807907
+  },
+  {
+   "file": "000000078170.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0013646667480468752,
+   "width": 640,
+   "height": 640,
+   "phoneScore": 0.04095659404993057,
+   "phoneBox": {
+    "x": 0.3515625,
+    "y": 0.659375,
+    "width": 0.1109375,
+    "height": 0.053125
+   },
+   "objectMs": 228.5
+  },
+  {
+   "file": "000000082688.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.003818902599299066,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.06746169179677963,
+   "phoneBox": {
+    "x": 0.8515625,
+    "y": 0.7289719626168224,
+    "width": 0.0984375,
+    "height": 0.053738317757009345
+   },
+   "objectMs": 228.60000002384186
+  },
+  {
+   "file": "000000089648.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.000895213700234192,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.10793145000934601,
+   "phoneBox": {
+    "x": 0.49375,
+    "y": 0.405152224824356,
+    "width": 0.0375,
+    "height": 0.03981264637002342
+   },
+   "objectMs": 231.2999999821186
+  },
+  {
+   "file": "000000099428.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.378372515625,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.5981625318527222,
+   "phoneBox": {
+    "x": 0.06875,
+    "y": 0.10208333333333333,
+    "width": 0.8484375,
+    "height": 0.44166666666666665
+   },
+   "objectMs": 240.60000002384186
+  },
+  {
+   "file": "000000100624.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.006450327868852459,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.4670320451259613,
+   "phoneBox": {
+    "x": 0.2765625,
+    "y": 0.30679156908665106,
+    "width": 0.0953125,
+    "height": 0.1592505854800937
+   },
+   "objectMs": 224
+  },
+  {
+   "file": "000000112997.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.598112724609375,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.6080433130264282,
+   "phoneBox": {
+    "x": 0.04791666666666667,
+    "y": 0.0984375,
+    "width": 0.8770833333333333,
+    "height": 0.8234375
+   },
+   "objectMs": 237.09999999403954
+  },
+  {
+   "file": "000000114049.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.00027605882352941174,
+   "width": 425,
+   "height": 640,
+   "phoneScore": 0.07575532793998718,
+   "phoneBox": {
+    "x": 0.5317647058823529,
+    "y": 0.3390625,
+    "width": 0.07058823529411765,
+    "height": 0.0453125
+   },
+   "objectMs": 223.90000000596046
+  },
+  {
+   "file": "000000115870.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0004003851232394366,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.18067345023155212,
+   "phoneBox": {
+    "x": 0.003125,
+    "y": 0.8544600938967136,
+    "width": 0.10625,
+    "height": 0.06572769953051644
+   },
+   "objectMs": 235.2999999821186
+  },
+  {
+   "file": "000000117197.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0006517234442060086,
+   "width": 640,
+   "height": 466,
+   "phoneScore": 0.044121015816926956,
+   "phoneBox": {
+    "x": 0.7046875,
+    "y": 0.34120171673819744,
+    "width": 0.0203125,
+    "height": 0.032188841201716736
+   },
+   "objectMs": 241.10000002384186
+  },
+  {
+   "file": "000000119233.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0083199251497006,
+   "width": 500,
+   "height": 334,
+   "phoneScore": 0.18979127705097198,
+   "phoneBox": {
+    "x": 0.146,
+    "y": 0.6407185628742516,
+    "width": 0.122,
+    "height": 0.05688622754491018
+   },
+   "objectMs": 227.80000001192093
+  },
+  {
+   "file": "000000119365.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.013291845703125,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.18817391991615295,
+   "phoneBox": {
+    "x": 0.6958333333333333,
+    "y": 0.4625,
+    "width": 0.09166666666666666,
+    "height": 0.0765625
+   },
+   "objectMs": 250.2000000178814
+  },
+  {
+   "file": "000000119516.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.00011091810597189696,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.029606139287352562,
+   "phoneBox": {
+    "x": 0.59375,
+    "y": 0.4894613583138173,
+    "width": 0.04375,
+    "height": 0.10772833723653395
+   },
+   "objectMs": 239.09999999403954
+  },
+  {
+   "file": "000000119828.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0033418944,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.24923600256443024,
+   "phoneBox": {
+    "x": 0.84,
+    "y": 0.376,
+    "width": 0.15,
+    "height": 0.136
+   },
+   "objectMs": 230.59999999403954
+  },
+  {
+   "file": "000000120420.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.06584910286458334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.38552364706993103,
+   "phoneBox": {
+    "x": 0.4296875,
+    "y": 0.40625,
+    "width": 0.190625,
+    "height": 0.49375
+   },
+   "objectMs": 236.7000000178814
+  },
+  {
+   "file": "000000120853.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.02998553957359813,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.5636510848999023,
+   "phoneBox": {
+    "x": 0.5484375,
+    "y": 0.16355140186915887,
+    "width": 0.2125,
+    "height": 0.14018691588785046
+   },
+   "objectMs": 231.2999999821186
+  },
+  {
+   "file": "000000121417.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0021491451822916664,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.0732148140668869,
+   "phoneBox": {
+    "x": 0.40208333333333335,
+    "y": 0.4390625,
+    "width": 0.09375,
+    "height": 0.05625
+   },
+   "objectMs": 238.40000000596046
+  },
+  {
+   "file": "000000122962.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00020499631485849056,
+   "width": 640,
+   "height": 424,
+   "phoneScore": 0.04977446794509888,
+   "phoneBox": {
+    "x": 0.259375,
+    "y": 0.5683962264150944,
+    "width": 0.0171875,
+    "height": 0.03537735849056604
+   },
+   "objectMs": 236.59999999403954
+  },
+  {
+   "file": "000000123480.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0070016064453125,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.05412295460700989,
+   "phoneBox": {
+    "x": 0.271875,
+    "y": 0.41458333333333336,
+    "width": 0.01875,
+    "height": 0.0375
+   },
+   "objectMs": 232.40000000596046
+  },
+  {
+   "file": "000000125129.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00029394834834834836,
+   "width": 500,
+   "height": 333,
+   "phoneScore": 0.19366131722927094,
+   "phoneBox": {
+    "x": 0.092,
+    "y": 0.8648648648648649,
+    "width": 0.232,
+    "height": 0.12912912912912913
+   },
+   "objectMs": 236.60000002384186
+  },
+  {
+   "file": "000000136600.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0027688580415754925,
+   "width": 640,
+   "height": 457,
+   "phoneScore": 0.10089797526597977,
+   "phoneBox": {
+    "x": 0.3359375,
+    "y": 0.4617067833698031,
+    "width": 0.375,
+    "height": 0.45295404814004375
+   },
+   "objectMs": 236.90000000596046
+  },
+  {
+   "file": "000000144333.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.002289861355633803,
+   "width": 426,
+   "height": 640,
+   "phoneScore": 0.14706136286258698,
+   "phoneBox": {
+    "x": 0.44835680751173707,
+    "y": 0.315625,
+    "width": 0.03051643192488263,
+    "height": 0.059375
+   },
+   "objectMs": 239.69999998807907
+  },
+  {
+   "file": "000000146489.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.03896099055989584,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.02537519484758377,
+   "phoneBox": {
+    "x": 0.1078125,
+    "y": 0,
+    "width": 0.2,
+    "height": 0.32916666666666666
+   },
+   "objectMs": 259.80000001192093
+  },
+  {
+   "file": "000000147729.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.019968,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.528206467628479,
+   "phoneBox": {
+    "x": 0.522,
+    "y": 0.30933333333333335,
+    "width": 0.086,
+    "height": 0.2
+   },
+   "objectMs": 241.30000001192093
+  },
+  {
+   "file": "000000151000.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.005351071009389671,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.12838943302631378,
+   "phoneBox": {
+    "x": 0.2625,
+    "y": 0.6408450704225352,
+    "width": 0.0578125,
+    "height": 0.051643192488262914
+   },
+   "objectMs": 249.7000000178814
+  },
+  {
+   "file": "000000154644.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0290292856,
+   "width": 500,
+   "height": 500,
+   "phoneScore": 0.3108307421207428,
+   "phoneBox": {
+    "x": 0.382,
+    "y": 0.326,
+    "width": 0.306,
+    "height": 0.128
+   },
+   "objectMs": 239.30000001192093
+  },
+  {
+   "file": "000000156076.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0012729105648535564,
+   "width": 640,
+   "height": 478,
+   "phoneScore": 0.1294960379600525,
+   "phoneBox": {
+    "x": 0.315625,
+    "y": 0.3054393305439331,
+    "width": 0.046875,
+    "height": 0.03556485355648536
+   },
+   "objectMs": 247.5
+  },
+  {
+   "file": "000000157767.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0007285846018735363,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.08359560370445251,
+   "phoneBox": {
+    "x": 0.58125,
+    "y": 0.4519906323185012,
+    "width": 0.0171875,
+    "height": 0.0234192037470726
+   },
+   "objectMs": 235.59999999403954
+  },
+  {
+   "file": "000000160556.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.006139759783878505,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.15382377803325653,
+   "phoneBox": {
+    "x": 0.8703125,
+    "y": 0.3294392523364486,
+    "width": 0.065625,
+    "height": 0.06775700934579439
+   },
+   "objectMs": 231.40000000596046
+  },
+  {
+   "file": "000000166478.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.011315613996478874,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.10025844722986221,
+   "phoneBox": {
+    "x": 0.6390625,
+    "y": 0.5751173708920188,
+    "width": 0.1625,
+    "height": 0.11502347417840375
+   },
+   "objectMs": 249.30000001192093
+  },
+  {
+   "file": "000000168883.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0025614033141962427,
+   "width": 479,
+   "height": 640,
+   "phoneScore": 0.23132582008838654,
+   "phoneBox": {
+    "x": 0.40292275574112735,
+    "y": 0.2921875,
+    "width": 0.05010438413361169,
+    "height": 0.1109375
+   },
+   "objectMs": 235.30000001192093
+  },
+  {
+   "file": "000000168974.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.04015784426666667,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.4181094169616699,
+   "phoneBox": {
+    "x": 0.30133333333333334,
+    "y": 0.622,
+    "width": 0.18933333333333333,
+    "height": 0.1
+   },
+   "objectMs": 232.19999998807907
+  },
+  {
+   "file": "000000171382.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0002971258802816901,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.034044310450553894,
+   "phoneBox": {
+    "x": 0.878125,
+    "y": 0.39906103286384975,
+    "width": 0.0171875,
+    "height": 0.028169014084507043
+   },
+   "objectMs": 239.89999997615814
+  },
+  {
+   "file": "000000172595.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0006214192708333334,
+   "width": 640,
+   "height": 360,
+   "phoneScore": 0.14755624532699585,
+   "phoneBox": {
+    "x": 0.3078125,
+    "y": 0.3333333333333333,
+    "width": 0.0609375,
+    "height": 0.058333333333333334
+   },
+   "objectMs": 234.5
+  },
+  {
+   "file": "000000174371.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.005234972786203523,
+   "width": 640,
+   "height": 511,
+   "phoneScore": 0.30519846081733704,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.9295499021526419,
+    "width": 0.1625,
+    "height": 0.06457925636007827
+   },
+   "objectMs": 243.80000001192093
+  },
+  {
+   "file": "000000176606.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00018225000000000004,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.008355237543582916,
+   "phoneBox": {
+    "x": 0.0375,
+    "y": 0.4125,
+    "width": 0.0484375,
+    "height": 0.11041666666666666
+   },
+   "objectMs": 230.89999997615814
+  },
+  {
+   "file": "000000176799.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00007124633215962442,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.01982809603214264,
+   "phoneBox": {
+    "x": 0.128125,
+    "y": 0.41784037558685444,
+    "width": 0.0671875,
+    "height": 0.06103286384976526
+   },
+   "objectMs": 234.09999999403954
+  },
+  {
+   "file": "000000176857.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.0010333232,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.10117156058549881,
+   "phoneBox": {
+    "x": 0.248,
+    "y": 0.192,
+    "width": 0.05,
+    "height": 0.04533333333333334
+   },
+   "objectMs": 234.60000002384186
+  },
+  {
+   "file": "000000179112.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.03365217920000001,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.7188946008682251,
+   "phoneBox": {
+    "x": 0.398,
+    "y": 0.35733333333333334,
+    "width": 0.126,
+    "height": 0.2986666666666667
+   },
+   "objectMs": 236.40000000596046
+  },
+  {
+   "file": "000000180798.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.20711549333333332,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.7461735606193542,
+   "phoneBox": {
+    "x": 0.44266666666666665,
+    "y": 0.296,
+    "width": 0.3253333333333333,
+    "height": 0.578
+   },
+   "objectMs": 233.40000000596046
+  },
+  {
+   "file": "000000180878.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.0499505075380562,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.5358401536941528,
+   "phoneBox": {
+    "x": 0.6359375,
+    "y": 0.47306791569086654,
+    "width": 0.15,
+    "height": 0.2646370023419204
+   },
+   "objectMs": 233.69999998807907
+  },
+  {
+   "file": "000000182202.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.26081688636363637,
+   "width": 640,
+   "height": 385,
+   "phoneScore": 0.8036768436431885,
+   "phoneBox": {
+    "x": 0.0890625,
+    "y": 0.2701298701298701,
+    "width": 0.4359375,
+    "height": 0.5532467532467532
+   },
+   "objectMs": 257.5
+  },
+  {
+   "file": "000000194716.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.004161958430913349,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.053919561207294464,
+   "phoneBox": {
+    "x": 0.590625,
+    "y": 0.4918032786885246,
+    "width": 0.0984375,
+    "height": 0.05152224824355972
+   },
+   "objectMs": 236.5
+  },
+  {
+   "file": "000000194724.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.014175645182291667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.5024653673171997,
+   "phoneBox": {
+    "x": 0.890625,
+    "y": 0.47291666666666665,
+    "width": 0.1078125,
+    "height": 0.12708333333333333
+   },
+   "objectMs": 231.5
+  },
+  {
+   "file": "000000202001.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.008530563991323209,
+   "width": 500,
+   "height": 461,
+   "phoneScore": 0.49957332015037537,
+   "phoneBox": {
+    "x": 0.088,
+    "y": 0.4945770065075922,
+    "width": 0.084,
+    "height": 0.11713665943600868
+   },
+   "objectMs": 238.40000000596046
+  },
+  {
+   "file": "000000203629.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0008263209894613583,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.2130451202392578,
+   "phoneBox": {
+    "x": 0.4234375,
+    "y": 0.4309133489461358,
+    "width": 0.021875,
+    "height": 0.053864168618266976
+   },
+   "objectMs": 232.2000000178814
+  },
+  {
+   "file": "000000209753.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.006676936228586724,
+   "width": 467,
+   "height": 640,
+   "phoneScore": 0.11504092067480087,
+   "phoneBox": {
+    "x": 0.6102783725910065,
+    "y": 0.553125,
+    "width": 0.18201284796573874,
+    "height": 0.071875
+   },
+   "objectMs": 237.09999999403954
+  },
+  {
+   "file": "000000213035.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.02105486131440281,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.40268591046333313,
+   "phoneBox": {
+    "x": 0.4390625,
+    "y": 0.3911007025761124,
+    "width": 0.171875,
+    "height": 0.13817330210772832
+   },
+   "objectMs": 231.40000000596046
+  },
+  {
+   "file": "000000214869.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.143580142578125,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.13479366898536682,
+   "phoneBox": {
+    "x": 0.3828125,
+    "y": 0.50625,
+    "width": 0.2484375,
+    "height": 0.4791666666666667
+   },
+   "objectMs": 234.5
+  },
+  {
+   "file": "000000216277.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.07656141145833334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.8420110940933228,
+   "phoneBox": {
+    "x": 0.60625,
+    "y": 0.14791666666666667,
+    "width": 0.2234375,
+    "height": 0.3625
+   },
+   "objectMs": 236.7999999821186
+  },
+  {
+   "file": "000000218439.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0026814619140625,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.08085807412862778,
+   "phoneBox": {
+    "x": 0.9166666666666666,
+    "y": 0.6796875,
+    "width": 0.07708333333333334,
+    "height": 0.065625
+   },
+   "objectMs": 231
+  },
+  {
+   "file": "000000222118.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00024511014344262295,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.16196422278881073,
+   "phoneBox": {
+    "x": 0.3859375,
+    "y": 0.4566744730679157,
+    "width": 0.0515625,
+    "height": 0.053864168618266976
+   },
+   "objectMs": 231.5
+  },
+  {
+   "file": "000000222299.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0053324768,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.2634555697441101,
+   "phoneBox": {
+    "x": 0.894,
+    "y": 0.648,
+    "width": 0.092,
+    "height": 0.14666666666666667
+   },
+   "objectMs": 229.90000000596046
+  },
+  {
+   "file": "000000225757.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.005401791280653951,
+   "width": 500,
+   "height": 367,
+   "phoneScore": 0.4393064081668854,
+   "phoneBox": {
+    "x": 0.458,
+    "y": 0.5395095367847411,
+    "width": 0.054,
+    "height": 0.10626702997275204
+   },
+   "objectMs": 231.09999999403954
+  },
+  {
+   "file": "000000226147.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.008076991536458333,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.06730914115905762,
+   "phoneBox": {
+    "x": 0.38333333333333336,
+    "y": 0.503125,
+    "width": 0.12708333333333333,
+    "height": 0.0671875
+   },
+   "objectMs": 236.59999999403954
+  },
+  {
+   "file": "000000226171.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.008184515625000001,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.13455715775489807,
+   "phoneBox": {
+    "x": 0.003125,
+    "y": 0.5729166666666666,
+    "width": 0.1140625,
+    "height": 0.08958333333333333
+   },
+   "objectMs": 230.09999999403954
+  },
+  {
+   "file": "000000228214.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.009498729239510489,
+   "width": 429,
+   "height": 640,
+   "phoneScore": 0.49145448207855225,
+   "phoneBox": {
+    "x": 0.4592074592074592,
+    "y": 0.5171875,
+    "width": 0.1258741258741259,
+    "height": 0.0625
+   },
+   "objectMs": 237.80000001192093
+  },
+  {
+   "file": "000000228981.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.12423622688802081,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.7623481154441833,
+   "phoneBox": {
+    "x": 0.628125,
+    "y": 0.3104166666666667,
+    "width": 0.1390625,
+    "height": 0.38958333333333334
+   },
+   "objectMs": 239.2000000178814
+  },
+  {
+   "file": "000000229216.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.004731040933098592,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.27728912234306335,
+   "phoneBox": {
+    "x": 0.1953125,
+    "y": 0.8568075117370892,
+    "width": 0.0875,
+    "height": 0.09624413145539906
+   },
+   "objectMs": 235.59999999403954
+  },
+  {
+   "file": "000000229358.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.001443651743498818,
+   "width": 640,
+   "height": 423,
+   "phoneScore": 0.08575686812400818,
+   "phoneBox": {
+    "x": 0.525,
+    "y": 0.3546099290780142,
+    "width": 0.034375,
+    "height": 0.04728132387706856
+   },
+   "objectMs": 243
+  },
+  {
+   "file": "000000231831.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.009450108173076923,
+   "width": 481,
+   "height": 640,
+   "phoneScore": 0.1947190761566162,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.2984375,
+    "width": 0.15592515592515593,
+    "height": 0.059375
+   },
+   "objectMs": 251.5
+  },
+  {
+   "file": "000000245576.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.027046696239406778,
+   "width": 640,
+   "height": 472,
+   "phoneScore": 0.6210254430770874,
+   "phoneBox": {
+    "x": 0.31875,
+    "y": 0.15677966101694915,
+    "width": 0.115625,
+    "height": 0.2097457627118644
+   },
+   "objectMs": 255.19999998807907
+  },
+  {
+   "file": "000000249180.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0005568266978922717,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.07651035487651825,
+   "phoneBox": {
+    "x": 0.2421875,
+    "y": 0.5245901639344263,
+    "width": 0.0109375,
+    "height": 0.02576112412177986
+   },
+   "objectMs": 236.69999998807907
+  },
+  {
+   "file": "000000250127.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0005936279296875,
+   "width": 640,
+   "height": 640,
+   "phoneScore": 0.04455112665891647,
+   "phoneBox": {
+    "x": 0.525,
+    "y": 0.421875,
+    "width": 0.0234375,
+    "height": 0.0546875
+   },
+   "objectMs": 242.80000001192093
+  },
+  {
+   "file": "000000257566.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.000038645833333333335,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.01969315856695175,
+   "phoneBox": {
+    "x": 0.475,
+    "y": 0.2125,
+    "width": 0.028125,
+    "height": 0.04375
+   },
+   "objectMs": 238.80000001192093
+  },
+  {
+   "file": "000000259597.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.009229106570512822,
+   "width": 640,
+   "height": 312,
+   "phoneScore": 0.09700430929660797,
+   "phoneBox": {
+    "x": 0.3265625,
+    "y": 0.33974358974358976,
+    "width": 0.03125,
+    "height": 0.12179487179487179
+   },
+   "objectMs": 234.90000000596046
+  },
+  {
+   "file": "000000261318.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.004627851288056206,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.14784519374370575,
+   "phoneBox": {
+    "x": 0.4379391100702576,
+    "y": 0.3140625,
+    "width": 0.0351288056206089,
+    "height": 0.059375
+   },
+   "objectMs": 233.90000000596046
+  },
+  {
+   "file": "000000266768.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0009767188901704472,
+   "width": 612,
+   "height": 612,
+   "phoneScore": 0.08467410504817963,
+   "phoneBox": {
+    "x": 0.5163398692810458,
+    "y": 0.5784313725490197,
+    "width": 0.0457516339869281,
+    "height": 0.07516339869281045
+   },
+   "objectMs": 237
+  },
+  {
+   "file": "000000271116.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0031178633549528304,
+   "width": 640,
+   "height": 424,
+   "phoneScore": 0.13361883163452148,
+   "phoneBox": {
+    "x": 0.1859375,
+    "y": 0.7240566037735849,
+    "width": 0.0609375,
+    "height": 0.02830188679245283
+   },
+   "objectMs": 240.80000001192093
+  },
+  {
+   "file": "000000273420.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00119739,
+   "width": 500,
+   "height": 400,
+   "phoneScore": 0.09466107934713364,
+   "phoneBox": {
+    "x": 0.464,
+    "y": 0.9425,
+    "width": 0.142,
+    "height": 0.0525
+   },
+   "objectMs": 234.19999998807907
+  },
+  {
+   "file": "000000278463.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.003136263020833334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08535385876893997,
+   "phoneBox": {
+    "x": 0.34375,
+    "y": 0.4625,
+    "width": 0.2296875,
+    "height": 0.33125
+   },
+   "objectMs": 246
+  },
+  {
+   "file": "000000281414.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0013621825620767495,
+   "width": 443,
+   "height": 640,
+   "phoneScore": 0.04390934482216835,
+   "phoneBox": {
+    "x": 0.44469525959367945,
+    "y": 0.3875,
+    "width": 0.07900677200902935,
+    "height": 0.0421875
+   },
+   "objectMs": 244.10000002384186
+  },
+  {
+   "file": "000000281687.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.006577416000000001,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.06882569193840027,
+   "phoneBox": {
+    "x": 0.196,
+    "y": 0.6053333333333333,
+    "width": 0.024,
+    "height": 0.018666666666666668
+   },
+   "objectMs": 239.5
+  },
+  {
+   "file": "000000284764.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.11612919862412177,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.31077325344085693,
+   "phoneBox": {
+    "x": 0.203125,
+    "y": 0.6463700234192038,
+    "width": 0.253125,
+    "height": 0.351288056206089
+   },
+   "objectMs": 233.5
+  },
+  {
+   "file": "000000285047.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.010802725775761125,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.25683480501174927,
+   "phoneBox": {
+    "x": 0.7822014051522248,
+    "y": 0.7375,
+    "width": 0.15456674473067916,
+    "height": 0.0734375
+   },
+   "objectMs": 232.19999998807907
+  },
+  {
+   "file": "000000286523.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.024421446984435796,
+   "width": 640,
+   "height": 514,
+   "phoneScore": 0.3707534074783325,
+   "phoneBox": {
+    "x": 0.6546875,
+    "y": 0.7821011673151751,
+    "width": 0.0453125,
+    "height": 0.08949416342412451
+   },
+   "objectMs": 243.60000002384186
+  },
+  {
+   "file": "000000288391.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.17008215676229507,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.05032995343208313,
+   "phoneBox": {
+    "x": 0.01873536299765808,
+    "y": 0.059375,
+    "width": 0.3700234192037471,
+    "height": 0.4765625
+   },
+   "objectMs": 237.09999999403954
+  },
+  {
+   "file": "000000292488.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.008725435005868544,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.6499587297439575,
+   "phoneBox": {
+    "x": 0.5328125,
+    "y": 0.2605633802816901,
+    "width": 0.0453125,
+    "height": 0.176056338028169
+   },
+   "objectMs": 246
+  },
+  {
+   "file": "000000295713.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0010174202283372365,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.20855404436588287,
+   "phoneBox": {
+    "x": 0.7046875,
+    "y": 0.3583138173302108,
+    "width": 0.0203125,
+    "height": 0.04449648711943794
+   },
+   "objectMs": 247.69999998807907
+  },
+  {
+   "file": "000000296657.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00013305035128805622,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.050036825239658356,
+   "phoneBox": {
+    "x": 0.575,
+    "y": 0.3372365339578454,
+    "width": 0.021875,
+    "height": 0.03044496487119438
+   },
+   "objectMs": 226.2000000178814
+  },
+  {
+   "file": "000000300039.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.45107213636363636,
+   "width": 500,
+   "height": 374,
+   "phoneScore": 0.3409167528152466,
+   "phoneBox": {
+    "x": 0.494,
+    "y": 0.5775401069518716,
+    "width": 0.164,
+    "height": 0.1443850267379679
+   },
+   "objectMs": 234.2000000178814
+  },
+  {
+   "file": "000000301421.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.007377768588992974,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.20472800731658936,
+   "phoneBox": {
+    "x": 0.325,
+    "y": 0.5550351288056206,
+    "width": 0.0828125,
+    "height": 0.06323185011709602
+   },
+   "objectMs": 229.09999999403954
+  },
+  {
+   "file": "000000302452.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.0006877451372768751,
+   "width": 403,
+   "height": 403,
+   "phoneScore": 0.0350920669734478,
+   "phoneBox": {
+    "x": 0.23076923076923078,
+    "y": 0.5558312655086849,
+    "width": 0.10421836228287841,
+    "height": 0.07692307692307693
+   },
+   "objectMs": 236.2999999821186
+  },
+  {
+   "file": "000000302882.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.10588209949999998,
+   "width": 500,
+   "height": 400,
+   "phoneScore": 0.5052628517150879,
+   "phoneBox": {
+    "x": 0.434,
+    "y": 0.2075,
+    "width": 0.314,
+    "height": 0.7725
+   },
+   "objectMs": 240.5
+  },
+  {
+   "file": "000000316015.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.0082675635,
+   "width": 500,
+   "height": 400,
+   "phoneScore": 0.1210659071803093,
+   "phoneBox": {
+    "x": 0.424,
+    "y": 0.5275,
+    "width": 0.106,
+    "height": 0.0575
+   },
+   "objectMs": 226.2000000178814
+  },
+  {
+   "file": "000000323263.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.00032700398489932884,
+   "width": 640,
+   "height": 447,
+   "phoneScore": 0.07108669728040695,
+   "phoneBox": {
+    "x": 0.753125,
+    "y": 0.2930648769574944,
+    "width": 0.0234375,
+    "height": 0.03131991051454139
+   },
+   "objectMs": 238
+  },
+  {
+   "file": "000000325838.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0009777936197916668,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.13474611937999725,
+   "phoneBox": {
+    "x": 0.4796875,
+    "y": 0.6958333333333333,
+    "width": 0.0640625,
+    "height": 0.07916666666666666
+   },
+   "objectMs": 235.39999997615814
+  },
+  {
+   "file": "000000326541.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.023388534288194446,
+   "width": 640,
+   "height": 360,
+   "phoneScore": 0.4221140444278717,
+   "phoneBox": {
+    "x": 0.39375,
+    "y": 0.275,
+    "width": 0.0609375,
+    "height": 0.19444444444444445
+   },
+   "objectMs": 232
+  },
+  {
+   "file": "000000326970.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.0023926513671875,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1302303671836853,
+   "phoneBox": {
+    "x": 0.1390625,
+    "y": 0.6958333333333333,
+    "width": 0.1890625,
+    "height": 0.12083333333333333
+   },
+   "objectMs": 232.09999999403954
+  },
+  {
+   "file": "000000332570.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.4298300615384615,
+   "width": 390,
+   "height": 500,
+   "phoneScore": 0.6713449954986572,
+   "phoneBox": {
+    "x": 0.2230769230769231,
+    "y": 0.116,
+    "width": 0.6153846153846154,
+    "height": 0.746
+   },
+   "objectMs": 231.10000002384186
+  },
+  {
+   "file": "000000333402.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.0003930661764705882,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.03930444270372391,
+   "phoneBox": {
+    "x": 0.765625,
+    "y": 0.571764705882353,
+    "width": 0.0453125,
+    "height": 0.12470588235294118
+   },
+   "objectMs": 233.90000000596046
+  },
+  {
+   "file": "000000334309.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.03771717286299766,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.08789675682783127,
+   "phoneBox": {
+    "x": 0.39375,
+    "y": 0.5690866510538641,
+    "width": 0.190625,
+    "height": 0.19672131147540983
+   },
+   "objectMs": 239.80000001192093
+  },
+  {
+   "file": "000000334555.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00012399207746478872,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.04845263436436653,
+   "phoneBox": {
+    "x": 0.565625,
+    "y": 0.23943661971830985,
+    "width": 0.028125,
+    "height": 0.04929577464788732
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000334977.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.19996796337890627,
+   "width": 640,
+   "height": 320,
+   "phoneScore": 0.44116783142089844,
+   "phoneBox": {
+    "x": 0.2359375,
+    "y": 0.0125,
+    "width": 0.4765625,
+    "height": 0.93125
+   },
+   "objectMs": 242.40000000596046
+  },
+  {
+   "file": "000000336628.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0004103154205607477,
+   "width": 428,
+   "height": 640,
+   "phoneScore": 0.0943574532866478,
+   "phoneBox": {
+    "x": 0.0514018691588785,
+    "y": 0.734375,
+    "width": 0.12850467289719625,
+    "height": 0.0859375
+   },
+   "objectMs": 232.2999999821186
+  },
+  {
+   "file": "000000338304.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.002814258088235294,
+   "width": 425,
+   "height": 640,
+   "phoneScore": 0.019653666764497757,
+   "phoneBox": {
+    "x": 0.4235294117647059,
+    "y": 0.4140625,
+    "width": 0.02823529411764706,
+    "height": 0.0390625
+   },
+   "objectMs": 234
+  },
+  {
+   "file": "000000340894.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0025041884765625005,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.22464701533317566,
+   "phoneBox": {
+    "x": 0.7265625,
+    "y": 0.6770833333333334,
+    "width": 0.1203125,
+    "height": 0.08541666666666667
+   },
+   "objectMs": 236.5
+  },
+  {
+   "file": "000000341828.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.03880319428424965,
+   "width": 612,
+   "height": 612,
+   "phoneScore": 0.6617412567138672,
+   "phoneBox": {
+    "x": 0.5620915032679739,
+    "y": 0.4150326797385621,
+    "width": 0.14869281045751634,
+    "height": 0.2434640522875817
+   },
+   "objectMs": 234.59999999403954
+  },
+  {
+   "file": "000000343149.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0042976484375,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.0676753968000412,
+   "phoneBox": {
+    "x": 0.15,
+    "y": 0.75625,
+    "width": 0.014583333333333334,
+    "height": 0.01875
+   },
+   "objectMs": 234.39999997615814
+  },
+  {
+   "file": "000000343706.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.03535619644657258,
+   "width": 640,
+   "height": 496,
+   "phoneScore": 0.6146727800369263,
+   "phoneBox": {
+    "x": 0.290625,
+    "y": 0.6350806451612904,
+    "width": 0.1921875,
+    "height": 0.14717741935483872
+   },
+   "objectMs": 232.80000001192093
+  },
+  {
+   "file": "000000345356.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.013628720703125001,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.7075865864753723,
+   "phoneBox": {
+    "x": 0.2453125,
+    "y": 0.5479166666666667,
+    "width": 0.0703125,
+    "height": 0.14583333333333334
+   },
+   "objectMs": 238.69999998807907
+  },
+  {
+   "file": "000000345397.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.20055774293333334,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.7167518734931946,
+   "phoneBox": {
+    "x": 0.464,
+    "y": 0.33066666666666666,
+    "width": 0.524,
+    "height": 0.376
+   },
+   "objectMs": 232.09999999403954
+  },
+  {
+   "file": "000000346968.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.00293362676056338,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.26222100853919983,
+   "phoneBox": {
+    "x": 0.58125,
+    "y": 0.4953051643192488,
+    "width": 0.04375,
+    "height": 0.107981220657277
+   },
+   "objectMs": 238.40000000596046
+  },
+  {
+   "file": "000000348481.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0110914384765625,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.6562321782112122,
+   "phoneBox": {
+    "x": 0.025,
+    "y": 0.7583333333333333,
+    "width": 0.096875,
+    "height": 0.21458333333333332
+   },
+   "objectMs": 232.69999998807907
+  },
+  {
+   "file": "000000351530.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.00038678571428571424,
+   "width": 640,
+   "height": 378,
+   "phoneScore": 0.02715444378554821,
+   "phoneBox": {
+    "x": 0.2703125,
+    "y": 0.3915343915343915,
+    "width": 0.0359375,
+    "height": 0.09259259259259259
+   },
+   "objectMs": 241.80000001192093
+  },
+  {
+   "file": "000000357941.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.005890864,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.3148166537284851,
+   "phoneBox": {
+    "x": 0.044,
+    "y": 0.5626666666666666,
+    "width": 0.044,
+    "height": 0.152
+   },
+   "objectMs": 242.19999998807907
+  },
+  {
+   "file": "000000358923.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.02698589880257009,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.38624075055122375,
+   "phoneBox": {
+    "x": 0.671875,
+    "y": 0.3247663551401869,
+    "width": 0.090625,
+    "height": 0.14018691588785046
+   },
+   "objectMs": 242.39999997615814
+  },
+  {
+   "file": "000000361103.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.000046440281030444964,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.03869793191552162,
+   "phoneBox": {
+    "x": 0.878125,
+    "y": 0.550351288056206,
+    "width": 0.0109375,
+    "height": 0.0234192037470726
+   },
+   "objectMs": 233.80000001192093
+  },
+  {
+   "file": "000000363188.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0019457647058823532,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.14006052911281586,
+   "phoneBox": {
+    "x": 0.765625,
+    "y": 0.39294117647058824,
+    "width": 0.0515625,
+    "height": 0.09176470588235294
+   },
+   "objectMs": 235.59999999403954
+  },
+  {
+   "file": "000000365886.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.1339429376,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.7020741105079651,
+   "phoneBox": {
+    "x": 0.104,
+    "y": 0.42933333333333334,
+    "width": 0.226,
+    "height": 0.5546666666666666
+   },
+   "objectMs": 237.19999998807907
+  },
+  {
+   "file": "000000366225.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.009460880891866912,
+   "width": 541,
+   "height": 640,
+   "phoneScore": 0.24058713018894196,
+   "phoneBox": {
+    "x": 0.09242144177449169,
+    "y": 0.396875,
+    "width": 0.08133086876155268,
+    "height": 0.109375
+   },
+   "objectMs": 246.5
+  },
+  {
+   "file": "000000367569.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0007435984141791045,
+   "width": 469,
+   "height": 640,
+   "phoneScore": 0.053782250732183456,
+   "phoneBox": {
+    "x": 0.3347547974413646,
+    "y": 0.5578125,
+    "width": 0.03837953091684435,
+    "height": 0.0171875
+   },
+   "objectMs": 259.09999999403954
+  },
+  {
+   "file": "000000376264.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00975037422037422,
+   "width": 640,
+   "height": 481,
+   "phoneScore": 0.4930128753185272,
+   "phoneBox": {
+    "x": 0.5828125,
+    "y": 0.36382536382536385,
+    "width": 0.41875,
+    "height": 0.632016632016632
+   },
+   "objectMs": 244.2000000178814
+  },
+  {
+   "file": "000000376322.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.011378335839435148,
+   "width": 478,
+   "height": 640,
+   "phoneScore": 0.08141294121742249,
+   "phoneBox": {
+    "x": 0.8619246861924686,
+    "y": 0.575,
+    "width": 0.13389121338912133,
+    "height": 0.121875
+   },
+   "objectMs": 239.90000000596046
+  },
+  {
+   "file": "000000380913.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.10082999014310748,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.12938469648361206,
+   "phoneBox": {
+    "x": 0.2671875,
+    "y": 0.5911214953271028,
+    "width": 0.0359375,
+    "height": 0.037383177570093455
+   },
+   "objectMs": 232.5
+  },
+  {
+   "file": "000000383289.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0035648155968468465,
+   "width": 640,
+   "height": 444,
+   "phoneScore": 0.13076487183570862,
+   "phoneBox": {
+    "x": 0.6390625,
+    "y": 0.1891891891891892,
+    "width": 0.0453125,
+    "height": 0.1036036036036036
+   },
+   "objectMs": 236.5
+  },
+  {
+   "file": "000000384808.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0025268437333333337,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.35311734676361084,
+   "phoneBox": {
+    "x": 0.7333333333333333,
+    "y": 0.158,
+    "width": 0.048,
+    "height": 0.074
+   },
+   "objectMs": 237.90000000596046
+  },
+  {
+   "file": "000000388903.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00519830843373494,
+   "width": 500,
+   "height": 332,
+   "phoneScore": 0.40304431319236755,
+   "phoneBox": {
+    "x": 0.592,
+    "y": 0.3313253012048193,
+    "width": 0.074,
+    "height": 0.12349397590361445
+   },
+   "objectMs": 237.59999999403954
+  },
+  {
+   "file": "000000388927.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.22018640950520832,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.7535372376441956,
+   "phoneBox": {
+    "x": 0.40625,
+    "y": 0.3328125,
+    "width": 0.4125,
+    "height": 0.46875
+   },
+   "objectMs": 239.10000002384186
+  },
+  {
+   "file": "000000389109.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0074514541861826706,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.250647634267807,
+   "phoneBox": {
+    "x": 0.6651053864168618,
+    "y": 0.578125,
+    "width": 0.25526932084309134,
+    "height": 0.0765625
+   },
+   "objectMs": 230.40000000596046
+  },
+  {
+   "file": "000000391722.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0037075812007874016,
+   "width": 635,
+   "height": 640,
+   "phoneScore": 0.10460855811834335,
+   "phoneBox": {
+    "x": 0.8110236220472441,
+    "y": 0.8625,
+    "width": 0.11496062992125984,
+    "height": 0.0421875
+   },
+   "objectMs": 236.40000000596046
+  },
+  {
+   "file": "000000394677.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.004470724266666666,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.3947252929210663,
+   "phoneBox": {
+    "x": 0.144,
+    "y": 0.2826666666666667,
+    "width": 0.064,
+    "height": 0.06933333333333333
+   },
+   "objectMs": 232.40000000596046
+  },
+  {
+   "file": "000000395180.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00016225961538461538,
+   "width": 640,
+   "height": 481,
+   "phoneScore": 0.031051253899931908,
+   "phoneBox": {
+    "x": 0.1515625,
+    "y": 0.3762993762993763,
+    "width": 0.01875,
+    "height": 0.02286902286902287
+   },
+   "objectMs": 234.7000000178814
+  },
+  {
+   "file": "000000396729.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.029188916911764704,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.773040771484375,
+   "phoneBox": {
+    "x": 0.53125,
+    "y": 0.2611764705882353,
+    "width": 0.1796875,
+    "height": 0.16941176470588235
+   },
+   "objectMs": 233.30000001192093
+  },
+  {
+   "file": "000000398377.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.00107604,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.12929107248783112,
+   "phoneBox": {
+    "x": 0.098,
+    "y": 0.592,
+    "width": 0.122,
+    "height": 0.056
+   },
+   "objectMs": 237.40000000596046
+  },
+  {
+   "file": "000000399205.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.007277630208333333,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.2417375147342682,
+   "phoneBox": {
+    "x": 0.6171875,
+    "y": 0.44375,
+    "width": 0.0765625,
+    "height": 0.1
+   },
+   "objectMs": 233.09999999403954
+  },
+  {
+   "file": "000000402720.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.002928531494297065,
+   "width": 612,
+   "height": 612,
+   "phoneScore": 0.07739140838384628,
+   "phoneBox": {
+    "x": 0.6225490196078431,
+    "y": 0.7565359477124183,
+    "width": 0.06535947712418301,
+    "height": 0.058823529411764705
+   },
+   "objectMs": 240
+  },
+  {
+   "file": "000000411754.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.016900807291666667,
+   "width": 320,
+   "height": 240,
+   "phoneScore": 0.18443188071250916,
+   "phoneBox": {
+    "x": 0.125,
+    "y": 0.8833333333333333,
+    "width": 0.11875,
+    "height": 0.10833333333333334
+   },
+   "objectMs": 234.40000000596046
+  },
+  {
+   "file": "000000411817.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.00081938671875,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.057095419615507126,
+   "phoneBox": {
+    "x": 0.534375,
+    "y": 0.2833333333333333,
+    "width": 0.059375,
+    "height": 0.1125
+   },
+   "objectMs": 239.2999999821186
+  },
+  {
+   "file": "000000414510.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0003181285807291666,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.020701000466942787,
+   "phoneBox": {
+    "x": 0.325,
+    "y": 0.45,
+    "width": 0.022916666666666665,
+    "height": 0.0234375
+   },
+   "objectMs": 229.7000000178814
+  },
+  {
+   "file": "000000421455.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.11725003306666666,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.2425854504108429,
+   "phoneBox": {
+    "x": 0.1,
+    "y": 0.4666666666666667,
+    "width": 0.26,
+    "height": 0.49866666666666665
+   },
+   "objectMs": 234.09999999403954
+  },
+  {
+   "file": "000000423123.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.001379083406690141,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.07019903510808945,
+   "phoneBox": {
+    "x": 0.471875,
+    "y": 0.4131455399061033,
+    "width": 0.0375,
+    "height": 0.06807511737089202
+   },
+   "objectMs": 237.90000000596046
+  },
+  {
+   "file": "000000433980.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.057424291733333334,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.11634541302919388,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.574,
+    "width": 0.384,
+    "height": 0.204
+   },
+   "objectMs": 242.19999998807907
+  },
+  {
+   "file": "000000439773.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.06173721354166666,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.7055369019508362,
+   "phoneBox": {
+    "x": 0.378125,
+    "y": 0.6916666666666667,
+    "width": 0.2609375,
+    "height": 0.23125
+   },
+   "objectMs": 248.2000000178814
+  },
+  {
+   "file": "000000441543.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0017687042493796524,
+   "width": 640,
+   "height": 403,
+   "phoneScore": 0.042466361075639725,
+   "phoneBox": {
+    "x": 0.2296875,
+    "y": 0.8089330024813896,
+    "width": 0.1171875,
+    "height": 0.18610421836228289
+   },
+   "objectMs": 229.69999998807907
+  },
+  {
+   "file": "000000442456.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.00013552931882022473,
+   "width": 640,
+   "height": 356,
+   "phoneScore": 0.019014250487089157,
+   "phoneBox": {
+    "x": 0.31875,
+    "y": 0.2247191011235955,
+    "width": 0.021875,
+    "height": 0.03932584269662921
+   },
+   "objectMs": 235.19999998807907
+  },
+  {
+   "file": "000000445792.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0101400544,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.11857890337705612,
+   "phoneBox": {
+    "x": 0.46,
+    "y": 0.0026666666666666666,
+    "width": 0.252,
+    "height": 0.4533333333333333
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000446207.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.23937452148437502,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.6928877830505371,
+   "phoneBox": {
+    "x": 0.171875,
+    "y": 0.5875,
+    "width": 0.61875,
+    "height": 0.38125
+   },
+   "objectMs": 241.7000000178814
+  },
+  {
+   "file": "000000450303.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00033253515625,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1610967218875885,
+   "phoneBox": {
+    "x": 0.15625,
+    "y": 0.6895833333333333,
+    "width": 0.115625,
+    "height": 0.04375
+   },
+   "objectMs": 229.09999999403954
+  },
+  {
+   "file": "000000450399.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.00600947265625,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.04646223038434982,
+   "phoneBox": {
+    "x": 0.0859375,
+    "y": 0.50625,
+    "width": 0.1,
+    "height": 0.05
+   },
+   "objectMs": 230.90000000596046
+  },
+  {
+   "file": "000000450686.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.18451383622798434,
+   "width": 511,
+   "height": 640,
+   "phoneScore": 0.7385861277580261,
+   "phoneBox": {
+    "x": 0.3268101761252446,
+    "y": 0.2765625,
+    "width": 0.38747553816046965,
+    "height": 0.4578125
+   },
+   "objectMs": 240.30000001192093
+  },
+  {
+   "file": "000000453341.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.004050269531249999,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.11822578310966492,
+   "phoneBox": {
+    "x": 0.1640625,
+    "y": 0.6479166666666667,
+    "width": 0.059375,
+    "height": 0.08333333333333333
+   },
+   "objectMs": 235.40000000596046
+  },
+  {
+   "file": "000000454404.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.002645291824196597,
+   "width": 640,
+   "height": 529,
+   "phoneScore": 0.0654386654496193,
+   "phoneBox": {
+    "x": 0.0109375,
+    "y": 0.8374291115311909,
+    "width": 0.103125,
+    "height": 0.16068052930056712
+   },
+   "objectMs": 236
+  },
+  {
+   "file": "000000459272.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.017335968750000003,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.3396443724632263,
+   "phoneBox": {
+    "x": 0.6458333333333334,
+    "y": 0.7421875,
+    "width": 0.1875,
+    "height": 0.084375
+   },
+   "objectMs": 234.90000000596046
+  },
+  {
+   "file": "000000462643.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.5157136095588235,
+   "width": 425,
+   "height": 640,
+   "phoneScore": 0.5125587582588196,
+   "phoneBox": {
+    "x": 0.004705882352941176,
+    "y": 0.078125,
+    "width": 0.6494117647058824,
+    "height": 0.8765625
+   },
+   "objectMs": 238.30000001192093
+  },
+  {
+   "file": "000000463199.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.005780091796875,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.13037815690040588,
+   "phoneBox": {
+    "x": 0.5265625,
+    "y": 0.7104166666666667,
+    "width": 0.0703125,
+    "height": 0.058333333333333334
+   },
+   "objectMs": 243.40000000596046
+  },
+  {
+   "file": "000000465718.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.007446274038461539,
+   "width": 640,
+   "height": 429,
+   "phoneScore": 0.6860975027084351,
+   "phoneBox": {
+    "x": 0.8484375,
+    "y": 0.8461538461538461,
+    "width": 0.0625,
+    "height": 0.11421911421911422
+   },
+   "objectMs": 238.10000002384186
+  },
+  {
+   "file": "000000469067.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.008216865234375,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.3156748116016388,
+   "phoneBox": {
+    "x": 0.796875,
+    "y": 0.8666666666666667,
+    "width": 0.0765625,
+    "height": 0.11458333333333333
+   },
+   "objectMs": 235.40000000596046
+  },
+  {
+   "file": "000000472678.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0019271484375,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1412501484155655,
+   "phoneBox": {
+    "x": 0.7125,
+    "y": 0.7375,
+    "width": 0.0921875,
+    "height": 0.04791666666666667
+   },
+   "objectMs": 238.30000001192093
+  },
+  {
+   "file": "000000478420.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0013986897786458334,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.07051621377468109,
+   "phoneBox": {
+    "x": 0.19375,
+    "y": 0.271875,
+    "width": 0.020833333333333332,
+    "height": 0.0171875
+   },
+   "objectMs": 246.7000000178814
+  },
+  {
+   "file": "000000480212.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.18443001171874998,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.8455782532691956,
+   "phoneBox": {
+    "x": 0.4265625,
+    "y": 0.3333333333333333,
+    "width": 0.2796875,
+    "height": 0.58125
+   },
+   "objectMs": 235.59999999403954
+  },
+  {
+   "file": "000000492110.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.015702009660421547,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.6514558792114258,
+   "phoneBox": {
+    "x": 0.521875,
+    "y": 0.8454332552693209,
+    "width": 0.146875,
+    "height": 0.0936768149882904
+   },
+   "objectMs": 233.40000000596046
+  },
+  {
+   "file": "000000493334.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.02860506302250804,
+   "width": 500,
+   "height": 311,
+   "phoneScore": 0.04961365461349487,
+   "phoneBox": {
+    "x": 0.424,
+    "y": 0.03536977491961415,
+    "width": 0.074,
+    "height": 0.3279742765273312
+   },
+   "objectMs": 232.7999999821186
+  },
+  {
+   "file": "000000496571.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.012870396662763465,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.6829982995986938,
+   "phoneBox": {
+    "x": 0.05152224824355972,
+    "y": 0.2921875,
+    "width": 0.117096018735363,
+    "height": 0.103125
+   },
+   "objectMs": 235
+  },
+  {
+   "file": "000000497344.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 6,
+   "phoneAreaRatio": 0.0334707027027027,
+   "width": 500,
+   "height": 333,
+   "phoneScore": 0.29941490292549133,
+   "phoneBox": {
+    "x": 0.704,
+    "y": 0.7027027027027027,
+    "width": 0.196,
+    "height": 0.16216216216216217
+   },
+   "objectMs": 236.10000002384186
+  },
+  {
+   "file": "000000498747.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0012067789713541667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.38101062178611755,
+   "phoneBox": {
+    "x": 0.440625,
+    "y": 0.40625,
+    "width": 0.040625,
+    "height": 0.1
+   },
+   "objectMs": 232.5
+  },
+  {
+   "file": "000000499266.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.5231324381510417,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.4956754446029663,
+   "phoneBox": {
+    "x": 0.153125,
+    "y": 0.20833333333333334,
+    "width": 0.75625,
+    "height": 0.6208333333333333
+   },
+   "objectMs": 261.5
+  },
+  {
+   "file": "000000506933.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.106966484375,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.6155869960784912,
+   "phoneBox": {
+    "x": 0.11875,
+    "y": 0.37083333333333335,
+    "width": 0.196875,
+    "height": 0.4791666666666667
+   },
+   "objectMs": 237.2000000178814
+  },
+  {
+   "file": "000000507473.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.012597247395833334,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.45608359575271606,
+   "phoneBox": {
+    "x": 0.2515625,
+    "y": 0.25416666666666665,
+    "width": 0.1265625,
+    "height": 0.11666666666666667
+   },
+   "objectMs": 229.90000000596046
+  },
+  {
+   "file": "000000507575.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.0036834960937499996,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.20955975353717804,
+   "phoneBox": {
+    "x": 0.2109375,
+    "y": 0.65625,
+    "width": 0.0609375,
+    "height": 0.0625
+   },
+   "objectMs": 246.80000001192093
+  },
+  {
+   "file": "000000516916.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0019292539062499999,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1761513501405716,
+   "phoneBox": {
+    "x": 0.784375,
+    "y": 0.4479166666666667,
+    "width": 0.128125,
+    "height": 0.16875
+   },
+   "objectMs": 236.09999999403954
+  },
+  {
+   "file": "000000517687.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.25381294227430556,
+   "width": 640,
+   "height": 360,
+   "phoneScore": 0.7727005481719971,
+   "phoneBox": {
+    "x": 0.503125,
+    "y": 0.05277777777777778,
+    "width": 0.275,
+    "height": 0.9138888888888889
+   },
+   "objectMs": 234.90000000596046
+  },
+  {
+   "file": "000000522393.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.000022922607421874997,
+   "width": 640,
+   "height": 640,
+   "phoneScore": 0.0077391332015395164,
+   "phoneBox": {
+    "x": 0.50625,
+    "y": 0.796875,
+    "width": 0.0203125,
+    "height": 0.03125
+   },
+   "objectMs": 240.19999998807907
+  },
+  {
+   "file": "000000527427.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.001444978841145833,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.4562419056892395,
+   "phoneBox": {
+    "x": 0.734375,
+    "y": 0.42291666666666666,
+    "width": 0.0671875,
+    "height": 0.08541666666666667
+   },
+   "objectMs": 238.40000000596046
+  },
+  {
+   "file": "000000529762.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0122839609375,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.23604245483875275,
+   "phoneBox": {
+    "x": 0.3296875,
+    "y": 0.5333333333333333,
+    "width": 0.175,
+    "height": 0.13541666666666666
+   },
+   "objectMs": 227.09999999403954
+  },
+  {
+   "file": "000000537270.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.02889205078125,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.5981059670448303,
+   "phoneBox": {
+    "x": 0.4796875,
+    "y": 0.8395833333333333,
+    "width": 0.23125,
+    "height": 0.15416666666666667
+   },
+   "objectMs": 232.2999999821186
+  },
+  {
+   "file": "000000537991.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0091981884765625,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.8009886741638184,
+   "phoneBox": {
+    "x": 0.2453125,
+    "y": 0.35,
+    "width": 0.06875,
+    "height": 0.13333333333333333
+   },
+   "objectMs": 230.59999999403954
+  },
+  {
+   "file": "000000545100.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.0029290346244131454,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.17663857340812683,
+   "phoneBox": {
+    "x": 0.696875,
+    "y": 0.3591549295774648,
+    "width": 0.0265625,
+    "height": 0.04460093896713615
+   },
+   "objectMs": 241.19999998807907
+  },
+  {
+   "file": "000000546475.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.017800097911227154,
+   "width": 383,
+   "height": 640,
+   "phoneScore": 0.5859125256538391,
+   "phoneBox": {
+    "x": 0.4281984334203655,
+    "y": 0.284375,
+    "width": 0.14882506527415143,
+    "height": 0.0875
+   },
+   "objectMs": 237.5
+  },
+  {
+   "file": "000000546626.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 2,
+   "phoneAreaRatio": 0.05622720833333333,
+   "width": 300,
+   "height": 400,
+   "phoneScore": 0.7390735149383545,
+   "phoneBox": {
+    "x": 0.45,
+    "y": 0.46,
+    "width": 0.29333333333333333,
+    "height": 0.175
+   },
+   "objectMs": 235.2000000178814
+  },
+  {
+   "file": "000000547336.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.0039707324218750005,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1320243924856186,
+   "phoneBox": {
+    "x": 0.1765625,
+    "y": 0.3875,
+    "width": 0.2234375,
+    "height": 0.28541666666666665
+   },
+   "objectMs": 238.69999998807907
+  },
+  {
+   "file": "000000549674.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0058203450520833335,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.24022158980369568,
+   "phoneBox": {
+    "x": 0.1265625,
+    "y": 0.6083333333333333,
+    "width": 0.0734375,
+    "height": 0.1375
+   },
+   "objectMs": 229.80000001192093
+  },
+  {
+   "file": "000000553664.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 4,
+   "phoneAreaRatio": 0.011541745923913042,
+   "width": 640,
+   "height": 414,
+   "phoneScore": 0.35578644275665283,
+   "phoneBox": {
+    "x": 0.7640625,
+    "y": 0.7874396135265701,
+    "width": 0.1671875,
+    "height": 0.07246376811594203
+   },
+   "objectMs": 243
+  },
+  {
+   "file": "000000553731.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.00047233133761682245,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.05252297595143318,
+   "phoneBox": {
+    "x": 0.4234375,
+    "y": 0.35046728971962615,
+    "width": 0.0421875,
+    "height": 0.07710280373831775
+   },
+   "objectMs": 233.2000000178814
+  },
+  {
+   "file": "000000560911.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.001565827702702703,
+   "width": 481,
+   "height": 640,
+   "phoneScore": 0.05734126642346382,
+   "phoneBox": {
+    "x": 0.5135135135135135,
+    "y": 0.2296875,
+    "width": 0.0893970893970894,
+    "height": 0.0640625
+   },
+   "objectMs": 234.19999998807907
+  },
+  {
+   "file": "000000561366.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.13733242545572918,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.20444490015506744,
+   "phoneBox": {
+    "x": 0.546875,
+    "y": 0.17291666666666666,
+    "width": 0.3859375,
+    "height": 0.34791666666666665
+   },
+   "objectMs": 234.59999999403954
+  },
+  {
+   "file": "000000562843.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.07484222293333334,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.6471520662307739,
+   "phoneBox": {
+    "x": 0.13,
+    "y": 0.472,
+    "width": 0.354,
+    "height": 0.21866666666666668
+   },
+   "objectMs": 233.19999998807907
+  },
+  {
+   "file": "000000563882.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.012549044117647058,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.35477128624916077,
+   "phoneBox": {
+    "x": 0.578125,
+    "y": 0.548235294117647,
+    "width": 0.121875,
+    "height": 0.09647058823529411
+   },
+   "objectMs": 239.90000000596046
+  },
+  {
+   "file": "000000564091.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.00405451112412178,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.3379687964916229,
+   "phoneBox": {
+    "x": 0.5128805620608899,
+    "y": 0.0875,
+    "width": 0.07259953161592506,
+    "height": 0.065625
+   },
+   "objectMs": 231.80000001192093
+  },
+  {
+   "file": "000000569059.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 3,
+   "phoneAreaRatio": 0.0025595768229166667,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.12938940525054932,
+   "phoneBox": {
+    "x": 0.7171875,
+    "y": 0.5708333333333333,
+    "width": 0.071875,
+    "height": 0.04791666666666667
+   },
+   "objectMs": 240.7000000178814
+  },
+  {
+   "file": "000000579655.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 1,
+   "phoneAreaRatio": 0.023599155310150374,
+   "width": 640,
+   "height": 399,
+   "phoneScore": 0.45717889070510864,
+   "phoneBox": {
+    "x": 0.4234375,
+    "y": 0.40601503759398494,
+    "width": 0.1125,
+    "height": 0.2957393483709273
+   },
+   "objectMs": 227.7000000178814
+  },
+  {
+   "file": "000000581317.jpg",
+   "source": "COCO val2017",
+   "group": "phone",
+   "label": "phone",
+   "license": 5,
+   "phoneAreaRatio": 0.0034288378354519772,
+   "width": 640,
+   "height": 354,
+   "phoneScore": 0.46492165327072144,
+   "phoneBox": {
+    "x": 0.6328125,
+    "y": 0.403954802259887,
+    "width": 0.05,
+    "height": 0.1016949152542373
+   },
+   "objectMs": 222.19999998807907
+  },
+  {
+   "file": "000000001503.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 320,
+   "height": 240,
+   "phoneScore": 0.08040764927864075,
+   "phoneBox": {
+    "x": 0.384375,
+    "y": 0.7458333333333333,
+    "width": 0.109375,
+    "height": 0.07916666666666666
+   },
+   "objectMs": 228.09999999403954
+  },
+  {
+   "file": "000000004795.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.21414293348789215,
+   "phoneBox": {
+    "x": 0.828125,
+    "y": 0.5333333333333333,
+    "width": 0.1671875,
+    "height": 0.43125
+   },
+   "objectMs": 232.39999997615814
+  },
+  {
+   "file": "000000009400.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.22431612014770508,
+   "phoneBox": {
+    "x": 0.275,
+    "y": 0.4,
+    "width": 0.065625,
+    "height": 0.13958333333333334
+   },
+   "objectMs": 221.90000000596046
+  },
+  {
+   "file": "000000010707.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08265272527933121,
+   "phoneBox": {
+    "x": 0.3640625,
+    "y": 0.75,
+    "width": 0.046875,
+    "height": 0.08333333333333333
+   },
+   "objectMs": 230.09999999403954
+  },
+  {
+   "file": "000000011813.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 333,
+   "height": 500,
+   "phoneScore": 0.06450456380844116,
+   "phoneBox": {
+    "x": 0.06906906906906907,
+    "y": 0.776,
+    "width": 0.4084084084084084,
+    "height": 0.172
+   },
+   "objectMs": 233.30000001192093
+  },
+  {
+   "file": "000000013659.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1290939748287201,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.9270833333333334,
+    "width": 0.0609375,
+    "height": 0.06458333333333334
+   },
+   "objectMs": 230.19999998807907
+  },
+  {
+   "file": "000000014226.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08244892954826355,
+   "phoneBox": {
+    "x": 0.3390625,
+    "y": 0.5125,
+    "width": 0.34375,
+    "height": 0.25416666666666665
+   },
+   "objectMs": 223
+  },
+  {
+   "file": "000000016439.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.06417540460824966,
+   "phoneBox": {
+    "x": 0.2890625,
+    "y": 0.35208333333333336,
+    "width": 0.290625,
+    "height": 0.2520833333333333
+   },
+   "objectMs": 223.2999999821186
+  },
+  {
+   "file": "000000019786.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.04546122997999191,
+   "phoneBox": {
+    "x": 0.904,
+    "y": 0,
+    "width": 0.086,
+    "height": 0.11733333333333333
+   },
+   "objectMs": 229.90000000596046
+  },
+  {
+   "file": "000000022371.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 425,
+   "height": 282,
+   "phoneScore": 0.09578220546245575,
+   "phoneBox": {
+    "x": 0.5623529411764706,
+    "y": 0.9397163120567376,
+    "width": 0.0988235294117647,
+    "height": 0.05319148936170213
+   },
+   "objectMs": 224.09999999403954
+  },
+  {
+   "file": "000000024610.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.05450829863548279,
+   "phoneBox": {
+    "x": 0.040625,
+    "y": 0.5166666666666667,
+    "width": 0.0828125,
+    "height": 0.13958333333333334
+   },
+   "objectMs": 235.09999999403954
+  },
+  {
+   "file": "000000026564.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.18134120106697083,
+   "phoneBox": {
+    "x": 0.6609375,
+    "y": 0.7652582159624414,
+    "width": 0.06875,
+    "height": 0.08450704225352113
+   },
+   "objectMs": 232.09999999403954
+  },
+  {
+   "file": "000000027620.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08774469047784805,
+   "phoneBox": {
+    "x": 0.2859375,
+    "y": 0.22708333333333333,
+    "width": 0.046875,
+    "height": 0.13541666666666666
+   },
+   "objectMs": 230.69999998807907
+  },
+  {
+   "file": "000000032610.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.08282215148210526,
+   "phoneBox": {
+    "x": 0.459375,
+    "y": 0.2716627634660422,
+    "width": 0.2359375,
+    "height": 0.3442622950819672
+   },
+   "objectMs": 237.30000001192093
+  },
+  {
+   "file": "000000037740.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 6,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.0828172117471695,
+   "phoneBox": {
+    "x": 0.3125,
+    "y": 0.41041666666666665,
+    "width": 0.0390625,
+    "height": 0.022916666666666665
+   },
+   "objectMs": 228.40000000596046
+  },
+  {
+   "file": "000000051008.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.028636066243052483,
+   "phoneBox": {
+    "x": 0.25,
+    "y": 0.0020833333333333333,
+    "width": 0.73125,
+    "height": 1
+   },
+   "objectMs": 223.09999999403954
+  },
+  {
+   "file": "000000051610.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.06586025655269623,
+   "phoneBox": {
+    "x": 0.625,
+    "y": 0.7213114754098361,
+    "width": 0.06875,
+    "height": 0.09601873536299765
+   },
+   "objectMs": 226.59999999403954
+  },
+  {
+   "file": "000000060449.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.0481177382171154,
+   "phoneBox": {
+    "x": 0.035416666666666666,
+    "y": 0.6625,
+    "width": 0.10416666666666667,
+    "height": 0.0703125
+   },
+   "objectMs": 231
+  },
+  {
+   "file": "000000063602.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.11782381683588028,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.7270588235294118,
+    "width": 0.1203125,
+    "height": 0.15764705882352942
+   },
+   "objectMs": 232.09999999403954
+  },
+  {
+   "file": "000000063740.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.6563799977302551,
+   "phoneBox": {
+    "x": 0.0265625,
+    "y": 0.7416666666666667,
+    "width": 0.2078125,
+    "height": 0.15625
+   },
+   "objectMs": 230.2999999821186
+  },
+  {
+   "file": "000000076547.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.12527047097682953,
+   "phoneBox": {
+    "x": 0.60625,
+    "y": 0.5229166666666667,
+    "width": 0.0703125,
+    "height": 0.11458333333333333
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000076731.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 406,
+   "phoneScore": 0.19770096242427826,
+   "phoneBox": {
+    "x": 0.31875,
+    "y": 0.39655172413793105,
+    "width": 0.415625,
+    "height": 0.1921182266009852
+   },
+   "objectMs": 234.19999998807907
+  },
+  {
+   "file": "000000077396.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.07316550612449646,
+   "phoneBox": {
+    "x": 0.7515625,
+    "y": 0.38125,
+    "width": 0.05,
+    "height": 0.014583333333333334
+   },
+   "objectMs": 226
+  },
+  {
+   "file": "000000077595.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.029222162440419197,
+   "phoneBox": {
+    "x": 0.7453125,
+    "y": 0.9670588235294117,
+    "width": 0.090625,
+    "height": 0.02823529411764706
+   },
+   "objectMs": 237.40000000596046
+  },
+  {
+   "file": "000000078420.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.599069356918335,
+   "phoneBox": {
+    "x": 0.2984375,
+    "y": 0.7479166666666667,
+    "width": 0.2671875,
+    "height": 0.24583333333333332
+   },
+   "objectMs": 230.09999999403954
+  },
+  {
+   "file": "000000080949.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 438,
+   "phoneScore": 0.04855074733495712,
+   "phoneBox": {
+    "x": 0.1109375,
+    "y": 0.0319634703196347,
+    "width": 0.771875,
+    "height": 0.3424657534246575
+   },
+   "objectMs": 224.69999998807907
+  },
+  {
+   "file": "000000082765.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 426,
+   "height": 640,
+   "phoneScore": 0.018616996705532074,
+   "phoneBox": {
+    "x": 0.13615023474178403,
+    "y": 0.6453125,
+    "width": 0.2323943661971831,
+    "height": 0.0703125
+   },
+   "objectMs": 228.30000001192093
+  },
+  {
+   "file": "000000086582.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.2844477891921997,
+   "phoneBox": {
+    "x": 0.915625,
+    "y": 0.819672131147541,
+    "width": 0.08125,
+    "height": 0.09133489461358314
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000097994.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.14474987983703613,
+   "phoneBox": {
+    "x": 0.23125,
+    "y": 0.6042154566744731,
+    "width": 0.0703125,
+    "height": 0.11241217798594848
+   },
+   "objectMs": 224.19999998807907
+  },
+  {
+   "file": "000000110449.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.464895099401474,
+   "phoneBox": {
+    "x": 0.696,
+    "y": 0.688,
+    "width": 0.116,
+    "height": 0.128
+   },
+   "objectMs": 230
+  },
+  {
+   "file": "000000111609.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 429,
+   "phoneScore": 0.09669572860002518,
+   "phoneBox": {
+    "x": 0.790625,
+    "y": 0.8088578088578089,
+    "width": 0.20625,
+    "height": 0.18414918414918416
+   },
+   "objectMs": 240.30000001192093
+  },
+  {
+   "file": "000000112798.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 359,
+   "phoneScore": 0.053584158420562744,
+   "phoneBox": {
+    "x": 0.7890625,
+    "y": 0.7910863509749304,
+    "width": 0.2046875,
+    "height": 0.20334261838440112
+   },
+   "objectMs": 232.69999998807907
+  },
+  {
+   "file": "000000115885.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.11753702908754349,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.08533333333333333,
+    "width": 0.72,
+    "height": 0.9066666666666666
+   },
+   "objectMs": 227.40000000596046
+  },
+  {
+   "file": "000000124659.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.04181976243853569,
+   "phoneBox": {
+    "x": 0.0109375,
+    "y": 0.11458333333333333,
+    "width": 0.0625,
+    "height": 0.10208333333333333
+   },
+   "objectMs": 236.90000000596046
+  },
+  {
+   "file": "000000131138.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.3615352213382721,
+   "phoneBox": {
+    "x": 0.303125,
+    "y": 0.6375,
+    "width": 0.0859375,
+    "height": 0.06458333333333334
+   },
+   "objectMs": 222.69999998807907
+  },
+  {
+   "file": "000000134112.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 357,
+   "phoneScore": 0.04501211270689964,
+   "phoneBox": {
+    "x": 0.434,
+    "y": 0.5266106442577031,
+    "width": 0.158,
+    "height": 0.1092436974789916
+   },
+   "objectMs": 227
+  },
+  {
+   "file": "000000134882.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 639,
+   "phoneScore": 0.011721091344952583,
+   "phoneBox": {
+    "x": 0.73125,
+    "y": 0.5571205007824727,
+    "width": 0.2203125,
+    "height": 0.10485133020344288
+   },
+   "objectMs": 224.89999997615814
+  },
+  {
+   "file": "000000135872.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.09339725226163864,
+   "phoneBox": {
+    "x": 0.3703125,
+    "y": 0.4332552693208431,
+    "width": 0.071875,
+    "height": 0.06791569086651054
+   },
+   "objectMs": 229.59999999403954
+  },
+  {
+   "file": "000000139077.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.138629749417305,
+   "phoneBox": {
+    "x": 0.326,
+    "y": 0.488,
+    "width": 0.076,
+    "height": 0.06933333333333333
+   },
+   "objectMs": 229.40000000596046
+  },
+  {
+   "file": "000000147415.jpg",
+   "source": "COCO val2017",
+   "group": "laptop",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1299741268157959,
+   "phoneBox": {
+    "x": 0.14375,
+    "y": 0.8458333333333333,
+    "width": 0.1421875,
+    "height": 0.14166666666666666
+   },
+   "objectMs": 237.7999999821186
+  },
+  {
+   "file": "000000000139.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.042464930564165115,
+   "phoneBox": {
+    "x": 0.1984375,
+    "y": 0.5985915492957746,
+    "width": 0.021875,
+    "height": 0.025821596244131457
+   },
+   "objectMs": 226.10000002384186
+  },
+  {
+   "file": "000000000632.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 483,
+   "phoneScore": 0.029809577390551567,
+   "phoneBox": {
+    "x": 0.7140625,
+    "y": 0.7598343685300207,
+    "width": 0.05625,
+    "height": 0.07867494824016563
+   },
+   "objectMs": 226.30000001192093
+  },
+  {
+   "file": "000000016958.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.028875701129436493,
+   "phoneBox": {
+    "x": 0.6546875,
+    "y": 0.5046728971962616,
+    "width": 0.1296875,
+    "height": 0.04906542056074766
+   },
+   "objectMs": 231.5
+  },
+  {
+   "file": "000000017182.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.024142634123563766,
+   "phoneBox": {
+    "x": 0.8703125,
+    "y": 0.5887850467289719,
+    "width": 0.0171875,
+    "height": 0.04672897196261682
+   },
+   "objectMs": 224
+  },
+  {
+   "file": "000000025603.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.06900464743375778,
+   "phoneBox": {
+    "x": 0.8203125,
+    "y": 0.6875,
+    "width": 0.078125,
+    "height": 0.08333333333333333
+   },
+   "objectMs": 227.7999999821186
+  },
+  {
+   "file": "000000029596.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.06477387249469757,
+   "phoneBox": {
+    "x": 0.815625,
+    "y": 0.6682242990654206,
+    "width": 0.1,
+    "height": 0.03271028037383177
+   },
+   "objectMs": 236.09999999403954
+  },
+  {
+   "file": "000000031248.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 333,
+   "phoneScore": 0.021475549787282944,
+   "phoneBox": {
+    "x": 0.986,
+    "y": 0.21621621621621623,
+    "width": 0.014,
+    "height": 0.03003003003003003
+   },
+   "objectMs": 231.7999999821186
+  },
+  {
+   "file": "000000031735.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.030976174399256706,
+   "phoneBox": {
+    "x": 0.1671875,
+    "y": 0.55625,
+    "width": 0.0796875,
+    "height": 0.058333333333333334
+   },
+   "objectMs": 231.19999998807907
+  },
+  {
+   "file": "000000039477.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 421,
+   "phoneScore": 0.04686307907104492,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.833729216152019,
+    "width": 0.015625,
+    "height": 0.0498812351543943
+   },
+   "objectMs": 231.19999998807907
+  },
+  {
+   "file": "000000045229.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.026896148920059204,
+   "phoneBox": {
+    "x": 0.1125,
+    "y": 0.7104166666666667,
+    "width": 0.0453125,
+    "height": 0.09166666666666666
+   },
+   "objectMs": 227.69999998807907
+  },
+  {
+   "file": "000000046048.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.03369623422622681,
+   "phoneBox": {
+    "x": 0.959375,
+    "y": 0.475,
+    "width": 0.03125,
+    "height": 0.025
+   },
+   "objectMs": 230.2000000178814
+  },
+  {
+   "file": "000000052996.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.09958779066801071,
+   "phoneBox": {
+    "x": 0.6921875,
+    "y": 0.4131455399061033,
+    "width": 0.046875,
+    "height": 0.12910798122065728
+   },
+   "objectMs": 233.40000000596046
+  },
+  {
+   "file": "000000055150.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.06811344623565674,
+   "phoneBox": {
+    "x": 0.4828125,
+    "y": 0.3685446009389671,
+    "width": 0.0546875,
+    "height": 0.10328638497652583
+   },
+   "objectMs": 224.80000001192093
+  },
+  {
+   "file": "000000055528.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1696021556854248,
+   "phoneBox": {
+    "x": 0.6953125,
+    "y": 0.22291666666666668,
+    "width": 0.0265625,
+    "height": 0.07291666666666667
+   },
+   "objectMs": 226.7999999821186
+  },
+  {
+   "file": "000000058111.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 490,
+   "phoneScore": 0.03221990168094635,
+   "phoneBox": {
+    "x": 0.322,
+    "y": 0,
+    "width": 0.286,
+    "height": 0.07142857142857142
+   },
+   "objectMs": 228.59999999403954
+  },
+  {
+   "file": "000000060899.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 360,
+   "height": 640,
+   "phoneScore": 0.15779654681682587,
+   "phoneBox": {
+    "x": 0.13055555555555556,
+    "y": 0.6890625,
+    "width": 0.14444444444444443,
+    "height": 0.065625
+   },
+   "objectMs": 225.10000002384186
+  },
+  {
+   "file": "000000061333.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 361,
+   "phoneScore": 0.0145177086815238,
+   "phoneBox": {
+    "x": 0.02,
+    "y": 0.27977839335180055,
+    "width": 0.598,
+    "height": 0.6066481994459834
+   },
+   "objectMs": 226.7999999821186
+  },
+  {
+   "file": "000000065074.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 424,
+   "height": 640,
+   "phoneScore": 0.026439713314175606,
+   "phoneBox": {
+    "x": 0.7476415094339622,
+    "y": 0.475,
+    "width": 0.06132075471698113,
+    "height": 0.0328125
+   },
+   "objectMs": 240.30000001192093
+  },
+  {
+   "file": "000000071226.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.03716069459915161,
+   "phoneBox": {
+    "x": 0.9375,
+    "y": 0.16666666666666666,
+    "width": 0.0609375,
+    "height": 0.2136150234741784
+   },
+   "objectMs": 233
+  },
+  {
+   "file": "000000084674.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.040628302842378616,
+   "phoneBox": {
+    "x": 0.8645833333333334,
+    "y": 0.45625,
+    "width": 0.027083333333333334,
+    "height": 0.021875
+   },
+   "objectMs": 228.09999999403954
+  },
+  {
+   "file": "000000089045.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.03261053189635277,
+   "phoneBox": {
+    "x": 0.7234375,
+    "y": 0.5435294117647059,
+    "width": 0.0609375,
+    "height": 0.09411764705882353
+   },
+   "objectMs": 232.40000000596046
+  },
+  {
+   "file": "000000091406.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 424,
+   "phoneScore": 0.0775710940361023,
+   "phoneBox": {
+    "x": 0.45,
+    "y": 0.4339622641509434,
+    "width": 0.0296875,
+    "height": 0.06367924528301887
+   },
+   "objectMs": 233.59999999403954
+  },
+  {
+   "file": "000000091615.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.035030946135520935,
+   "phoneBox": {
+    "x": 0.5875,
+    "y": 0.3176470588235294,
+    "width": 0.0484375,
+    "height": 0.10823529411764705
+   },
+   "objectMs": 238
+  },
+  {
+   "file": "000000093353.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.07229235023260117,
+   "phoneBox": {
+    "x": 0.2609375,
+    "y": 0.19791666666666666,
+    "width": 0.7234375,
+    "height": 0.5770833333333333
+   },
+   "objectMs": 229.30000001192093
+  },
+  {
+   "file": "000000093437.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 361,
+   "phoneScore": 0.05102813243865967,
+   "phoneBox": {
+    "x": 0.6640625,
+    "y": 0.7839335180055401,
+    "width": 0.059375,
+    "height": 0.06371191135734072
+   },
+   "objectMs": 225.09999999403954
+  },
+  {
+   "file": "000000096001.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.030315160751342773,
+   "phoneBox": {
+    "x": 0.4484375,
+    "y": 0.007042253521126761,
+    "width": 0.4953125,
+    "height": 0.6103286384976526
+   },
+   "objectMs": 227.09999999403954
+  },
+  {
+   "file": "000000099182.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 334,
+   "phoneScore": 0.10233111679553986,
+   "phoneBox": {
+    "x": 0.498,
+    "y": 0.1467065868263473,
+    "width": 0.042,
+    "height": 0.059880239520958084
+   },
+   "objectMs": 229.80000001192093
+  },
+  {
+   "file": "000000104666.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.10537195950746536,
+   "phoneBox": {
+    "x": 0.3421875,
+    "y": 0.522248243559719,
+    "width": 0.0453125,
+    "height": 0.09133489461358314
+   },
+   "objectMs": 234.5
+  },
+  {
+   "file": "000000106389.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.024620885029435158,
+   "phoneBox": {
+    "x": 0.7859375,
+    "y": 0.28541666666666665,
+    "width": 0.1296875,
+    "height": 0.05
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000107339.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 240,
+   "height": 180,
+   "phoneScore": 0.10042610764503479,
+   "phoneBox": {
+    "x": 0.6541666666666667,
+    "y": 0.13333333333333333,
+    "width": 0.025,
+    "height": 0.03333333333333333
+   },
+   "objectMs": 228.2000000178814
+  },
+  {
+   "file": "000000109313.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.051299549639225006,
+   "phoneBox": {
+    "x": 0.21041666666666667,
+    "y": 0.56875,
+    "width": 0.05625,
+    "height": 0.04375
+   },
+   "objectMs": 229.7000000178814
+  },
+  {
+   "file": "000000121586.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 478,
+   "phoneScore": 0.07380121946334839,
+   "phoneBox": {
+    "x": 0.084375,
+    "y": 0.7301255230125523,
+    "width": 0.1234375,
+    "height": 0.058577405857740586
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000123633.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08359568566083908,
+   "phoneBox": {
+    "x": 0.221875,
+    "y": 0.11458333333333333,
+    "width": 0.1140625,
+    "height": 0.14583333333333334
+   },
+   "objectMs": 231.7999999821186
+  },
+  {
+   "file": "000000125062.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.025554487481713295,
+   "phoneBox": {
+    "x": 0.667447306791569,
+    "y": 0.003125,
+    "width": 0.10772833723653395,
+    "height": 0.0125
+   },
+   "objectMs": 237.39999997615814
+  },
+  {
+   "file": "000000128148.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.10427714884281158,
+   "phoneBox": {
+    "x": 0.0203125,
+    "y": 0.5023364485981309,
+    "width": 0.0203125,
+    "height": 0.02336448598130841
+   },
+   "objectMs": 235.5
+  },
+  {
+   "file": "000000129492.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.2642991840839386,
+   "phoneBox": {
+    "x": 0.2,
+    "y": 0.4479166666666667,
+    "width": 0.0921875,
+    "height": 0.041666666666666664
+   },
+   "objectMs": 238.80000001192093
+  },
+  {
+   "file": "000000136915.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.19103525578975677,
+   "phoneBox": {
+    "x": 0.2328125,
+    "y": 0.6206088992974239,
+    "width": 0.275,
+    "height": 0.18969555035128804
+   },
+   "objectMs": 230
+  },
+  {
+   "file": "000000139684.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 333,
+   "phoneScore": 0.1279659867286682,
+   "phoneBox": {
+    "x": 0.372,
+    "y": 0.5885885885885885,
+    "width": 0.084,
+    "height": 0.042042042042042045
+   },
+   "objectMs": 227.40000000596046
+  },
+  {
+   "file": "000000144798.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 425,
+   "height": 640,
+   "phoneScore": 0.039210639894008636,
+   "phoneBox": {
+    "x": 0.33647058823529413,
+    "y": 0.259375,
+    "width": 0.0611764705882353,
+    "height": 0.075
+   },
+   "objectMs": 234.5
+  },
+  {
+   "file": "000000147518.jpg",
+   "source": "COCO val2017",
+   "group": "book",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.029828228056430817,
+   "phoneBox": {
+    "x": 0.65,
+    "y": 0.7,
+    "width": 0.07708333333333334,
+    "height": 0.0984375
+   },
+   "objectMs": 223.5
+  },
+  {
+   "file": "000000003934.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.057937800884246826,
+   "phoneBox": {
+    "x": 0.3333333333333333,
+    "y": 0.404,
+    "width": 0.058666666666666666,
+    "height": 0.06
+   },
+   "objectMs": 227.90000000596046
+  },
+  {
+   "file": "000000007795.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.03213834390044212,
+   "phoneBox": {
+    "x": 0.1953125,
+    "y": 0.5714285714285714,
+    "width": 0.028125,
+    "height": 0.03981264637002342
+   },
+   "objectMs": 234.09999999403954
+  },
+  {
+   "file": "000000013729.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.09972600638866425,
+   "phoneBox": {
+    "x": 0.5859375,
+    "y": 0.3104166666666667,
+    "width": 0.0328125,
+    "height": 0.04375
+   },
+   "objectMs": 229.89999997615814
+  },
+  {
+   "file": "000000021503.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08753859251737595,
+   "phoneBox": {
+    "x": 0.759375,
+    "y": 0.06041666666666667,
+    "width": 0.234375,
+    "height": 0.2625
+   },
+   "objectMs": 226.69999998807907
+  },
+  {
+   "file": "000000023899.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.146450474858284,
+   "phoneBox": {
+    "x": 0.9078125,
+    "y": 0.5270588235294118,
+    "width": 0.0671875,
+    "height": 0.0611764705882353
+   },
+   "objectMs": 227.7000000178814
+  },
+  {
+   "file": "000000027186.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.12036596238613129,
+   "phoneBox": {
+    "x": 0.5296875,
+    "y": 0.3364485981308411,
+    "width": 0.0984375,
+    "height": 0.16121495327102803
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000036844.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.05347933620214462,
+   "phoneBox": {
+    "x": 0.8796875,
+    "y": 0.61875,
+    "width": 0.08125,
+    "height": 0.12291666666666666
+   },
+   "objectMs": 225.30000001192093
+  },
+  {
+   "file": "000000037670.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08347320556640625,
+   "phoneBox": {
+    "x": 0.3328125,
+    "y": 0.16666666666666666,
+    "width": 0.5515625,
+    "height": 0.425
+   },
+   "objectMs": 224.90000000596046
+  },
+  {
+   "file": "000000039769.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.235633984208107,
+   "phoneBox": {
+    "x": 0.05,
+    "y": 0.14375,
+    "width": 0.23125,
+    "height": 0.10625
+   },
+   "objectMs": 226
+  },
+  {
+   "file": "000000050828.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.043691929429769516,
+   "phoneBox": {
+    "x": 0.003125,
+    "y": 0.5208333333333334,
+    "width": 0.0453125,
+    "height": 0.03125
+   },
+   "objectMs": 226.80000001192093
+  },
+  {
+   "file": "000000059044.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.07658415287733078,
+   "phoneBox": {
+    "x": 0.0359375,
+    "y": 0.7377049180327869,
+    "width": 0.11875,
+    "height": 0.09601873536299765
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000066635.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.26087233424186707,
+   "phoneBox": {
+    "x": 0.6375,
+    "y": 0.60625,
+    "width": 0.075,
+    "height": 0.04583333333333333
+   },
+   "objectMs": 228.7999999821186
+  },
+  {
+   "file": "000000075612.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.15452717244625092,
+   "phoneBox": {
+    "x": 0.6484375,
+    "y": 0.49166666666666664,
+    "width": 0.0234375,
+    "height": 0.07083333333333333
+   },
+   "objectMs": 222.40000000596046
+  },
+  {
+   "file": "000000084362.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.022249735891819,
+   "phoneBox": {
+    "x": 0.83125,
+    "y": 0,
+    "width": 0.15625,
+    "height": 0.3458333333333333
+   },
+   "objectMs": 243.30000001192093
+  },
+  {
+   "file": "000000091500.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1727106124162674,
+   "phoneBox": {
+    "x": 0.1109375,
+    "y": 0.6875,
+    "width": 0.0671875,
+    "height": 0.04791666666666667
+   },
+   "objectMs": 228.40000000596046
+  },
+  {
+   "file": "000000096493.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 426,
+   "height": 640,
+   "phoneScore": 0.08834012597799301,
+   "phoneBox": {
+    "x": 0.26291079812206575,
+    "y": 0.5484375,
+    "width": 0.2511737089201878,
+    "height": 0.0609375
+   },
+   "objectMs": 234.09999999403954
+  },
+  {
+   "file": "000000106235.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.045276422053575516,
+   "phoneBox": {
+    "x": 0.2765625,
+    "y": 0.04791666666666667,
+    "width": 0.0390625,
+    "height": 0.0625
+   },
+   "objectMs": 229.5
+  },
+  {
+   "file": "000000144003.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.045490507036447525,
+   "phoneBox": {
+    "x": 0.414,
+    "y": 0.21333333333333335,
+    "width": 0.036,
+    "height": 0.042666666666666665
+   },
+   "objectMs": 242.19999998807907
+  },
+  {
+   "file": "000000144984.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 426,
+   "height": 640,
+   "phoneScore": 0.16383545100688934,
+   "phoneBox": {
+    "x": 0.215962441314554,
+    "y": 0.6859375,
+    "width": 0.20892018779342722,
+    "height": 0.084375
+   },
+   "objectMs": 241.09999999403954
+  },
+  {
+   "file": "000000154431.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 444,
+   "phoneScore": 0.08552484214305878,
+   "phoneBox": {
+    "x": 0.13125,
+    "y": 0.48423423423423423,
+    "width": 0.046875,
+    "height": 0.07207207207207207
+   },
+   "objectMs": 234.5
+  },
+  {
+   "file": "000000156924.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 333,
+   "phoneScore": 0.03696560859680176,
+   "phoneBox": {
+    "x": 0.244,
+    "y": 0.4174174174174174,
+    "width": 0.034,
+    "height": 0.06006006006006006
+   },
+   "objectMs": 234.19999998807907
+  },
+  {
+   "file": "000000157046.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.1607285737991333,
+   "phoneBox": {
+    "x": 0.596,
+    "y": 0.42133333333333334,
+    "width": 0.242,
+    "height": 0.344
+   },
+   "objectMs": 225
+  },
+  {
+   "file": "000000164883.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.10471725463867188,
+   "phoneBox": {
+    "x": 0.388,
+    "y": 0.8346666666666667,
+    "width": 0.144,
+    "height": 0.15466666666666667
+   },
+   "objectMs": 219.40000000596046
+  },
+  {
+   "file": "000000166166.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.15243664383888245,
+   "phoneBox": {
+    "x": 0.33,
+    "y": 0.6133333333333333,
+    "width": 0.072,
+    "height": 0.042666666666666665
+   },
+   "objectMs": 226.09999999403954
+  },
+  {
+   "file": "000000171757.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.0647134855389595,
+   "phoneBox": {
+    "x": 0.3796875,
+    "y": 0.3333333333333333,
+    "width": 0.0625,
+    "height": 0.0625
+   },
+   "objectMs": 242.80000001192093
+  },
+  {
+   "file": "000000172946.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 427,
+   "height": 640,
+   "phoneScore": 0.26680615544319153,
+   "phoneBox": {
+    "x": 0.4309133489461358,
+    "y": 0.396875,
+    "width": 0.07259953161592506,
+    "height": 0.0390625
+   },
+   "objectMs": 233.5
+  },
+  {
+   "file": "000000182155.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.03862765431404114,
+   "phoneBox": {
+    "x": 0.715625,
+    "y": 0.20892018779342722,
+    "width": 0.04375,
+    "height": 0.07276995305164319
+   },
+   "objectMs": 228.39999997615814
+  },
+  {
+   "file": "000000182162.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 425,
+   "phoneScore": 0.10206817090511322,
+   "phoneBox": {
+    "x": 0.0828125,
+    "y": 0.6329411764705882,
+    "width": 0.0421875,
+    "height": 0.021176470588235293
+   },
+   "objectMs": 225
+  },
+  {
+   "file": "000000185890.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 509,
+   "height": 640,
+   "phoneScore": 0.06692883372306824,
+   "phoneBox": {
+    "x": 0.4675834970530452,
+    "y": 0.1671875,
+    "width": 0.047151277013752456,
+    "height": 0.065625
+   },
+   "objectMs": 237.5
+  },
+  {
+   "file": "000000190637.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 428,
+   "height": 640,
+   "phoneScore": 0.14456741511821747,
+   "phoneBox": {
+    "x": 0.7686915887850467,
+    "y": 0.41875,
+    "width": 0.10747663551401869,
+    "height": 0.0875
+   },
+   "objectMs": 235.40000000596046
+  },
+  {
+   "file": "000000195842.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.058124154806137085,
+   "phoneBox": {
+    "x": 0.884375,
+    "y": 0.6583333333333333,
+    "width": 0.0421875,
+    "height": 0.020833333333333332
+   },
+   "objectMs": 236.60000002384186
+  },
+  {
+   "file": "000000201646.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.32789838314056396,
+   "phoneBox": {
+    "x": 0.071875,
+    "y": 0.7283372365339579,
+    "width": 0.1,
+    "height": 0.12177985948477751
+   },
+   "objectMs": 233.09999999403954
+  },
+  {
+   "file": "000000215259.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 336,
+   "height": 500,
+   "phoneScore": 0.05644099414348602,
+   "phoneBox": {
+    "x": 0.9434523809523809,
+    "y": 0.658,
+    "width": 0.050595238095238096,
+    "height": 0.018
+   },
+   "objectMs": 238.7000000178814
+  },
+  {
+   "file": "000000218091.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 429,
+   "phoneScore": 0.1054723933339119,
+   "phoneBox": {
+    "x": 0.7609375,
+    "y": 0.8881118881118881,
+    "width": 0.146875,
+    "height": 0.10722610722610723
+   },
+   "objectMs": 232.90000000596046
+  },
+  {
+   "file": "000000222317.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.06719490885734558,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.8875,
+    "width": 0.0375,
+    "height": 0.05416666666666667
+   },
+   "objectMs": 236.90000000596046
+  },
+  {
+   "file": "000000222735.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 474,
+   "height": 640,
+   "phoneScore": 0.1391603648662567,
+   "phoneBox": {
+    "x": 0.027426160337552744,
+    "y": 0.5234375,
+    "width": 0.7974683544303798,
+    "height": 0.390625
+   },
+   "objectMs": 229.09999999403954
+  },
+  {
+   "file": "000000229111.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.07604705542325974,
+   "phoneBox": {
+    "x": 0.07733333333333334,
+    "y": 0.186,
+    "width": 0.432,
+    "height": 0.64
+   },
+   "objectMs": 233.30000001192093
+  },
+  {
+   "file": "000000232088.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.0712822675704956,
+   "phoneBox": {
+    "x": 0.746875,
+    "y": 0.8104166666666667,
+    "width": 0.0703125,
+    "height": 0.06041666666666667
+   },
+   "objectMs": 223.7000000178814
+  },
+  {
+   "file": "000000233825.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.06862901896238327,
+   "phoneBox": {
+    "x": 0.4328125,
+    "y": 0.88125,
+    "width": 0.084375,
+    "height": 0.052083333333333336
+   },
+   "objectMs": 232.39999997615814
+  },
+  {
+   "file": "000000234607.jpg",
+   "source": "COCO val2017",
+   "group": "remote",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.04068067669868469,
+   "phoneBox": {
+    "x": 0.7893333333333333,
+    "y": 0.508,
+    "width": 0.096,
+    "height": 0.038
+   },
+   "objectMs": 236.30000001192093
+  },
+  {
+   "file": "000000001675.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1230325996875763,
+   "phoneBox": {
+    "x": 0.0671875,
+    "y": 0.6270833333333333,
+    "width": 0.875,
+    "height": 0.3625
+   },
+   "objectMs": 236.10000002384186
+  },
+  {
+   "file": "000000003661.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 384,
+   "phoneScore": 0.05949290469288826,
+   "phoneBox": {
+    "x": 0.9203125,
+    "y": 0.4583333333333333,
+    "width": 0.071875,
+    "height": 0.22916666666666666
+   },
+   "objectMs": 225.2999999821186
+  },
+  {
+   "file": "000000009483.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.0932207703590393,
+   "phoneBox": {
+    "x": 0.30625,
+    "y": 0.6270833333333333,
+    "width": 0.0484375,
+    "height": 0.020833333333333332
+   },
+   "objectMs": 234.30000001192093
+  },
+  {
+   "file": "000000038576.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 438,
+   "height": 640,
+   "phoneScore": 0.10383494198322296,
+   "phoneBox": {
+    "x": 0.6712328767123288,
+    "y": 0.5625,
+    "width": 0.13013698630136986,
+    "height": 0.04375
+   },
+   "objectMs": 243.09999999403954
+  },
+  {
+   "file": "000000042889.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.49793222546577454,
+   "phoneBox": {
+    "x": 0.45866666666666667,
+    "y": 0.488,
+    "width": 0.176,
+    "height": 0.186
+   },
+   "objectMs": 228.39999997615814
+  },
+  {
+   "file": "000000056288.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1306241750717163,
+   "phoneBox": {
+    "x": 0.003125,
+    "y": 0.20833333333333334,
+    "width": 0.0859375,
+    "height": 0.22083333333333333
+   },
+   "objectMs": 228.5
+  },
+  {
+   "file": "000000068765.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.5214706063270569,
+   "phoneBox": {
+    "x": 0.2765625,
+    "y": 0.11041666666666666,
+    "width": 0.0984375,
+    "height": 0.08333333333333333
+   },
+   "objectMs": 231.5
+  },
+  {
+   "file": "000000108026.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.16994903981685638,
+   "phoneBox": {
+    "x": 0.5703125,
+    "y": 0.397196261682243,
+    "width": 0.175,
+    "height": 0.23130841121495327
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000127987.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.07104774564504623,
+   "phoneBox": {
+    "x": 0.5515625,
+    "y": 0.607981220657277,
+    "width": 0.446875,
+    "height": 0.3427230046948357
+   },
+   "objectMs": 239.60000002384186
+  },
+  {
+   "file": "000000148620.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.08690958470106125,
+   "phoneBox": {
+    "x": 0.486,
+    "y": 0.9146666666666666,
+    "width": 0.148,
+    "height": 0.08
+   },
+   "objectMs": 235.40000000596046
+  },
+  {
+   "file": "000000149222.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 383,
+   "phoneScore": 0.09945179522037506,
+   "phoneBox": {
+    "x": 0.854,
+    "y": 0.7728459530026109,
+    "width": 0.128,
+    "height": 0.13838120104438642
+   },
+   "objectMs": 227.59999999403954
+  },
+  {
+   "file": "000000154705.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 464,
+   "phoneScore": 0.1511239856481552,
+   "phoneBox": {
+    "x": 0.684375,
+    "y": 0.6357758620689655,
+    "width": 0.084375,
+    "height": 0.03879310344827586
+   },
+   "objectMs": 237.59999999403954
+  },
+  {
+   "file": "000000178469.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.12053605914115906,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.6346604215456675,
+    "width": 0.1609375,
+    "height": 0.1592505854800937
+   },
+   "objectMs": 226.80000001192093
+  },
+  {
+   "file": "000000179392.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.07846413552761078,
+   "phoneBox": {
+    "x": 0.24583333333333332,
+    "y": 0.5703125,
+    "width": 0.13958333333333334,
+    "height": 0.090625
+   },
+   "objectMs": 236.5
+  },
+  {
+   "file": "000000181499.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 513,
+   "phoneScore": 0.1362983137369156,
+   "phoneBox": {
+    "x": 0.3203125,
+    "y": 0.723196881091618,
+    "width": 0.353125,
+    "height": 0.2709551656920078
+   },
+   "objectMs": 237
+  },
+  {
+   "file": "000000186282.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.05869236961007118,
+   "phoneBox": {
+    "x": 0.4875,
+    "y": 0.6182669789227166,
+    "width": 0.1,
+    "height": 0.0468384074941452
+   },
+   "objectMs": 235.59999999403954
+  },
+  {
+   "file": "000000189820.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.29108574986457825,
+   "phoneBox": {
+    "x": 0.23125,
+    "y": 0.6206088992974239,
+    "width": 0.1078125,
+    "height": 0.08665105386416862
+   },
+   "objectMs": 235.09999999403954
+  },
+  {
+   "file": "000000190236.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 393,
+   "phoneScore": 0.10175284743309021,
+   "phoneBox": {
+    "x": 0.1984375,
+    "y": 0.3104325699745547,
+    "width": 0.0640625,
+    "height": 0.061068702290076333
+   },
+   "objectMs": 238
+  },
+  {
+   "file": "000000195918.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.1359083354473114,
+   "phoneBox": {
+    "x": 0.4453125,
+    "y": 0.6588785046728972,
+    "width": 0.0609375,
+    "height": 0.0514018691588785
+   },
+   "objectMs": 233.69999998807907
+  },
+  {
+   "file": "000000197004.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.044761113822460175,
+   "phoneBox": {
+    "x": 0.2453125,
+    "y": 0,
+    "width": 0.753125,
+    "height": 0.2529274004683841
+   },
+   "objectMs": 233.5
+  },
+  {
+   "file": "000000198641.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 479,
+   "phoneScore": 0.04460250213742256,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.732776617954071,
+    "width": 0.4234375,
+    "height": 0.2588726513569937
+   },
+   "objectMs": 229.09999999403954
+  },
+  {
+   "file": "000000206218.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.14233697950839996,
+   "phoneBox": {
+    "x": 0.4625,
+    "y": 0.49166666666666664,
+    "width": 0.109375,
+    "height": 0.07708333333333334
+   },
+   "objectMs": 228
+  },
+  {
+   "file": "000000215778.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.23073501884937286,
+   "phoneBox": {
+    "x": 0.1734375,
+    "y": 0.48243559718969553,
+    "width": 0.096875,
+    "height": 0.06557377049180328
+   },
+   "objectMs": 227.5
+  },
+  {
+   "file": "000000239318.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 375,
+   "height": 500,
+   "phoneScore": 0.07390955835580826,
+   "phoneBox": {
+    "x": 0.7013333333333334,
+    "y": 0.004,
+    "width": 0.13066666666666665,
+    "height": 0.018
+   },
+   "objectMs": 224.5
+  },
+  {
+   "file": "000000246308.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.13647949695587158,
+   "phoneBox": {
+    "x": 0.11041666666666666,
+    "y": 0.7359375,
+    "width": 0.06875,
+    "height": 0.08125
+   },
+   "objectMs": 229.69999998807907
+  },
+  {
+   "file": "000000248314.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.38816216588020325,
+   "phoneBox": {
+    "x": 0.484375,
+    "y": 0.21875,
+    "width": 0.14375,
+    "height": 0.1125
+   },
+   "objectMs": 230.30000001192093
+  },
+  {
+   "file": "000000255165.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.16131436824798584,
+   "phoneBox": {
+    "x": 0.184375,
+    "y": 0.88125,
+    "width": 0.0796875,
+    "height": 0.0625
+   },
+   "objectMs": 232.59999999403954
+  },
+  {
+   "file": "000000287649.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.13202913105487823,
+   "phoneBox": {
+    "x": 0.4453125,
+    "y": 0,
+    "width": 0.2421875,
+    "height": 0.12083333333333333
+   },
+   "objectMs": 228.09999999403954
+  },
+  {
+   "file": "000000302030.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 359,
+   "phoneScore": 0.07945819944143295,
+   "phoneBox": {
+    "x": 0.4546875,
+    "y": 0.3286908077994429,
+    "width": 0.065625,
+    "height": 0.06963788300835655
+   },
+   "objectMs": 227.7000000178814
+  },
+  {
+   "file": "000000310980.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 6,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.06589052081108093,
+   "phoneBox": {
+    "x": 0.003125,
+    "y": 0.0351288056206089,
+    "width": 0.896875,
+    "height": 0.955503512880562
+   },
+   "objectMs": 235.30000001192093
+  },
+  {
+   "file": "000000311789.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.04803521931171417,
+   "phoneBox": {
+    "x": 0.0046875,
+    "y": 0.3044496487119438,
+    "width": 0.2921875,
+    "height": 0.2388758782201405
+   },
+   "objectMs": 231.90000000596046
+  },
+  {
+   "file": "000000333772.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.13787473738193512,
+   "phoneBox": {
+    "x": 0.142,
+    "y": 0.5093333333333333,
+    "width": 0.118,
+    "height": 0.12
+   },
+   "objectMs": 233.90000000596046
+  },
+  {
+   "file": "000000335658.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.07604650408029556,
+   "phoneBox": {
+    "x": 0.590625,
+    "y": 0.5416666666666666,
+    "width": 0.165625,
+    "height": 0.3333333333333333
+   },
+   "objectMs": 230.19999998807907
+  },
+  {
+   "file": "000000345252.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 479,
+   "phoneScore": 0.23924468457698822,
+   "phoneBox": {
+    "x": 0.6671875,
+    "y": 0.1837160751565762,
+    "width": 0.034375,
+    "height": 0.05845511482254697
+   },
+   "objectMs": 233.09999999403954
+  },
+  {
+   "file": "000000346638.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.09256978332996368,
+   "phoneBox": {
+    "x": 0.1328125,
+    "y": 0.8125,
+    "width": 0.2984375,
+    "height": 0.15833333333333333
+   },
+   "objectMs": 234.59999999403954
+  },
+  {
+   "file": "000000353096.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 344,
+   "phoneScore": 0.16722826659679413,
+   "phoneBox": {
+    "x": 0.85,
+    "y": 0.7180232558139535,
+    "width": 0.082,
+    "height": 0.040697674418604654
+   },
+   "objectMs": 233.7999999821186
+  },
+  {
+   "file": "000000356432.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 416,
+   "phoneScore": 0.11450008302927017,
+   "phoneBox": {
+    "x": 0.7203125,
+    "y": 0.7403846153846154,
+    "width": 0.1359375,
+    "height": 0.06971153846153846
+   },
+   "objectMs": 227.09999999403954
+  },
+  {
+   "file": "000000360951.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.1521369218826294,
+   "phoneBox": {
+    "x": 0.8453125,
+    "y": 0.6978922716627635,
+    "width": 0.0609375,
+    "height": 0.06088992974238876
+   },
+   "objectMs": 227.19999998807907
+  },
+  {
+   "file": "000000363461.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 478,
+   "phoneScore": 0.12545926868915558,
+   "phoneBox": {
+    "x": 0.1359375,
+    "y": 0.9267782426778243,
+    "width": 0.0640625,
+    "height": 0.06694560669456066
+   },
+   "objectMs": 229.2000000178814
+  },
+  {
+   "file": "000000363840.jpg",
+   "source": "COCO val2017",
+   "group": "keyboard",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.1896381378173828,
+   "phoneBox": {
+    "x": 0.2328125,
+    "y": 0.68125,
+    "width": 0.115625,
+    "height": 0.17916666666666667
+   },
+   "objectMs": 240.30000001192093
+  },
+  {
+   "file": "000000015497.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.16878417134284973,
+   "phoneBox": {
+    "x": 0.228125,
+    "y": 0.6979166666666666,
+    "width": 0.15625,
+    "height": 0.2520833333333333
+   },
+   "objectMs": 227.30000001192093
+  },
+  {
+   "file": "000000248631.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.11642060428857803,
+   "phoneBox": {
+    "x": 0.7265625,
+    "y": 0.5875,
+    "width": 0.2421875,
+    "height": 0.31875
+   },
+   "objectMs": 228.5
+  },
+  {
+   "file": "000000275749.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.08420079946517944,
+   "phoneBox": {
+    "x": 0.442,
+    "y": 0.696,
+    "width": 0.024,
+    "height": 0.09866666666666667
+   },
+   "objectMs": 243.30000001192093
+  },
+  {
+   "file": "000000294162.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.09874769300222397,
+   "phoneBox": {
+    "x": 0.6958333333333333,
+    "y": 0.634375,
+    "width": 0.24583333333333332,
+    "height": 0.1953125
+   },
+   "objectMs": 257.5
+  },
+  {
+   "file": "000000321118.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.0625004842877388,
+   "phoneBox": {
+    "x": 0.7984375,
+    "y": 0.6314553990610329,
+    "width": 0.196875,
+    "height": 0.13849765258215962
+   },
+   "objectMs": 232.09999999403954
+  },
+  {
+   "file": "000000367095.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.06977343559265137,
+   "phoneBox": {
+    "x": 0.4859375,
+    "y": 0.6440281030444965,
+    "width": 0.1,
+    "height": 0.07259953161592506
+   },
+   "objectMs": 233.40000000596046
+  },
+  {
+   "file": "000000371677.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.06070506572723389,
+   "phoneBox": {
+    "x": 0.2296875,
+    "y": 0.75625,
+    "width": 0.065625,
+    "height": 0.09583333333333334
+   },
+   "objectMs": 230.09999999403954
+  },
+  {
+   "file": "000000372466.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 360,
+   "phoneScore": 0.1966751217842102,
+   "phoneBox": {
+    "x": 0.034375,
+    "y": 0.3277777777777778,
+    "width": 0.4328125,
+    "height": 0.2722222222222222
+   },
+   "objectMs": 229.30000001192093
+  },
+  {
+   "file": "000000378099.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 337,
+   "phoneScore": 0.12727725505828857,
+   "phoneBox": {
+    "x": 0.8078125,
+    "y": 0.4421364985163205,
+    "width": 0.15,
+    "height": 0.3768545994065282
+   },
+   "objectMs": 239
+  },
+  {
+   "file": "000000385719.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 421,
+   "phoneScore": 0.19955900311470032,
+   "phoneBox": {
+    "x": 0.6703125,
+    "y": 0.7743467933491687,
+    "width": 0.0484375,
+    "height": 0.052256532066508314
+   },
+   "objectMs": 236.2000000178814
+  },
+  {
+   "file": "000000387098.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.12642903625965118,
+   "phoneBox": {
+    "x": 0.2140625,
+    "y": 0.68125,
+    "width": 0.1265625,
+    "height": 0.06041666666666667
+   },
+   "objectMs": 236.7000000178814
+  },
+  {
+   "file": "000000409630.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.09179892390966415,
+   "phoneBox": {
+    "x": 0.772,
+    "y": 0.39466666666666667,
+    "width": 0.164,
+    "height": 0.328
+   },
+   "objectMs": 246.19999998807907
+  },
+  {
+   "file": "000000413247.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.11405351012945175,
+   "phoneBox": {
+    "x": 0.5515625,
+    "y": 0.8497652582159625,
+    "width": 0.084375,
+    "height": 0.05868544600938967
+   },
+   "objectMs": 230.5
+  },
+  {
+   "file": "000000415716.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 6,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.04199859872460365,
+   "phoneBox": {
+    "x": 0.00625,
+    "y": 0.9645833333333333,
+    "width": 0.103125,
+    "height": 0.029166666666666667
+   },
+   "objectMs": 222.90000000596046
+  },
+  {
+   "file": "000000425361.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 491,
+   "phoneScore": 0.1977839320898056,
+   "phoneBox": {
+    "x": 0.903125,
+    "y": 0.7270875763747454,
+    "width": 0.0890625,
+    "height": 0.06313645621181263
+   },
+   "objectMs": 232
+  },
+  {
+   "file": "000000426241.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.11120375990867615,
+   "phoneBox": {
+    "x": 0.254,
+    "y": 0.5946666666666667,
+    "width": 0.06,
+    "height": 0.050666666666666665
+   },
+   "objectMs": 226.19999998807907
+  },
+  {
+   "file": "000000432085.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.04285265877842903,
+   "phoneBox": {
+    "x": 0.016,
+    "y": 0.5733333333333334,
+    "width": 0.148,
+    "height": 0.09333333333333334
+   },
+   "objectMs": 231.5
+  },
+  {
+   "file": "000000435003.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.16336911916732788,
+   "phoneBox": {
+    "x": 0.653125,
+    "y": 0.5878220140515222,
+    "width": 0.090625,
+    "height": 0.04918032786885246
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000435208.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 2,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.04763004183769226,
+   "phoneBox": {
+    "x": 0.6583333333333333,
+    "y": 0.546875,
+    "width": 0.06875,
+    "height": 0.028125
+   },
+   "objectMs": 236.59999999403954
+  },
+  {
+   "file": "000000482970.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 360,
+   "phoneScore": 0.14381317794322968,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.8305555555555556,
+    "width": 0.0359375,
+    "height": 0.13333333333333333
+   },
+   "objectMs": 231.7999999821186
+  },
+  {
+   "file": "000000486040.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.14237932860851288,
+   "phoneBox": {
+    "x": 0.54375,
+    "y": 0.521875,
+    "width": 0.23958333333333334,
+    "height": 0.296875
+   },
+   "objectMs": 237.30000001192093
+  },
+  {
+   "file": "000000492905.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 343,
+   "phoneScore": 0.08349540829658508,
+   "phoneBox": {
+    "x": 0.234,
+    "y": 0.3673469387755102,
+    "width": 0.046,
+    "height": 0.043731778425655975
+   },
+   "objectMs": 237.09999999403954
+  },
+  {
+   "file": "000000513688.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.49167048931121826,
+   "phoneBox": {
+    "x": 0.7453125,
+    "y": 0.16875,
+    "width": 0.08125,
+    "height": 0.10833333333333334
+   },
+   "objectMs": 237.80000001192093
+  },
+  {
+   "file": "000000520077.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.10145773738622665,
+   "phoneBox": {
+    "x": 0.925,
+    "y": 0.38875878220140514,
+    "width": 0.071875,
+    "height": 0.10772833723653395
+   },
+   "objectMs": 239.40000000596046
+  },
+  {
+   "file": "000000524456.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.2153559774160385,
+   "phoneBox": {
+    "x": 0.5921875,
+    "y": 0.7333333333333333,
+    "width": 0.3109375,
+    "height": 0.18333333333333332
+   },
+   "objectMs": 231.59999999403954
+  },
+  {
+   "file": "000000529148.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 3,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 426,
+   "phoneScore": 0.1483134627342224,
+   "phoneBox": {
+    "x": 0.396875,
+    "y": 0.7699530516431925,
+    "width": 0.09375,
+    "height": 0.09859154929577464
+   },
+   "objectMs": 226
+  },
+  {
+   "file": "000000532761.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 6,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.033060573041439056,
+   "phoneBox": {
+    "x": 0.9078125,
+    "y": 0.6333333333333333,
+    "width": 0.065625,
+    "height": 0.06041666666666667
+   },
+   "objectMs": 230
+  },
+  {
+   "file": "000000546717.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 471,
+   "height": 640,
+   "phoneScore": 0.08713153004646301,
+   "phoneBox": {
+    "x": 0.5732484076433121,
+    "y": 0.6015625,
+    "width": 0.12738853503184713,
+    "height": 0.0796875
+   },
+   "objectMs": 233.30000001192093
+  },
+  {
+   "file": "000000547144.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.08109425753355026,
+   "phoneBox": {
+    "x": 0.91875,
+    "y": 0.5458333333333333,
+    "width": 0.0421875,
+    "height": 0.03958333333333333
+   },
+   "objectMs": 229.69999998807907
+  },
+  {
+   "file": "000000554291.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 4,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 428,
+   "phoneScore": 0.13281993567943573,
+   "phoneBox": {
+    "x": 0.928125,
+    "y": 0.6985981308411215,
+    "width": 0.0671875,
+    "height": 0.14719626168224298
+   },
+   "objectMs": 227.5
+  },
+  {
+   "file": "000000555009.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 500,
+   "height": 375,
+   "phoneScore": 0.12501151859760284,
+   "phoneBox": {
+    "x": 0.662,
+    "y": 0.536,
+    "width": 0.098,
+    "height": 0.048
+   },
+   "objectMs": 226.7000000178814
+  },
+  {
+   "file": "000000560011.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 332,
+   "height": 500,
+   "phoneScore": 0.04335002601146698,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.65,
+    "width": 1,
+    "height": 0.34
+   },
+   "objectMs": 224.5
+  },
+  {
+   "file": "000000570782.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 5,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 427,
+   "phoneScore": 0.12417618185281754,
+   "phoneBox": {
+    "x": 0.778125,
+    "y": 0.47306791569086654,
+    "width": 0.0625,
+    "height": 0.04918032786885246
+   },
+   "objectMs": 225.7000000178814
+  },
+  {
+   "file": "000000571313.jpg",
+   "source": "COCO val2017",
+   "group": "mouse",
+   "label": "no-phone",
+   "license": 1,
+   "phoneAreaRatio": null,
+   "width": 480,
+   "height": 640,
+   "phoneScore": 0.06703471392393112,
+   "phoneBox": {
+    "x": 0.7479166666666667,
+    "y": 0.490625,
+    "width": 0.05416666666666667,
+    "height": 0.0125
+   },
+   "objectMs": 223.10000002384186
+  },
+  {
+   "file": "thumb_up.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 382,
+   "height": 406,
+   "phoneScore": 0.020852435380220413,
+   "phoneBox": {
+    "x": 0.3193717277486911,
+    "y": 0.2044334975369458,
+    "width": 0.6832460732984293,
+    "height": 0.7783251231527094
+   },
+   "objectMs": 228.59999999403954
+  },
+  {
+   "file": "pointing_up.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 358,
+   "height": 376,
+   "phoneScore": 0.08533848077058792,
+   "phoneBox": {
+    "x": 0.24860335195530725,
+    "y": 0.17553191489361702,
+    "width": 0.5782122905027933,
+    "height": 0.8164893617021277
+   },
+   "objectMs": 227.5
+  },
+  {
+   "file": "pointing_up_rotated.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 376,
+   "height": 358,
+   "phoneScore": 0.052488602697849274,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.26256983240223464,
+    "width": 0.8191489361702128,
+    "height": 0.4664804469273743
+   },
+   "objectMs": 233.90000000596046
+  },
+  {
+   "file": "victory.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 342,
+   "height": 362,
+   "phoneScore": 0.10023906826972961,
+   "phoneBox": {
+    "x": 0.29239766081871343,
+    "y": 0.13259668508287292,
+    "width": 0.5175438596491229,
+    "height": 0.850828729281768
+   },
+   "objectMs": 234.09999999403954
+  },
+  {
+   "file": "fist.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 358,
+   "height": 354,
+   "phoneScore": 0.06747335195541382,
+   "phoneBox": {
+    "x": 0.3100558659217877,
+    "y": 0.22033898305084745,
+    "width": 0.44692737430167595,
+    "height": 0.7627118644067796
+   },
+   "objectMs": 238.59999999403954
+  },
+  {
+   "file": "right_hands.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 720,
+   "height": 382,
+   "phoneScore": 0.11328554153442383,
+   "phoneBox": {
+    "x": 0.19027777777777777,
+    "y": 0.01832460732984293,
+    "width": 0.7611111111111111,
+    "height": 0.9895287958115183
+   },
+   "objectMs": 232.59999999403954
+  },
+  {
+   "file": "left_hands.jpg",
+   "source": "MediaPipe test assets",
+   "group": "hands",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 720,
+   "height": 382,
+   "phoneScore": 0.09220533072948456,
+   "phoneBox": {
+    "x": 0.5236111111111111,
+    "y": 0.05235602094240838,
+    "width": 0.39305555555555555,
+    "height": 0.8979057591623036
+   },
+   "objectMs": 228
+  },
+  {
+   "file": "portrait.jpg",
+   "source": "MediaPipe test assets",
+   "group": "face (portrait)",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 820,
+   "height": 1024,
+   "phoneScore": 0.05589473992586136,
+   "phoneBox": {
+    "x": 0.6829268292682927,
+    "y": 0.62890625,
+    "width": 0.05731707317073171,
+    "height": 0.05859375
+   },
+   "objectMs": 243.09999999403954
+  },
+  {
+   "file": "synthetic-grey",
+   "source": "synthetic",
+   "group": "empty frame",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.00404477771371603,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.11041666666666666,
+    "width": 1,
+    "height": 0.9791666666666666
+   },
+   "objectMs": 233.2999999821186
+  },
+  {
+   "file": "synthetic-black",
+   "source": "synthetic",
+   "group": "empty frame",
+   "label": "no-phone",
+   "license": null,
+   "phoneAreaRatio": null,
+   "width": 640,
+   "height": 480,
+   "phoneScore": 0.006464655976742506,
+   "phoneBox": {
+    "x": 0,
+    "y": 0.035416666666666666,
+    "width": 1,
+    "height": 0.9291666666666667
+   },
+   "objectMs": 225
+  }
+ ]
+}

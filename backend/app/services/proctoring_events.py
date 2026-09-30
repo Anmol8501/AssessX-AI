@@ -19,12 +19,20 @@ Rules:
   (unique per session) and gets the original back. An identical event within
   `DEDUPE_WINDOW` of the previous one of its type is folded into it. A session holds at most
   `MAX_EVENTS_PER_SESSION` events.
+* **AI observations are episodes (Phase 5C).** An AI observation type (`AI_EPISODE_TYPES`) is
+  reported as a `started` row and later a `resolved` row sharing an `episode_id` — never one row
+  per frame. The server keeps the lifecycle honest: a start needs a new episode id; a resolution
+  must match an open episode of the same type in this session; the duration is computed here from
+  the server's own clock; a stale open episode is closed as `superseded` when a new one of the same
+  type starts (the app restarted mid-episode); and open episodes are closed as `session_ended` when
+  the session ends. None of this says the candidate did anything wrong.
 """
 
 import logging
+import math
 import re
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -89,7 +97,27 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.APP_CLOSE_FAILED: C.SYSTEM,
     E.DEVICE_CHECK_PASSED: C.SYSTEM,
     E.DEVICE_CHECK_FAILED: C.SYSTEM,
+    E.FACE_NOT_DETECTED: C.AI_OBSERVATION,
+    E.MULTIPLE_FACES_DETECTED: C.AI_OBSERVATION,
+    E.HEAD_ORIENTATION_CHANGED: C.AI_OBSERVATION,
+    E.GAZE_AWAY: C.AI_OBSERVATION,
+    E.CAMERA_TOO_DARK: C.AI_OBSERVATION,
+    E.FACE_TOO_FAR: C.AI_OBSERVATION,
+    E.FACE_TOO_CLOSE: C.AI_OBSERVATION,
+    E.AI_STATUS: C.AI_HEALTH,
 }
+
+#: AI observation types recorded as episodes (started → resolved). See the module docstring.
+AI_EPISODE_TYPES = frozenset(t for t, c in CATEGORY.items() if c is C.AI_OBSERVATION)
+#: Resolutions a client may report. `superseded` and `session_ended` are the server's.
+CLIENT_RESOLUTIONS = frozenset({"condition_cleared", "measurement_unavailable", "monitoring_stopped"})
+#: AI observation types that may no longer be *started* (webcam validation, 2026-09-30). The gaze
+#: signal proved unusable, so GAZE_AWAY is not an event: the app does not produce it and the server
+#: refuses a new one. The type stays valid so earlier rows remain, and an episode left open by an
+#: earlier app build can still be resolved (or is closed when the session ends).
+DISABLED_EPISODE_TYPES = frozenset({E.GAZE_AWAY})
+_EPISODE_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+_AI_DETECTORS = ("face_presence", "face_tracking", "head_pose", "gaze", "object_detection", "frame_quality")
 
 #: Recorded by the server only. The session lifecycle is the server's, and device changes arrive
 #: through the Phase 4A device report — which the server turns into these events itself.
@@ -136,6 +164,21 @@ def _int_between(low: int, high: int) -> Callable[[Any], bool]:
     return lambda v: isinstance(v, int) and not isinstance(v, bool) and low <= v <= high
 
 
+def _number_between(low: float, high: float) -> Callable[[Any], bool]:
+    return lambda v: (
+        isinstance(v, int | float) and not isinstance(v, bool) and math.isfinite(v) and low <= v <= high
+    )
+
+
+def _detector_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) <= len(_AI_DETECTORS)
+        and len(set(value)) == len(value)
+        and all(isinstance(v, str) and v in _AI_DETECTORS for v in value)
+    )
+
+
 def _capabilities(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -176,12 +219,44 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
         "other",
     ),
     "app_count": _int_between(0, 200),
+    # AI observations (Phase 5C) — factual measurements only; no score, risk or verdict field exists
+    "phase": _one_of("started", "resolved"),
+    "episode_id": lambda v: isinstance(v, str) and bool(_EPISODE_ID.match(v)),
+    "detector": _one_of(*_AI_DETECTORS),
+    "resolution": _one_of(*CLIENT_RESOLUTIONS, "superseded", "session_ended"),
+    "face_count": _int_between(0, 50),
+    "confidence": _number_between(0, 1),
+    "direction": _one_of("left", "right", "up", "down"),
+    "yaw_deg": _number_between(-180, 180),
+    "pitch_deg": _number_between(-180, 180),
+    "neutral_yaw_deg": _number_between(-180, 180),
+    "gaze_horizontal": _number_between(-1, 1),
+    "gaze_vertical": _number_between(-1, 1),
+    "mean_luminance": _number_between(0, 1),
+    "face_area_ratio": _number_between(0, 1),
+    # AI health (Phase 5C)
+    "ai_status": _one_of("INITIALIZING", "RUNNING", "DEGRADED", "ERROR", "STOPPED"),
+    "ai_reason": _one_of(
+        "none",
+        "no_runtime",
+        "model_load_failed",
+        "runtime_error",
+        "camera_unavailable",
+        "detector_impaired",
+        "inference_slow",
+        "stopped",
+    ),
+    "impaired": _detector_list,
+    "accelerator": _one_of("CPU", "GPU"),
     # server-only fields
     "state": _one_of(*(s.value for s in DeviceState)),
     "attempt_status": _one_of(*(s.value for s in AttemptStatus)),
 }
 
 _INPUT_FIELDS = frozenset({"shortcut", "blocked", "channel"})
+#: Every AI episode row: its phase and episode, which detector, and (on resolution) why it ended and
+#: how long it lasted. `duration_ms` is always computed by the server.
+_EPISODE_FIELDS = frozenset({"phase", "episode_id", "detector", "resolution", "duration_ms"})
 
 #: Which fields each event type accepts. A type absent here accepts none.
 _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
@@ -214,6 +289,14 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.APP_CLOSE_FAILED: frozenset({"app"}),
     E.DEVICE_CHECK_PASSED: frozenset({"app_count"}),
     E.DEVICE_CHECK_FAILED: frozenset({"app_count"}),
+    E.FACE_NOT_DETECTED: _EPISODE_FIELDS,
+    E.MULTIPLE_FACES_DETECTED: _EPISODE_FIELDS | {"face_count", "confidence"},
+    E.HEAD_ORIENTATION_CHANGED: _EPISODE_FIELDS | {"direction", "yaw_deg", "pitch_deg", "neutral_yaw_deg"},
+    E.GAZE_AWAY: _EPISODE_FIELDS | {"direction", "gaze_horizontal", "gaze_vertical"},
+    E.CAMERA_TOO_DARK: _EPISODE_FIELDS | {"mean_luminance"},
+    E.FACE_TOO_FAR: _EPISODE_FIELDS | {"face_area_ratio"},
+    E.FACE_TOO_CLOSE: _EPISODE_FIELDS | {"face_area_ratio"},
+    E.AI_STATUS: frozenset({"ai_status", "ai_reason", "impaired", "accelerator"}),
 }
 
 
@@ -277,6 +360,11 @@ class ProctoringEventRecorder:
                 details=[{"field": "event_type", "message": f"{event_type.value} cannot be reported."}],
             )
         details = validate_details(event_type, details)
+        if event_type is E.AI_STATUS and "ai_status" not in details:
+            raise ValidationFailed(
+                "AI_STATUS needs ai_status.",
+                details=[{"field": "metadata.ai_status", "message": "Required."}],
+            )
 
         existing = self._by_client_id(session, client_event_id)
         if existing is not None:
@@ -294,6 +382,9 @@ class ProctoringEventRecorder:
         if self._count(session) >= MAX_EVENTS_PER_SESSION:
             log.warning("Proctoring event limit reached", extra={"proctoring_session_id": str(session.id)})
             raise EventLimitReached()
+
+        if event_type in AI_EPISODE_TYPES:
+            details = self._episode(session, event_type, details, now)
 
         event = ProctoringEvent(
             session=session,
@@ -317,7 +408,99 @@ class ProctoringEventRecorder:
             return winner, False
         return event, True
 
+    def close_open_episodes(self, session: ProctoringSession, at: datetime) -> list[ProctoringEvent]:
+        """Resolves every AI episode still open when the session ends (`session_ended`).
+
+        After submission the attempt is locked, so the candidate's app cannot report the end of an
+        observation that was still going on; the server closes it at the session's end instead, so
+        no episode is left without a duration.
+        """
+        return [
+            self._resolve(session, start, "session_ended", at)
+            for start in self._open_episodes(session).values()
+        ]
+
     # -- internals ------------------------------------------------------------------------
+
+    def _episode(
+        self,
+        session: ProctoringSession,
+        event_type: ProctoringEventType,
+        details: dict[str, Any],
+        now: datetime,
+    ) -> dict[str, Any]:
+        """Checks an AI episode row against the session's open episodes; returns the details to store."""
+
+        def refuse(field: str, message: str) -> ValidationFailed:
+            return ValidationFailed(
+                "The AI event is inconsistent.", details=[{"field": f"metadata.{field}", "message": message}]
+            )
+
+        phase = details.get("phase")
+        episode_id = details.get("episode_id")
+        if phase is None or episode_id is None:
+            raise refuse("phase" if phase is None else "episode_id", "Required for AI observations.")
+        if "duration_ms" in details:
+            raise refuse("duration_ms", "Computed by the server.")
+        open_episodes = self._open_episodes(session)
+
+        if phase == "started":
+            if event_type in DISABLED_EPISODE_TYPES:
+                raise refuse("event_type", "This AI observation is disabled and is not recorded.")
+            if "resolution" in details:
+                raise refuse("resolution", "Only a resolved episode has a resolution.")
+            if self._episode_exists(session, episode_id):
+                raise refuse("episode_id", "This episode already exists.")
+            for start in [e for e in open_episodes.values() if e.event_type == event_type]:
+                self._resolve(session, start, "superseded", now)  # left open by an earlier app run
+            return details
+
+        resolution = details.get("resolution")
+        if resolution not in CLIENT_RESOLUTIONS:
+            raise refuse("resolution", "Required, and must be one a client may report.")
+        start = open_episodes.get(episode_id)
+        if start is None or start.event_type != event_type:
+            raise refuse("episode_id", "No open episode of this type with this id.")
+        stored = {**details, "duration_ms": _duration_ms(start.recorded_at, now)}
+        if "detector" in start.details:
+            stored.setdefault("detector", start.details["detector"])
+        return stored
+
+    def _resolve(
+        self, session: ProctoringSession, start: ProctoringEvent, resolution: str, at: datetime
+    ) -> ProctoringEvent:
+        details: dict[str, Any] = {
+            "phase": "resolved",
+            "episode_id": start.details["episode_id"],
+            "resolution": resolution,
+            "duration_ms": _duration_ms(start.recorded_at, at),
+        }
+        if "detector" in start.details:
+            details["detector"] = start.details["detector"]
+        return self.record_server(session, start.event_type, details, at=at)
+
+    def _open_episodes(self, session: ProctoringSession) -> dict[str, ProctoringEvent]:
+        """AI episodes started and not yet resolved in this session, by episode id."""
+        rows = self.db.scalars(
+            select(ProctoringEvent)
+            .where(ProctoringEvent.session_id == session.id, ProctoringEvent.category == C.AI_OBSERVATION)
+            .order_by(ProctoringEvent.recorded_at)
+        )
+        return open_episodes(rows)
+
+    def _episode_exists(self, session: ProctoringSession, episode_id: str) -> bool:
+        return (
+            self.db.scalar(
+                select(func.count())
+                .select_from(ProctoringEvent)
+                .where(
+                    ProctoringEvent.session_id == session.id,
+                    ProctoringEvent.category == C.AI_OBSERVATION,
+                    ProctoringEvent.details["episode_id"].astext == episode_id,
+                )
+            )
+            or 0
+        ) > 0
 
     def _by_client_id(self, session: ProctoringSession, client_event_id: uuid.UUID) -> ProctoringEvent | None:
         return self.db.scalar(
@@ -356,3 +539,26 @@ class ProctoringEventRecorder:
         if earliest <= reported <= now + CLIENT_CLOCK_TOLERANCE:
             return reported
         return None
+
+
+def _duration_ms(start: datetime, end: datetime) -> int:
+    return max(0, min(int((end - start).total_seconds() * 1000), 24 * 60 * 60 * 1000))
+
+
+def open_episodes(rows: Iterable[ProctoringEvent]) -> dict[str, ProctoringEvent]:
+    """The AI episodes among `rows` that were started and never resolved, by episode id.
+
+    Independent of row order: a start and its resolution can share a timestamp, so a resolution
+    closes its episode wherever it appears. Non-episode rows (e.g. AI_STATUS) are ignored.
+    """
+    started: dict[str, ProctoringEvent] = {}
+    resolved: set[str] = set()
+    for row in rows:
+        if row.event_type not in AI_EPISODE_TYPES:
+            continue
+        episode = row.details.get("episode_id")
+        if row.details.get("phase") == "started":
+            started.setdefault(episode, row)
+        else:
+            resolved.add(episode)
+    return {episode: row for episode, row in started.items() if episode not in resolved}

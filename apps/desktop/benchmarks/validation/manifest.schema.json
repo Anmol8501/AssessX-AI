@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assessx/phone-validation-manifest/v1",
+  "title": "AssessX phone-detection validation dataset manifest",
+  "description": "One manifest per dataset. Images live next to it (never in git). See README.md for collection, consent and labelling rules.",
+  "type": "object",
+  "required": ["schema", "dataset", "samples"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "assessx/phone-validation-manifest/v1" },
+    "dataset": {
+      "type": "object",
+      "required": ["name", "version", "collected", "consentProtocol", "labellingGuideVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,63}$" },
+        "version": { "type": "string" },
+        "collected": { "type": "string", "description": "Collection period, e.g. 2026-10-01/2026-10-15." },
+        "consentProtocol": { "type": "string", "description": "Identifier of the approved consent protocol the samples were collected under." },
+        "labellingGuideVersion": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "samples": { "type": "array", "items": { "$ref": "#/$defs/sample" } }
+  },
+  "$defs": {
+    "box": {
+      "type": "object",
+      "description": "Normalised to the image (0..1, origin top-left).",
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "required": ["id", "file", "sha256", "label", "person", "camera", "room", "lighting", "phone_visibility", "distractor_type", "consent_ref", "split", "labelled_by", "reviewed_by"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "file": { "type": "string", "description": "Path relative to the manifest (e.g. images/p03_c1_0042.jpg)." },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "label": { "enum": ["PHONE_PRESENT", "PHONE_ABSENT"] },
+        "person": { "type": "string", "pattern": "^P[0-9]{2,4}$", "description": "Pseudonymous participant id — never a name." },
+        "camera": { "type": "string", "description": "Pseudonymous camera id (e.g. C1); describe models in the dataset notes." },
+        "room": { "type": "string", "description": "Pseudonymous room/environment id (e.g. R2)." },
+        "lighting": { "enum": ["bright", "normal", "dim", "backlit", "mixed"] },
+        "phone_size": { "enum": ["small", "medium", "large"], "description": "Phone box area / frame area: small < 1%, medium 1–5%, large ≥ 5%. Required when PHONE_PRESENT." },
+        "phone_visibility": { "enum": ["full", "partial_frame_edge", "partial_occluded", "none"] },
+        "phone_position": { "enum": ["in_hand_face_level", "in_hand_chest_level", "in_hand_lap", "at_ear", "on_desk", "against_object", "other"] },
+        "phone_orientation": { "enum": ["portrait_screen_facing", "portrait_back_facing", "landscape_screen_facing", "landscape_back_facing", "flat", "edge_on", "other"] },
+        "phone_box": { "$ref": "#/$defs/box" },
+        "distractor_type": { "enum": ["none", "empty_hands", "laptop", "keyboard", "mouse", "usb_device", "charger_cable", "remote", "calculator", "book_notes", "headphones_earbuds", "mug_bottle", "tablet", "second_monitor", "other"] },
+        "consent_ref": { "type": "string", "description": "Reference to the participant's consent record (stored elsewhere, not in the manifest)." },
+        "split": { "enum": ["calibration", "holdout"], "description": "Assigned by PERSON, never by frame, so one person's frames never appear in both." },
+        "labelled_by": { "type": "string" },
+        "reviewed_by": { "type": "string", "description": "A second, independent labeller." },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "label": { "const": "PHONE_PRESENT" } } },
+          "then": { "required": ["phone_size", "phone_position", "phone_orientation", "phone_box"], "properties": { "phone_visibility": { "enum": ["full", "partial_frame_edge", "partial_occluded"] } } }
+        },
+        {
+          "if": { "properties": { "label": { "const": "PHONE_ABSENT" } } },
+          "then": { "properties": { "phone_visibility": { "const": "none" } }, "not": { "anyOf": [{ "required": ["phone_size"] }, { "required": ["phone_box"] }, { "required": ["phone_position"] }, { "required": ["phone_orientation"] }] } }
+        }
+      ]
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { CameraIcon, ClockIcon, MicIcon } from '@/components/icons'
 import { Button, StatusBadge } from '@/components/ui'
 import { useApi } from '@/features/session'
 import { cn } from '@/lib/cn'
+import { AIMonitoringSection } from './AIMonitoringSection'
 import { eventLabel } from './events'
 import { deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
 import { toEvent, type MonitoringEvent, type MonitoringSession } from './types'
@@ -26,8 +27,8 @@ const VIDEO_STATE_LABEL: Record<MediaState, string> = {
 }
 
 /**
- * The candidate detail view (Phase 4C): the large live video, current factual status, and recent
- * proctoring events, updating live. Opening it establishes the WebRTC stream for this one
+ * The candidate detail view (Phase 4C): the large live video, current factual status, the on-device
+ * AI's factual state (Phase 5C), and recent proctoring events, updating live. Opening it establishes the WebRTC stream for this one
  * candidate; closing it tears everything down. Audio is muted by default and only plays when the
  * admin turns it on. Nothing here interprets, scores or judges — it is technical state only.
  */
@@ -48,7 +49,9 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
       .catch(() => undefined)
     const unsubscribe = signaling.subscribe(session.attemptId, (message: Signal) => {
       if (message.type === 'PROCTORING_EVENT' && message.event) {
-        setEvents((prev) => [toEvent(message.event as Record<string, unknown>), ...prev].slice(0, 50))
+        const event = toEvent(message.event as Record<string, unknown>)
+        // A delta can arrive after the REST snapshot that already contains the same row.
+        setEvents((prev) => (prev.some((e) => e.id === event.id) ? prev : [event, ...prev].slice(0, 50)))
       }
     })
     return () => {
@@ -146,6 +149,8 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
                 <Detail label="Fullscreen" value={fullscreen.label} ok={fullscreen.ok} />
                 <Detail label="Connection" value={connection === 'connected' ? 'Connected' : connection} ok={connection === 'connected'} />
               </dl>
+
+              <AIMonitoringSection ai={session.ai} />
             </div>
 
             <div>
