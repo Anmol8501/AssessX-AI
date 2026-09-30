@@ -20,11 +20,14 @@ from app.realtime.messages import MessageType, message
 from app.repositories.monitoring import MonitoringRepository
 from app.schemas.monitoring import (
     ActiveSessions,
+    AIActiveObservation,
+    AIMonitoringState,
     MonitoringDetail,
     MonitoringEvent,
     MonitoringSession,
     MonitoringSummary,
 )
+from app.services.proctoring_events import open_episodes
 
 #: How many recent events the detail view returns. Recent window, not a full history/timeline.
 RECENT_EVENT_LIMIT = 40
@@ -107,6 +110,7 @@ class MonitoringService:
             fullscreen=self._fullscreen(session, events),
             started_at=session.started_at,
             devices_reported_at=session.devices_reported_at,
+            ai=derive_ai_state(self.repo.ai_events(session.id)),
         )
 
     def _fullscreen(self, session: ProctoringSession, events: list[ProctoringEvent] | None) -> bool | None:
@@ -128,3 +132,66 @@ class MonitoringService:
             metadata=event.details,
             recorded_at=event.recorded_at,
         )
+
+
+# -- AI state (Phase 5C) -----------------------------------------------------------------------
+
+_E = ProctoringEventType
+_QUALITY = frozenset({_E.CAMERA_TOO_DARK, _E.FACE_TOO_FAR, _E.FACE_TOO_CLOSE})
+_MEASURING = frozenset({"RUNNING", "DEGRADED"})
+
+
+def derive_ai_state(events: list[ProctoringEvent]) -> AIMonitoringState:
+    """The on-device AI's current factual state from a session's AI events (oldest first).
+
+    Pure: the same events always give the same state, so REST and realtime deltas agree.
+    """
+    status: str | None = None
+    reason: str | None = None
+    impaired: list[str] = []
+    for event in events:
+        if event.event_type is _E.AI_STATUS:
+            status = event.details.get("ai_status")
+            reason = event.details.get("ai_reason")
+            impaired = list(event.details.get("impaired", []))
+    active = sorted(open_episodes(events).values(), key=lambda e: e.recorded_at)
+    open_types = {e.event_type: e for e in active}
+
+    def measuring(detector: str) -> bool:
+        return status in _MEASURING and detector not in impaired
+
+    no_face = _E.FACE_NOT_DETECTED in open_types
+    face_known = measuring("face_presence")
+    if not face_known:
+        face, face_count = "unknown", "unknown"
+    elif no_face:
+        face, face_count = "not_detected", "none"
+    else:
+        face = "detected"
+        face_count = "multiple" if _E.MULTIPLE_FACES_DETECTED in open_types else "one"
+
+    if not measuring("head_pose") or not face_known or no_face:
+        head = "unknown"
+    else:
+        turned = open_types.get(_E.HEAD_ORIENTATION_CHANGED)
+        head = "forward" if turned is None else turned.details.get("direction", "unknown")
+    gaze = "not_used"  # GAZE_AWAY is disabled: gaze is not an event signal (see DISABLED_EPISODE_TYPES)
+    if not measuring("frame_quality"):
+        camera = "unknown"
+    else:
+        camera = "issue" if any(t in open_types for t in _QUALITY) else "good"
+
+    return AIMonitoringState(
+        status=status,
+        reason=reason,
+        impaired=impaired,
+        face=face,
+        face_count=face_count,
+        head_orientation=head,
+        gaze=gaze,
+        camera_quality=camera,
+        active=[
+            AIActiveObservation(event_type=e.event_type, started_at=e.recorded_at, metadata=e.details)
+            for e in active
+        ],
+    )

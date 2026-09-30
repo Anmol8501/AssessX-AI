@@ -1,0 +1,12 @@
+{
+  "schema": "assessx/phone-validation-manifest/v1",
+  "dataset": {
+    "name": "",
+    "version": "",
+    "collected": "",
+    "consentProtocol": "",
+    "labellingGuideVersion": "",
+    "notes": ""
+  },
+  "samples": []
+}

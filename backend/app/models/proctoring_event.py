@@ -61,6 +61,20 @@ class ProctoringEventType(enum.StrEnum):
     APP_CLOSE_FAILED = "APP_CLOSE_FAILED"
     DEVICE_CHECK_PASSED = "DEVICE_CHECK_PASSED"
     DEVICE_CHECK_FAILED = "DEVICE_CHECK_FAILED"
+    # AI observations (Phase 5C) — factual, temporally stabilised conditions reported by the
+    # candidate's on-device AI, each recorded as an episode: a `started` row and a `resolved` row
+    # (same `episode_id`; the server computes the duration). They say what a detector observed,
+    # never why. There is deliberately no PHONE_DETECTED: phone detection is not validated.
+    FACE_NOT_DETECTED = "FACE_NOT_DETECTED"
+    MULTIPLE_FACES_DETECTED = "MULTIPLE_FACES_DETECTED"
+    HEAD_ORIENTATION_CHANGED = "HEAD_ORIENTATION_CHANGED"
+    GAZE_AWAY = "GAZE_AWAY"
+    CAMERA_TOO_DARK = "CAMERA_TOO_DARK"
+    FACE_TOO_FAR = "FACE_TOO_FAR"
+    FACE_TOO_CLOSE = "FACE_TOO_CLOSE"
+    #: AI health (Phase 5C) — whether AssessX's AI monitoring is working. A system condition, never
+    #: an observation about the candidate.
+    AI_STATUS = "AI_STATUS"
 
 
 class ProctoringEventCategory(enum.StrEnum):
@@ -72,6 +86,10 @@ class ProctoringEventCategory(enum.StrEnum):
     INPUT = "INPUT"
     DISPLAY = "DISPLAY"
     SYSTEM = "SYSTEM"
+    #: What the on-device AI observed (Phase 5C).
+    AI_OBSERVATION = "AI_OBSERVATION"
+    #: Whether the on-device AI is working (Phase 5C) — kept apart from observations.
+    AI_HEALTH = "AI_HEALTH"
 
 
 class ProctoringEventSource(enum.StrEnum):
@@ -112,7 +130,8 @@ class ProctoringEvent(UUIDPrimaryKeyMixin, Base):
             name="ck_proctoring_events_source",
         ),
         CheckConstraint(
-            "category IN ('SESSION', 'DEVICE', 'WINDOW', 'INPUT', 'DISPLAY', 'SYSTEM')",
+            "category IN ('SESSION', 'DEVICE', 'WINDOW', 'INPUT', 'DISPLAY', 'SYSTEM', "
+            "'AI_OBSERVATION', 'AI_HEALTH')",
             name="ck_proctoring_events_category",
         ),
     )

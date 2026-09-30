@@ -9,7 +9,7 @@ const RETRY_BASE_MS = 2000
 const RETRY_MAX_MS = 30_000
 const MAX_PENDING = 200
 
-export type EventMetadata = Record<string, string | number | boolean | Record<string, string>>
+export type EventMetadata = Record<string, string | number | boolean | string[] | Record<string, string>>
 
 interface PendingEvent {
   client_event_id: string

@@ -5,6 +5,7 @@ import { describeError } from '@/features/assessments/useAssessments'
 import { ExamRunner } from '@/features/exam/ExamRunner'
 import type { AttemptDetail, ExamDetail } from '@/features/exam/types'
 import { ApiError } from '@/lib/api'
+import { AIStatus, useAIPipeline } from './ai'
 import { toServerState } from './devices'
 import { DeviceReadiness } from './environment/DeviceReadiness'
 import { EnvironmentNotices } from './environment/EnvironmentNotices'
@@ -200,6 +201,10 @@ function EnforcedExam({
   // Phase 4C: publish this candidate's live camera/mic to a watching admin, reusing the streams
   // the proctoring check already opened. Released with this component when the exam ends.
   useMediaPublisher(attempt.id, camera, microphone)
+  // Phase 5A/5B: the on-device AI perception pipeline runs on the same camera stream for the life of
+  // the exam. Phase 5C: its observations become debounced, factual episode events (and AI health
+  // becomes AI_STATUS) through the same reporter. Nothing here judges the candidate.
+  const ai = useAIPipeline(attempt.id, camera, report)
 
   const replayed = useRef(false)
   useEffect(() => {
@@ -210,7 +215,17 @@ function EnforcedExam({
 
   return (
     <>
-      <ExamRunner attempt={attempt} headerExtra={children} onFinished={onFinished} onStale={onStale} />
+      <ExamRunner
+        attempt={attempt}
+        headerExtra={
+          <div className="flex items-center gap-3">
+            {children}
+            <AIStatus health={ai.health} />
+          </div>
+        }
+        onFinished={onFinished}
+        onStale={onStale}
+      />
       <EnvironmentNotices
         notices={notices}
         fullscreenRequired={fullscreenRequired}

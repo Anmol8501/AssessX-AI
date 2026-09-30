@@ -77,6 +77,8 @@ class ProctoringService:
         session.status = ProctoringSessionStatus.ENDED
         session.ended_at = ended_at
         self.db.flush()
+        # Phase 5C: an AI observation still open when the exam ends is closed here, at the end.
+        self.events.close_open_episodes(session, ended_at)
         self.events.record_server(
             session,
             ProctoringEventType.SESSION_ENDED,

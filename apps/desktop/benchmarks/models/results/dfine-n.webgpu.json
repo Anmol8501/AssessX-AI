@@ -1,0 +1,109 @@
+{
+ "candidate": "dfine-n",
+ "model": "dfine_n_coco.onnx",
+ "runtime": "onnx",
+ "ep": "webgpu",
+ "accelerator": "webgpu",
+ "webgpuAdapter": {
+  "vendor": "intel",
+  "architecture": "gen-12lp",
+  "description": ""
+ },
+ "modelBytes": 17067128,
+ "coldStartMs": 14129,
+ "loadMs": 2665,
+ "firstInferMs": 11463,
+ "steadyMedianMs": 124,
+ "steadyP90Ms": 131,
+ "scoring": "parity sample",
+ "results": [
+  {
+   "image": "000000001268.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.002036372950819672,
+   "score": 0.4158036410808563,
+   "inferMs": 118.5
+  },
+  {
+   "image": "000000115870.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.0004003851232394366,
+   "score": 0.23725387454032898,
+   "inferMs": 123.2999999821186
+  },
+  {
+   "image": "000000214869.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.143580142578125,
+   "score": 0.3128407299518585,
+   "inferMs": 122.69999998807907
+  },
+  {
+   "image": "000000326970.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.0023926513671875,
+   "score": 0.41263315081596375,
+   "inferMs": 122.5
+  },
+  {
+   "image": "000000411817.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.00081938671875,
+   "score": 0.19264231622219086,
+   "inferMs": 120.09999999403954
+  },
+  {
+   "image": "000000546475.jpg",
+   "group": "phone",
+   "label": "phone",
+   "phoneAreaRatio": 0.017800097911227154,
+   "score": 0.8572410941123962,
+   "inferMs": 125.7999999821186
+  },
+  {
+   "image": "000000082765.jpg",
+   "group": "laptop",
+   "label": "no-phone",
+   "phoneAreaRatio": null,
+   "score": 0.0788845643401146,
+   "inferMs": 122.90000000596046
+  },
+  {
+   "image": "000000099182.jpg",
+   "group": "book",
+   "label": "no-phone",
+   "phoneAreaRatio": null,
+   "score": 0.05965762957930565,
+   "inferMs": 125.69999998807907
+  },
+  {
+   "image": "000000182155.jpg",
+   "group": "remote",
+   "label": "no-phone",
+   "phoneAreaRatio": null,
+   "score": 0.11748312413692474,
+   "inferMs": 118.80000001192093
+  },
+  {
+   "image": "000000255165.jpg",
+   "group": "keyboard",
+   "label": "no-phone",
+   "phoneAreaRatio": null,
+   "score": 0.6791640520095825,
+   "inferMs": 132.10000002384186
+  },
+  {
+   "image": "000000532761.jpg",
+   "group": "mouse",
+   "label": "no-phone",
+   "phoneAreaRatio": null,
+   "score": 0.16734246909618378,
+   "inferMs": 122
+  }
+ ]
+}

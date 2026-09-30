@@ -31,3 +31,15 @@ playwright-report/
 .env.local
 .env.*.local
 .env.production
+
+# On-device AI assets (Phase 5B): copied/downloaded and SHA-256-verified by scripts/fetch-ai-assets.mjs
+public/mediapipe/
+public/models/
+public/onnxruntime/
+.ai-cache/
+
+# Test fixtures downloaded at test time (not redistributed)
+e2e/.cache/
+
+# Benchmark datasets (downloaded, not redistributed)
+benchmarks/.cache/

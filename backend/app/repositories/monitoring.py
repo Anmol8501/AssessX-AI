@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.attempt import ACTIVE_ATTEMPT_STATUSES, AssessmentAttempt
 from app.models.proctoring import ProctoringSession, ProctoringSessionStatus
-from app.models.proctoring_event import ProctoringEvent
+from app.models.proctoring_event import ProctoringEvent, ProctoringEventCategory
 
 
 class MonitoringRepository:
@@ -59,5 +59,23 @@ class MonitoringRepository:
                 .where(ProctoringEvent.session_id == session_id)
                 .order_by(ProctoringEvent.recorded_at.desc())
                 .limit(limit)
+            )
+        )
+
+    def ai_events(self, session_id: uuid.UUID) -> list[ProctoringEvent]:
+        """The session's AI observation and AI health events, oldest first (Phase 5C).
+
+        Bounded by the per-session event ceiling; an AI episode is two rows, not one per frame.
+        """
+        return list(
+            self.db.scalars(
+                select(ProctoringEvent)
+                .where(
+                    ProctoringEvent.session_id == session_id,
+                    ProctoringEvent.category.in_(
+                        (ProctoringEventCategory.AI_OBSERVATION, ProctoringEventCategory.AI_HEALTH)
+                    ),
+                )
+                .order_by(ProctoringEvent.recorded_at)
             )
         )

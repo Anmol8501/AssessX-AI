@@ -16,6 +16,37 @@ from app.models.proctoring import DeviceState, ProctoringSessionStatus
 from app.models.proctoring_event import ProctoringEventCategory, ProctoringEventType
 
 
+class AIActiveObservation(BaseModel):
+    """An AI observation episode that has started and not yet resolved (Phase 5C)."""
+
+    event_type: ProctoringEventType
+    started_at: datetime
+    #: Factual measurements recorded when the episode started (e.g. direction, face_count).
+    metadata: dict[str, Any]
+
+
+class AIMonitoringState(BaseModel):
+    """What the candidate's on-device AI currently reports (Phase 5C) — observations, never a verdict.
+
+    Derived by the server from the stored AI events: `status` from the latest AI_STATUS, the
+    indicators from which observation episodes are open. "unknown" whenever the AI is not running or
+    the detector behind an indicator is impaired — it is never guessed. "forward" means no sustained
+    head-turn episode is open, not that every frame was forward. Head orientation is measured
+    against the candidate's own calibrated neutral yaw. `gaze` is always "not_used": gaze is not an
+    event signal (GAZE_AWAY is disabled), so the admin view does not present it as one.
+    """
+
+    status: str | None
+    reason: str | None
+    impaired: list[str]
+    face: str  # detected | not_detected | unknown
+    face_count: str  # one | multiple | none | unknown
+    head_orientation: str  # forward | left | right | unknown (up/down only on rows from before 2026-09-30)
+    gaze: str  # not_used
+    camera_quality: str  # good | issue | unknown
+    active: list[AIActiveObservation]
+
+
 class MonitoringSession(BaseModel):
     """One candidate tile on the live wall."""
 
@@ -34,6 +65,8 @@ class MonitoringSession(BaseModel):
     fullscreen: bool | None
     started_at: datetime | None
     devices_reported_at: datetime | None
+    #: The on-device AI's current factual state (Phase 5C).
+    ai: AIMonitoringState
 
 
 class MonitoringSummary(BaseModel):
