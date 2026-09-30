@@ -13,6 +13,10 @@ Everything a candidate can do to an attempt goes through here. Three rules shape
   validity only — that the option exists on that question, and that the count suits the question
   type. Correctness belongs to `services/evaluation.py`, which this module calls once, at the
   moment an attempt finalizes, inside the same transaction.
+
+Phase 4A adds one thing alongside the attempt, without changing any of the above: a proctored
+attempt carries a proctoring session (`services/proctoring.py`), opened in the same transaction
+that creates the attempt and ended in the same transaction that finalizes it.
 """
 
 import logging
@@ -33,6 +37,7 @@ from app.repositories.assignments import AssignmentRepository
 from app.repositories.attempts import AttemptRepository
 from app.repositories.questions import QuestionRepository
 from app.services.evaluation import EvaluationService
+from app.services.proctoring import ProctoringService
 
 log = logging.getLogger("assessx.attempts")
 
@@ -84,6 +89,10 @@ class AttemptService:
             # A savepoint, so that losing the race leaves the surrounding transaction usable.
             with self.db.begin_nested():
                 self.attempts.add(attempt)
+                # Read once, here: the session row, not the assessment's current setting, is what
+                # makes this attempt proctored from now on (see `models/proctoring.py`).
+                if assessment.proctoring_required:
+                    ProctoringService(self.db).open_for(attempt)
         except IntegrityError:
             # Two requests started at once and the partial unique index rejected this one. The
             # winner's attempt is the right answer to both, so resume it.
@@ -172,6 +181,7 @@ class AttemptService:
         attempt.status = AttemptStatus.TIME_EXPIRED
         attempt.finalized_at = attempt.expires_at
         self.db.flush()
+        ProctoringService(self.db).end_for(attempt)
         # Evaluated in the same transaction that ended it, so an expired attempt never exists in a
         # finished-but-unscored state that a candidate could observe.
         EvaluationService(self.db).ensure_result(attempt)
@@ -193,6 +203,17 @@ class AttemptService:
         Someone else's is not found, not forbidden.
         """
         attempt = self.attempts.get_for_candidate(attempt_id, candidate.id)
+        if attempt is None:
+            raise NotFound("Attempt not found.")
+        return self.settle(attempt)
+
+    def get_attempt_for_update(self, candidate: User, attempt_id: uuid.UUID) -> AssessmentAttempt:
+        """The candidate's own attempt, locked `FOR UPDATE` and with the clock applied.
+
+        For changes made next to the attempt rather than to it — the proctoring session — so they
+        serialise with a submission or an expiry exactly as `submit` does.
+        """
+        attempt = self.attempts.get_for_candidate_locked(attempt_id, candidate.id)
         if attempt is None:
             raise NotFound("Attempt not found.")
         return self.settle(attempt)
@@ -237,6 +258,8 @@ class AttemptService:
     ) -> AttemptAnswer:
         """Replaces the stored selection for one question. An empty list clears it."""
         attempt = self._open_attempt(candidate, attempt_id)
+        # A proctored exam is answered under proctoring: not before the devices are confirmed.
+        ProctoringService(self.db).require_active_if_proctored(attempt)
         question = self._question_of(attempt, question_id)
 
         selected = list(dict.fromkeys(selected_option_ids))
@@ -291,6 +314,7 @@ class AttemptService:
         attempt.submitted_at = now
         attempt.finalized_at = now
         self.db.flush()
+        ProctoringService(self.db).end_for(attempt)
         # Same transaction as the submission: the candidate cannot see a submitted attempt that
         # has no result, and a failed evaluation rolls the submission back rather than leaving
         # half a finish behind.

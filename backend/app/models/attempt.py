@@ -21,6 +21,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utcnow
 if TYPE_CHECKING:
     from app.models.assessment import Assessment
     from app.models.assignment import AssessmentAssignment
+    from app.models.proctoring import ProctoringSession
     from app.models.question import Question, QuestionOption
     from app.models.result import AttemptResult
     from app.models.user import User
@@ -123,6 +124,14 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     #: The score, once the attempt has been finalized and evaluated. `None` while it is running.
     result: Mapped["AttemptResult | None"] = relationship(
+        back_populates="attempt",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
+    #: Present only when the attempt was proctored at the moment it started (Phase 4A). `None`
+    #: means an unproctored attempt, not a missing row.
+    proctoring_session: Mapped["ProctoringSession | None"] = relationship(
         back_populates="attempt",
         cascade="all, delete-orphan",
         passive_deletes=True,

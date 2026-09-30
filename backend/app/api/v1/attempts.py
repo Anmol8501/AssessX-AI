@@ -28,6 +28,7 @@ from app.schemas.attempt import (
     ExamDetail,
     SaveAnswer,
 )
+from app.schemas.proctoring import ProctoringSessionOut
 from app.schemas.result import CandidateResult, QuestionResult, ResultSummary
 from app.services.attempts import AttemptService
 from app.services.results import ResultService
@@ -82,6 +83,11 @@ def _attempt_detail(attempt: AssessmentAttempt, service: AttemptService) -> Atte
         # against it is what drops them, so the answer key cannot reach the client by accident.
         questions=[CandidateQuestion.model_validate(q) for q in service.questions_for(attempt)],
         answers=[_answer(a) for a in service.answers_for(attempt)],
+        proctoring=(
+            ProctoringSessionOut.model_validate(attempt.proctoring_session)
+            if attempt.proctoring_session is not None
+            else None
+        ),
     )
 
 

@@ -84,6 +84,9 @@ class MyAssessment(BaseModel):
     passing_marks: int
     question_count: int
     max_attempts: int
+    #: Whether a new attempt at this exam will be proctored (Phase 4A). An attempt already under
+    #: way answers that for itself through `AttemptDetail.proctoring`.
+    proctoring_required: bool
     availability_start: datetime | None
     availability_end: datetime | None
     status: AssignmentStatus
@@ -117,6 +120,7 @@ class MyAssessment(BaseModel):
             passing_marks=assessment.passing_marks,
             question_count=question_count,
             max_attempts=assessment.max_attempts,
+            proctoring_required=assessment.proctoring_required,
             availability_start=assessment.availability_start,
             availability_end=assessment.availability_end,
             status=assignment.status,

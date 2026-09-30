@@ -25,6 +25,8 @@ export interface AssessmentSettings {
   randomize_options: boolean
   show_results: boolean
   question_navigation: QuestionNavigation
+  /** Phase 4A: candidates pass a camera/microphone check and sit the exam under a proctoring session. */
+  proctoring_required: boolean
   availability_start: string | null
   availability_end: string | null
 }
@@ -173,6 +175,8 @@ export interface MyAssessment {
   passing_marks: number
   question_count: number
   max_attempts: number
+  /** Whether a new attempt will be proctored. A running attempt answers for itself (`AttemptDetail.proctoring`). */
+  proctoring_required: boolean
   availability_start: string | null
   availability_end: string | null
   status: AssignmentStatus

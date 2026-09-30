@@ -87,6 +87,25 @@ class AttemptLocked(Conflict):
     message = "This attempt has been finalized and can no longer be changed."
 
 
+class ProctoringNotActive(Conflict):
+    """A proctored attempt was used before its camera and microphone were confirmed.
+
+    Its own code so the desktop client can send the candidate back to the proctoring check rather
+    than showing a generic conflict.
+    """
+
+    code = "proctoring_not_active"
+    message = "Complete the proctoring check before continuing with this exam."
+
+
+class EventLimitReached(AppError):
+    """A proctoring session has recorded as many events as it is allowed to (Phase 4B)."""
+
+    status_code = 429
+    code = "event_limit_reached"
+    message = "No further proctoring events can be recorded for this session."
+
+
 class DatabaseUnavailable(AppError):
     status_code = 503
     code = "database_unavailable"

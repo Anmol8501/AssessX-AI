@@ -361,3 +361,18 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Proctored-exam lockdown (Phase 4B), applied to <body> while a proctored exam is running.
+ * Text cannot be selected (so there is nothing to copy), and nothing of the exam is printed: a
+ * print dialog that opens by a route the page cannot cancel produces a blank page.
+ */
+body.exam-lockdown {
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media print {
+  body.exam-lockdown * {
+    visibility: hidden !important;
+  }
+}

@@ -1,8 +1,8 @@
 import { useState, type ComponentType, type SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { SignOutIcon } from '@/components/icons'
+import { RefreshIcon, SignOutIcon } from '@/components/icons'
 import { Logo } from '@/components/Logo'
-import { ConfirmDialog, StatusBadge } from '@/components/ui'
+import { Button, ConfirmDialog, StatusBadge } from '@/components/ui'
 import { APP_VERSION } from '@/config/app'
 import { ROLE_LABEL, useCurrentUser, useSession } from '@/features/session'
 import { cn } from '@/lib/cn'
@@ -22,6 +22,10 @@ interface AppShellProps {
 /**
  * Authenticated application frame: dark sidebar with role navigation, a top bar with the
  * current section and the signed-in user, and a scrolling content area for the routed page.
+ *
+ * **Refresh** re-mounts the routed page, so it fetches everything from the server again — newly
+ * assigned exams, new results, changes another admin made — without signing out or reloading the
+ * whole application. Anything typed but not yet saved on that page is discarded, as with any reload.
  */
 export function AppShell({ nav }: AppShellProps) {
   const user = useCurrentUser()
@@ -29,6 +33,15 @@ export function AppShell({ nav }: AppShellProps) {
   const { pathname } = useLocation()
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+
+  function handleRefresh() {
+    setRefreshKey((key) => key + 1)
+    // Brief feedback only: each page shows its own loading state while it refetches.
+    setRefreshing(true)
+    window.setTimeout(() => setRefreshing(false), 600)
+  }
 
   const current = nav.find((item) => (item.end ? pathname === item.to : pathname.startsWith(item.to)))
 
@@ -104,12 +117,25 @@ export function AppShell({ nav }: AppShellProps) {
               </>
             )}
           </div>
-          <StatusBadge tone="accent">{ROLE_LABEL[user.role]}</StatusBadge>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              leadingIcon={<RefreshIcon className={cn(refreshing && 'animate-spin')} />}
+              title="Reload this page's data from the server"
+            >
+              Refresh
+            </Button>
+            <StatusBadge tone="accent">{ROLE_LABEL[user.role]}</StatusBadge>
+          </div>
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-6xl px-8 py-7">
-            <Outlet />
+            {/* Keyed so Refresh re-mounts the page and every one of its data hooks refetches. */}
+            <Outlet key={refreshKey} />
           </div>
         </main>
       </div>

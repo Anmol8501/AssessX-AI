@@ -101,6 +101,13 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=QuestionNavigation.FREE,
         server_default=QuestionNavigation.FREE.value,
     )
+    #: Whether a candidate must pass the camera/microphone readiness check, and run under a
+    #: proctoring session, to take this exam (Phase 4A). Read once, when an attempt starts: the
+    #: attempt's own `proctoring_session` row is what makes *that* attempt proctored afterwards.
+    #: Off by default, so every assessment that existed before Phase 4A behaves as it did.
+    proctoring_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     availability_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     availability_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

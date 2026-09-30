@@ -39,6 +39,7 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
   const [randomizeOptions, setRandomizeOptions] = useState(settings.randomize_options)
   const [showResults, setShowResults] = useState(settings.show_results)
   const [navigation, setNavigation] = useState<QuestionNavigation>(settings.question_navigation)
+  const [proctoring, setProctoring] = useState(settings.proctoring_required)
   const [start, setStart] = useState(toLocalInput(settings.availability_start))
   const [end, setEnd] = useState(toLocalInput(settings.availability_end))
   const [errors, setErrors] = useState<{ max_attempts?: string; availability_end?: string }>({})
@@ -58,6 +59,7 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
       randomize_options: randomizeOptions,
       show_results: showResults,
       question_navigation: navigation,
+      proctoring_required: proctoring,
       availability_start: toIso(start),
       availability_end: toIso(end),
     })
@@ -118,6 +120,23 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
           <Toggle label="Randomise question order" checked={randomizeQuestions} onChange={setRandomizeQuestions} disabled={saving} />
           <Toggle label="Randomise option order" checked={randomizeOptions} onChange={setRandomizeOptions} disabled={saving} />
           <Toggle label="Show results to the candidate after submission" checked={showResults} onChange={setShowResults} disabled={saving} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Proctoring" description="Whether candidates sit this exam under a proctoring session." />
+        <CardBody className="space-y-3">
+          <Toggle
+            label="Require camera and microphone (proctored exam)"
+            checked={proctoring}
+            onChange={setProctoring}
+            disabled={saving}
+          />
+          <Note>
+            Candidates must allow camera and microphone access and pass a device check before the exam starts, and both
+            stay on while they answer. Nothing is recorded and no automated analysis runs in this version. The setting
+            applies to attempts started after it is saved.
+          </Note>
         </CardBody>
       </Card>
 

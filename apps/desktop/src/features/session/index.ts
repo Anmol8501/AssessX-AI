@@ -12,5 +12,6 @@ export type {
   SessionUser,
   SignedOutReason,
 } from './types'
+export { tokenStorage } from './tokenStorage'
 export { useApi } from './useApi'
 export { useCurrentUser, useSession } from './useSession'

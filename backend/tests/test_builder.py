@@ -27,6 +27,8 @@ def test_new_assessment_has_sensible_default_settings(client, helpers, users):
         "randomize_options": False,
         "show_results": False,
         "question_navigation": "FREE",
+        # Phase 4A: off by default, so an assessment is unproctored unless an admin opts in.
+        "proctoring_required": False,
         "availability_start": None,
         "availability_end": None,
     }
