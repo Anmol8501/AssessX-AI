@@ -4,6 +4,9 @@
 !.env.example
 !.env.development
 !.env.production.example
+# The website's production build settings: public values only (download URL/flag), committed so
+# Cloudflare's build can read them. Never put secrets in it.
+!apps/web/.env.production
 *.local
 
 # Python
