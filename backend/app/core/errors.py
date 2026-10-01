@@ -98,6 +98,79 @@ class ProctoringNotActive(Conflict):
     message = "Complete the proctoring check before continuing with this exam."
 
 
+class ReviewConflict(Conflict):
+    """The review changed since the administrator last read it (Phase 6C).
+
+    Another administrator completed or revised it first. Nothing is overwritten: the client re-reads
+    the review, sees who decided what, and decides again. `details` carries the current state.
+    """
+
+    code = "review_conflict"
+    message = "This review was changed by another administrator. Reload it before deciding."
+
+
+class ReviewNotStarted(Conflict):
+    code = "review_not_started"
+    message = "Start the review before recording notes, marks or an outcome."
+
+
+class AttemptStillOpen(Conflict):
+    """An outcome is recorded only on a finished attempt, whose evidence can no longer change."""
+
+    code = "attempt_in_progress"
+    message = "The attempt is still in progress. Complete the review once it is submitted or has expired."
+
+
+class InterviewStillActive(Conflict):
+    """A review outcome is recorded only once the interview has ended (Phase 7C)."""
+
+    code = "interview_in_progress"
+    message = "The interview is still in progress. Complete the review after it has ended."
+
+
+class EvaluationsPending(Conflict):
+    """Some answers are still being evaluated; the report is not final yet (Phase 7C)."""
+
+    code = "evaluations_pending"
+    message = (
+        "Some answers are still being evaluated. Complete the review once their evaluations have finished."
+    )
+
+
+class LiveInterview(Conflict):
+    """A LIVE interview is held as a video call with an interviewer, not as an AI-run session (7D)."""
+
+    code = "live_interview"
+    message = "This is a live interview. Join the call when your interviewer opens it."
+
+
+class CallEnded(Conflict):
+    code = "call_ended"
+    message = "This call has ended."
+
+
+class InterviewLocked(Conflict):
+    """A published interview (and its questions) cannot change: every session must see one paper."""
+
+    code = "interview_locked"
+    message = "Unpublish this interview before changing it."
+
+
+class InterviewCompleted(Conflict):
+    """The interview session has ended — answered, out of time, or ended by the candidate."""
+
+    code = "interview_completed"
+    message = "This interview has ended and can no longer be changed."
+
+
+class StaleInterviewQuestion(Conflict):
+    """The answer was for a question that is no longer the current one (a retry, a second tab, a
+    replay). Nothing is saved; `details` carries the current question so the client can resync."""
+
+    code = "stale_question"
+    message = "That question is no longer the current one. The interview has been reloaded."
+
+
 class EventLimitReached(AppError):
     """A proctoring session has recorded as many events as it is allowed to (Phase 4B)."""
 

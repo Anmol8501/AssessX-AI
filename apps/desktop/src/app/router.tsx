@@ -9,6 +9,17 @@ import { CreateAssessmentPage } from '@/features/assessments/pages/CreateAssessm
 import { CandidatesPage } from '@/features/admin/pages/CandidatesPage'
 import { LiveMonitoringPage } from '@/features/admin/monitoring/LiveMonitoringPage'
 import { SettingsPage } from '@/features/admin/pages/SettingsPage'
+import { AttemptReviewPage } from '@/features/admin/review/AttemptReviewPage'
+import { ReviewQueuePage } from '@/features/admin/review/ReviewQueuePage'
+import { InterviewEditorPage } from '@/features/interviews/admin/InterviewEditorPage'
+import { AdminCallPage } from '@/features/interviews/call/AdminCallPage'
+import { CandidateCallPage } from '@/features/interviews/call/CandidateCallPage'
+import { InterviewsPage } from '@/features/interviews/admin/InterviewsPage'
+import { InterviewDetailsPage } from '@/features/interviews/candidate/InterviewDetailsPage'
+import { InterviewRunnerPage } from '@/features/interviews/candidate/InterviewRunnerPage'
+import { MyInterviewsPage } from '@/features/interviews/candidate/MyInterviewsPage'
+import { InterviewReportPage } from '@/features/interviews/report/InterviewReportPage'
+import { ReportQueuePage } from '@/features/interviews/report/ReportQueuePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { CandidateShell } from '@/features/candidate/CandidateShell'
 import { ExamAttemptPage } from '@/features/exam/pages/ExamAttemptPage'
@@ -46,6 +57,9 @@ export const router = createHashRouter([
       {
         element: <RequireRole role="ADMIN" />,
         children: [
+          // A live interview call is full-screen: the video needs the room, and the shell's navigation
+          // would only lead away from it. More specific than the shell's catch-all child, so it wins.
+          { path: routes.admin.interviewCall(':interviewId', ':callId'), element: <AdminCallPage /> },
           {
             path: routes.admin.root,
             element: <AdminShell />,
@@ -58,6 +72,12 @@ export const router = createHashRouter([
               { path: 'monitoring', element: <LiveMonitoringPage /> },
               { path: 'results', element: <AdminResultsPage /> },
               { path: 'results/:assessmentId', element: <AssessmentResultsPage /> },
+              { path: 'reviews', element: <ReviewQueuePage /> },
+              { path: 'reviews/:attemptId', element: <AttemptReviewPage /> },
+              { path: 'interviews', element: <InterviewsPage /> },
+              { path: 'interviews/reports', element: <ReportQueuePage /> },
+              { path: 'interviews/:interviewId/sessions/:sessionId', element: <InterviewReportPage /> },
+              { path: 'interviews/:interviewId', element: <InterviewEditorPage /> },
               { path: 'settings', element: <SettingsPage /> },
               { path: '*', element: <Navigate to={routes.admin.dashboard} replace /> },
             ],
@@ -71,6 +91,8 @@ export const router = createHashRouter([
           // The exam runs outside the shell: no sidebar and no navigation while answering.
           // Listed first, and more specific than the shell's catch-all child, so it wins the match.
           { path: routes.candidate.attempt(':assessmentId'), element: <ExamAttemptPage /> },
+          { path: routes.candidate.interviewSession(':interviewId'), element: <InterviewRunnerPage /> },
+          { path: routes.candidate.interviewCall(':interviewId', ':callId'), element: <CandidateCallPage /> },
           {
             path: routes.candidate.root,
             element: <CandidateShell />,
@@ -79,6 +101,8 @@ export const router = createHashRouter([
               { path: 'exams', element: <MyExamsPage /> },
               { path: 'exams/:assessmentId', element: <ExamDetailsPage /> },
               { path: 'results', element: <CandidateResultsPage /> },
+              { path: 'interviews', element: <MyInterviewsPage /> },
+              { path: 'interviews/:interviewId', element: <InterviewDetailsPage /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: '*', element: <Navigate to={routes.candidate.dashboard} replace /> },
             ],

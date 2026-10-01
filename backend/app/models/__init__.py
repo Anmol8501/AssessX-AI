@@ -9,8 +9,37 @@ from app.models.attempt import (
     AttemptAnswerOption,
     AttemptStatus,
 )
+from app.models.audit_log import AuditAction, AuditLog
 from app.models.auth_session import AuthSession
 from app.models.base import Base
+from app.models.interview import (
+    CompletionReason,
+    Interview,
+    InterviewAssignment,
+    InterviewDifficulty,
+    InterviewFormat,
+    InterviewQuestion,
+    InterviewQuestionType,
+    InterviewSession,
+    InterviewSessionItem,
+    InterviewSessionStatus,
+    InterviewStatus,
+    InterviewType,
+    ItemState,
+    QuestionKind,
+    SelectedBy,
+)
+from app.models.interview_call import CallStatus, InterviewCall, InterviewCallMessage, InterviewCallNote
+from app.models.interview_evaluation import EvaluationFailure, EvaluationStatus, InterviewEvaluation
+from app.models.interview_review import (
+    AnswerMark,
+    InterviewReview,
+    InterviewReviewDecision,
+    InterviewReviewMark,
+    InterviewReviewNote,
+    InterviewReviewOutcome,
+    InterviewReviewStatus,
+)
 from app.models.login_challenge import LoginChallenge
 from app.models.proctoring import DeviceState, ProctoringSession, ProctoringSessionStatus
 from app.models.proctoring_event import (
@@ -21,10 +50,20 @@ from app.models.proctoring_event import (
 )
 from app.models.question import SINGLE_ANSWER_TYPES, Question, QuestionOption, QuestionType
 from app.models.result import AttemptResult
+from app.models.review import (
+    AttemptReview,
+    EvidenceMark,
+    ReviewDecision,
+    ReviewMark,
+    ReviewNote,
+    ReviewOutcome,
+    ReviewStatus,
+)
 from app.models.user import User, UserRole
 
 __all__ = [
     "ACTIVE_ATTEMPT_STATUSES",
+    "AnswerMark",
     "SINGLE_ANSWER_TYPES",
     "Assessment",
     "AssessmentAssignment",
@@ -34,10 +73,40 @@ __all__ = [
     "AttemptAnswer",
     "AttemptAnswerOption",
     "AttemptResult",
+    "AttemptReview",
     "AttemptStatus",
+    "AuditAction",
+    "AuditLog",
     "AuthSession",
     "Base",
+    "CallStatus",
+    "CompletionReason",
     "DeviceState",
+    "EvaluationFailure",
+    "EvaluationStatus",
+    "EvidenceMark",
+    "Interview",
+    "InterviewAssignment",
+    "InterviewCall",
+    "InterviewCallMessage",
+    "InterviewCallNote",
+    "InterviewDifficulty",
+    "InterviewFormat",
+    "InterviewEvaluation",
+    "InterviewQuestion",
+    "InterviewQuestionType",
+    "InterviewReview",
+    "InterviewReviewDecision",
+    "InterviewReviewMark",
+    "InterviewReviewNote",
+    "InterviewReviewOutcome",
+    "InterviewReviewStatus",
+    "InterviewSession",
+    "InterviewSessionItem",
+    "InterviewSessionStatus",
+    "InterviewStatus",
+    "InterviewType",
+    "ItemState",
     "LoginChallenge",
     "ProctoringEvent",
     "ProctoringEventCategory",
@@ -46,9 +115,16 @@ __all__ = [
     "ProctoringSession",
     "ProctoringSessionStatus",
     "Question",
+    "QuestionKind",
     "QuestionNavigation",
     "QuestionOption",
     "QuestionType",
+    "ReviewDecision",
+    "ReviewMark",
+    "ReviewNote",
+    "ReviewOutcome",
+    "ReviewStatus",
+    "SelectedBy",
     "User",
     "UserRole",
 ]
