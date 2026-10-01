@@ -77,6 +77,10 @@ into tickets/chat.
 | `STUN_URLS` | default `stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302` | optional |
 | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` | a Cloudflare Realtime TURN key id and its API token — the token is *secret*. Enables the TURN relay for live video (see §7) | recommended for video across networks |
 | `TURN_CREDENTIAL_TTL_SECONDS` | default `14400` (4 h): lifetime of the TURN credentials issued to each app | optional |
+| `LLM_PROVIDER` | `none` (default — interview answers are recorded as not evaluated) or `anthropic`. Phase 7B AI answer evaluation. **`stub` is refused in production** | optional |
+| `LLM_API_KEY` | the provider's API key — *secret*. Server-side only: never in the desktop app, never logged or returned. Required when `LLM_PROVIDER=anthropic` (startup refuses otherwise). Calls cost money per answer evaluated — check the provider's current pricing | with `anthropic` |
+| `LLM_MODEL` | default `claude-haiku-4-5-20251001` | optional |
+| `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES`, `EVALUATION_WAIT_SECONDS` | defaults 20 / 2 / 25: per-call timeout, extra attempts for transient failures, and how long a candidate waits for an evaluation before the interview moves on without it | optional |
 
 Do **not** set `TEST_DATABASE_URL`, `DEV_*_PASSWORD`, `API_HOST` or `API_PORT` on Render.
 
@@ -182,6 +186,10 @@ lines — without this, session tokens would be stored in Render's logs.
    * `VITE_ICE_SERVERS` (desktop build) still overrides the server's list, for development only.
 
    Events, the monitoring wall, candidate presence and the AI state do not depend on video.
+
+   **Live video interviews (Phase 7D)** use the same ICE servers, so the same TURN setting covers them.
+   Their media is peer-to-peer and never recorded; the API relays only signaling and stores the chat,
+   the interviewer's notes and the call times.
 
 **Live-monitoring reliability** (what the admin sees when something drops):
 * **Candidate app online/offline** is pushed to admins the moment the candidate's app connects or

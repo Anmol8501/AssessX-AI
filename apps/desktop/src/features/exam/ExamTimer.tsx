@@ -11,7 +11,7 @@ import { CRITICAL_SECONDS, WARNING_SECONDS, formatRemaining, type ExamClock } fr
  *
  * The number is a display of the server's deadline, never an input to it — see `useExamClock`.
  */
-export function ExamTimer({ clock }: { clock: ExamClock }) {
+export function ExamTimer({ clock }: { clock: Pick<ExamClock, 'remaining' | 'online' | 'finished'> }) {
   const { remaining, online, finished } = clock
   const critical = !finished && remaining <= CRITICAL_SECONDS
   const warning = !finished && !critical && remaining <= WARNING_SECONDS

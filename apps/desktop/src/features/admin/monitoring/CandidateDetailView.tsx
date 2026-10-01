@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { CameraIcon, ClockIcon, MicIcon } from '@/components/icons'
-import { Button, StatusBadge } from '@/components/ui'
+import { routes } from '@/app/routes'
+import { Button, ButtonLink, StatusBadge } from '@/components/ui'
 import { useApi } from '@/features/session'
 import { cn } from '@/lib/cn'
+import { EvidenceTimeline } from '../evidence/EvidenceTimeline'
+import { AttemptRiskPanel } from '../risk/AttemptRiskPanel'
 import { AIMonitoringSection } from './AIMonitoringSection'
 import { eventLabel } from './events'
 import { candidatePresenceLabel, deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
@@ -172,6 +175,16 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
               </dl>
 
               <AIMonitoringSection ai={session.ai} />
+              {/* Phase 6A: the server's risk state, refreshed as this candidate's events arrive. */}
+              <AttemptRiskPanel attemptId={session.attemptId} live refreshKey={events[0]?.id} />
+              {/* Phase 6B: the evidence behind that risk, refreshed the same way. */}
+              <EvidenceTimeline attemptId={session.attemptId} refreshKey={events[0]?.id} />
+              {/* Phase 6C: notes can be started live; an outcome is recorded after the attempt ends. */}
+              <div className="mt-3">
+                <ButtonLink to={routes.admin.review(session.attemptId)} variant="secondary" size="sm">
+                  Open review
+                </ButtonLink>
+              </div>
             </div>
 
             <div>

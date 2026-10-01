@@ -1,4 +1,4 @@
-import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
 import { cn } from '@/lib/cn'
 
@@ -94,5 +94,69 @@ export function Checkbox({ label, className, ...rest }: CheckboxProps) {
       <input type="checkbox" className="accent-accent h-4 w-4 rounded border-line-strong" {...rest} />
       {label}
     </label>
+  )
+}
+
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  invalid?: boolean
+}
+
+/** Multi-line text, styled like `Input`. */
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ invalid, className, ...rest }, ref) {
+  return (
+    <textarea
+      ref={ref}
+      aria-invalid={invalid || undefined}
+      className={inputClasses(invalid, cn('h-auto min-h-[84px] resize-y py-2 leading-relaxed', className))}
+      {...rest}
+    />
+  )
+})
+
+export interface RadioOption<T extends string> {
+  value: T
+  label: string
+  description?: string
+}
+
+interface RadioGroupProps<T extends string> {
+  /** Accessible name for the group. */
+  label: string
+  name: string
+  options: readonly RadioOption<T>[]
+  value: T | null
+  onChange(value: T): void
+  disabled?: boolean
+}
+
+/** A labelled set of radio options, each with an optional description. */
+export function RadioGroup<T extends string>({ label, name, options, value, onChange, disabled }: RadioGroupProps<T>) {
+  return (
+    <fieldset className="space-y-1.5" disabled={disabled}>
+      <legend className="text-ink mb-1.5 text-[13px] font-medium">{label}</legend>
+      {options.map((option) => (
+        <label
+          key={option.value}
+          className={cn(
+            'flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-[13px] transition-colors',
+            value === option.value ? 'border-accent bg-accent-soft/40' : 'border-line hover:border-line-strong',
+            disabled && 'cursor-not-allowed opacity-60',
+          )}
+        >
+          <input
+            type="radio"
+            name={name}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+            className="accent-accent mt-0.5 h-4 w-4"
+          />
+          <span className="min-w-0">
+            <span className="text-ink block font-medium">{option.label}</span>
+            {option.description && <span className="text-ink-subtle block text-[12px]">{option.description}</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
   )
 }

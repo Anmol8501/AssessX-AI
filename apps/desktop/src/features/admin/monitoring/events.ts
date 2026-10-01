@@ -5,7 +5,7 @@
  * "suspicious" or "risk" language anywhere — interpretation is not part of Phase 4C.
  */
 
-import { aiEventLabel } from './ai'
+import { AI_OBSERVATION_LABELS, aiEventLabel } from './ai'
 import type { MonitoringEvent } from './types'
 
 const LABELS: Record<string, string> = {
@@ -41,6 +41,11 @@ const LABELS: Record<string, string> = {
   APP_CLOSE_FAILED: 'Application did not close',
   DEVICE_CHECK_PASSED: 'Device check passed',
   DEVICE_CHECK_FAILED: 'Device check failed',
+}
+
+/** A readable name for an event type (no per-event details) — used by the risk view (Phase 6A). */
+export function eventTypeLabel(eventType: string): string {
+  return LABELS[eventType] ?? AI_OBSERVATION_LABELS[eventType] ?? eventType.replaceAll('_', ' ').toLowerCase()
 }
 
 export function eventLabel(event: MonitoringEvent): string {
