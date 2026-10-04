@@ -47,6 +47,16 @@ async function callDevices(page: Page) {
       return new MediaStream(tracks)
     }
     navigator.mediaDevices.getDisplayMedia = async () => canvasStream(640, 360, 'screen')
+
+    // A switch that makes the two "networks" unable to reach each other: while it is on, every new peer
+    // connection may only use a relay and has none, so video never connects (signaling and chat still do).
+    const Native = window.RTCPeerConnection
+    ;(window as unknown as { __blockVideo: boolean }).__blockVideo = false
+    window.RTCPeerConnection = function (config?: RTCConfiguration) {
+      const blocked = (window as unknown as { __blockVideo: boolean }).__blockVideo
+      return new Native(blocked ? { ...config, iceServers: [], iceTransportPolicy: 'relay' } : config)
+    } as unknown as typeof RTCPeerConnection
+    window.RTCPeerConnection.prototype = Native.prototype
   })
 }
 
@@ -210,4 +220,51 @@ test('a candidate cannot open calls or reach the interviewer screens', async ({ 
   expect((await request.post(`${API_BASE_URL}/api/v1/interviews/${id}/calls/${call_id}/notes`, { headers: candidate, data: { body: 'x' } })).status()).toBe(403)
   expect((await request.post(`${API_BASE_URL}/api/v1/interviews/${id}/calls/${call_id}/end`, { headers: candidate })).status()).toBe(403)
   expect((await request.post(`${API_BASE_URL}/api/v1/interviews/${id}/calls/${call_id}/end`, { headers: admin })).ok()).toBeTruthy()
+})
+
+test('when video cannot connect, both sides say so, chat keeps working, and Retry reconnects', async ({ browser, request }) => {
+  test.setTimeout(240_000)
+  const title = unique('Live Interview Blocked')
+  const { id, candidateName } = await liveInterview(request, title)
+  const block = (page: Page, on: boolean) => page.evaluate((value) => ((window as unknown as { __blockVideo: boolean }).__blockVideo = value), on)
+
+  const admin = await newPage(browser)
+  await signIn(admin, request, DEV_ADMIN)
+  await expect(admin).toHaveURL(/#\/admin$/)
+  await block(admin, true)
+  await admin.goto(`/#/admin/interviews/${id}`)
+  await admin.getByRole('list', { name: 'Assigned candidates' }).getByRole('listitem').filter({ hasText: candidateName }).getByRole('button', { name: 'Start live call' }).click()
+  await expect(admin).toHaveURL(new RegExp(`#/admin/interviews/${id}/calls/`))
+
+  const candidate = await newPage(browser)
+  await signIn(candidate, request, DEV_CANDIDATE)
+  await expect(candidate).toHaveURL(/#\/candidate$/)
+  await block(candidate, true)
+  await candidate.goto(`/#/candidate/interviews/${id}`)
+  await candidate.getByRole('link', { name: 'Join live call' }).click()
+
+  // Three automatic attempts (20 s each), then a clear message on both sides — never "Connecting…" forever.
+  await expect(candidate.getByTestId('video-failed')).toBeVisible({ timeout: 100_000 })
+  await expect(candidate.getByTestId('video-failed')).toContainText('no relay (TURN)')
+  await expect(admin.getByTestId('video-failed')).toBeVisible({ timeout: 40_000 })
+  await expect(admin.locator('[data-testid="live-call"]')).toHaveAttribute('data-phase', 'video-failed')
+
+  // Chat still works.
+  await candidate.getByLabel('Chat message').fill('No video here, typing instead.')
+  await candidate.getByRole('button', { name: 'Send' }).click()
+  await admin.getByRole('tab', { name: /Chat/ }).click()
+  await expect(admin.getByRole('log', { name: 'Chat history' })).toContainText('No video here, typing instead.')
+
+  // The networks recover; the interviewer presses Retry video and the call connects.
+  await block(admin, false)
+  await block(candidate, false)
+  await admin.getByRole('button', { name: 'Retry video' }).click()
+  await expect(admin.locator('[data-testid="live-call"]')).toHaveAttribute('data-phase', 'connected', { timeout: 45_000 })
+  await expect(candidate.locator('[data-testid="live-call"]')).toHaveAttribute('data-phase', 'connected', { timeout: 15_000 })
+  await expect.poll(() => showing(admin, candidateName), { timeout: 30_000 }).toBe(true)
+
+  await admin.getByRole('button', { name: 'End call' }).click()
+  await admin.getByRole('dialog').getByRole('button', { name: 'End call' }).click()
+  await admin.context().close()
+  await candidate.context().close()
 })

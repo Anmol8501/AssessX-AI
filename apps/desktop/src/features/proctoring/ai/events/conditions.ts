@@ -1,5 +1,6 @@
+import { OBJECT_CLASSES, type ObjectClassId, type RunningObjectModel } from '../objectDetection/models'
 import type { Observation } from '../types'
-import type { AIEventThresholds, AIEventType } from './config'
+import { OBJECT_EVENT, type AIEventThresholds, type AIEventType, type ObjectEventType } from './config'
 
 /**
  * Phase 5C, step 1: normalise one processed frame's detector observations into a factual reading of
@@ -10,9 +11,11 @@ import type { AIEventThresholds, AIEventType } from './config'
  * measure). An unknown reading never starts an episode and never counts as the condition clearing;
  * it only lets a long-unmeasurable episode end as `measurement_unavailable`.
  *
- * Only the observations Phase 5B actually produces are used. Phone / object-detection output is
- * ignored on purpose (no validated threshold exists), and conditions the 5B measurements cannot
- * support — a blocked camera, a partially visible face, generic "poor quality" — are not produced.
+ * Only the observations Phase 5B actually produces are used. Objects (a phone, a book, a laptop or
+ * tablet, a handheld device) are present when the model's best candidate of that class reaches the
+ * running model's PROVISIONAL threshold (2026-10-02, see `OBJECT_THRESHOLDS`); a frame the object
+ * model did not process is unknown. Conditions the measurements cannot support — a blocked camera, a
+ * partially visible face, generic "poor quality" — are not produced.
  */
 
 export type ConditionState = 'present' | 'absent' | 'unknown'
@@ -143,7 +146,40 @@ export function readConditions(
     CAMERA_TOO_DARK: dark,
     FACE_TOO_FAR: tooFar,
     FACE_TOO_CLOSE: tooClose,
+    ...objectReadings(observations, thresholds),
   }
+}
+
+const RUNNING_MODELS: readonly string[] = ['yolox_s', 'yolox_tiny', 'efficientdet_lite0']
+
+/**
+ * One reading per object class. No observation for a class (the object model did not run on this
+ * frame) is unknown; otherwise present when its best candidate's confidence reaches the running
+ * model's threshold for that class. The event carries what was measured: class, confidence, model
+ * and the box's share of the frame — never an image.
+ */
+function objectReadings(observations: Observation[], thresholds: AIEventThresholds): Record<ObjectEventType, ConditionReading> {
+  const out = {} as Record<ObjectEventType, ConditionReading>
+  for (const { id } of OBJECT_CLASSES) {
+    const type = OBJECT_EVENT[id]
+    const observation = observations.find((o) => o.observationType === 'OBJECT_DETECTION' && o.metadata.objectClass === id)
+    const model = observation?.metadata.objectModel
+    const threshold = typeof model === 'string' && RUNNING_MODELS.includes(model) ? thresholds.objects[model as RunningObjectModel][id as ObjectClassId] : null
+    if (!observation || observation.confidence === null || threshold === null) {
+      out[type] = UNKNOWN
+      continue
+    }
+    const area = num(observation, 'boxAreaRatio')
+    const required = threshold + (observation.metadata.region === 'tile' ? thresholds.objectTileMargin : 0)
+    out[type] = reading(observation.confidence >= required, {
+      detector: 'object_detection',
+      object_class: id,
+      confidence: observation.confidence,
+      object_model: model as string,
+      ...(area !== null ? { box_area_ratio: area } : {}),
+    })
+  }
+  return out
 }
 
 /** Every condition unknown — used when no frame has been processed recently. */
@@ -156,6 +192,10 @@ export function unknownConditions(): Record<AIEventType, ConditionReading> {
     CAMERA_TOO_DARK: UNKNOWN,
     FACE_TOO_FAR: UNKNOWN,
     FACE_TOO_CLOSE: UNKNOWN,
+    PHONE_DETECTED: UNKNOWN,
+    BOOK_DETECTED: UNKNOWN,
+    LAPTOP_DETECTED: UNKNOWN,
+    HANDHELD_DEVICE_DETECTED: UNKNOWN,
   }
 }
 

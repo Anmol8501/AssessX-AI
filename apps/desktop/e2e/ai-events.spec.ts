@@ -235,6 +235,54 @@ test.describe('AI events (real detectors, scripted scene)', () => {
     await page.context().close()
   })
 
+  test('a phone in view: the candidate is warned, the admin sees it live, and it ends when put away', async ({ browser, request }) => {
+    test.setTimeout(150_000)
+    const title = unique('AI Phone Exam')
+    const exam = await seedExam(request, title, true)
+    const page = await candidatePage(browser, { ...FAST, scene: { faces: 1 } })
+    const attemptId = await enterExam(page, request, title, exam.id)
+    await until(request, attemptId, (events) => ofType(events, 'AI_STATUS').some((e) => e.metadata.ai_status === 'RUNNING'))
+
+    const admin = await adminDetail(browser, request, title)
+    const dialog = admin.getByRole('dialog')
+    await expect(indicator(admin, 'Objects')).toContainText('None seen', { timeout: 15_000 })
+
+    // A phone scoring below YOLOX-S's provisional threshold (0.45) is not an event.
+    await setScene(page, { faces: 1, objects: [{ category: 'cell phone', score: 0.3 }] })
+    await page.waitForTimeout(3000)
+    expect(ofType(await aiEvents(request, attemptId), 'PHONE_DETECTED')).toHaveLength(0)
+
+    // A phone clearly in view, frame after frame: one episode, a warning, and the admin sees it.
+    await setScene(page, { faces: 1, objects: [{ category: 'cell phone', score: 0.81 }] })
+    const started = await until(request, attemptId, (events) => ofType(events, 'PHONE_DETECTED').length === 1)
+    expect(ofType(started, 'PHONE_DETECTED')[0]).toMatchObject({
+      category: 'AI_OBSERVATION',
+      metadata: { phase: 'started', detector: 'object_detection', object_class: 'cell_phone', confidence: 0.81, object_model: 'yolox_s' },
+    })
+    await expect(page.getByRole('alert').filter({ hasText: 'A mobile phone is visible' })).toBeVisible()
+    await expect(indicator(admin, 'Objects')).toContainText('Phone', { timeout: 15_000 })
+    const ongoing = dialog.getByRole('list', { name: 'Ongoing AI observations' })
+    await expect(ongoing.getByText('Mobile phone in view (confidence 81%)')).toBeVisible()
+
+    // A book appears too: its own episode.
+    await setScene(page, { faces: 1, objects: [{ category: 'cell phone', score: 0.81 }, { category: 'book', score: 0.7 }] })
+    await until(request, attemptId, (events) => ofType(events, 'BOOK_DETECTED').length === 1)
+    await expect(indicator(admin, 'Objects')).toContainText('Book')
+
+    // Both put away: both episodes end, the warning goes, the admin sees none.
+    await setScene(page, { faces: 1 })
+    const ended = await until(request, attemptId, (events) => ofType(events, 'PHONE_DETECTED').length === 2 && ofType(events, 'BOOK_DETECTED').length === 2)
+    expect(ofType(ended, 'PHONE_DETECTED')[1]!.metadata).toMatchObject({ phase: 'resolved', resolution: 'condition_cleared' })
+    await expect(page.getByRole('alert').filter({ hasText: 'A mobile phone is visible' })).toHaveCount(0)
+    await expect(indicator(admin, 'Objects')).toContainText('None seen', { timeout: 15_000 })
+    // A warning only: the exam is never locked by the AI.
+    await expect(counter(page)).toBeVisible()
+    expect(JSON.stringify(ended).toLowerCase()).not.toMatch(/risk|cheat|verdict|suspicious/)
+
+    await admin.context().close()
+    await page.context().close()
+  })
+
   test('an AI failure is reported as ERROR, open episodes end as unmeasurable, and the admin sees Unknown', async ({ browser, request }) => {
     test.setTimeout(120_000)
     const title = unique('AI Failure Exam')
@@ -304,7 +352,8 @@ test.describe('AI events (real detectors, scripted scene)', () => {
       })
     const episode = crypto.randomUUID()
 
-    expect((await post('PHONE_DETECTED', { phase: 'started', episode_id: episode })).status()).toBe(422)
+    expect((await post('CHEATING_DETECTED', { phase: 'started', episode_id: episode })).status()).toBe(422)
+    expect((await post('PHONE_DETECTED', { phase: 'started', episode_id: episode, object_class: 'cell_phone', image: 'AAAA' })).status()).toBe(422)
     expect((await post('GAZE_AWAY', { phase: 'started', episode_id: episode, direction: 'left' })).status()).toBe(422) // disabled
     expect((await post('FACE_NOT_DETECTED', { phase: 'started', episode_id: episode, risk_score: 1 })).status()).toBe(422)
     expect((await post('FACE_NOT_DETECTED', { phase: 'started', episode_id: episode })).status()).toBe(201)
@@ -317,20 +366,24 @@ test.describe('AI events (real detectors, scripted scene)', () => {
 })
 
 test.describe('AI events (real MediaPipe runtime, shipped debounce defaults)', () => {
-  test('an empty camera yields one FACE_NOT_DETECTED episode, not a row per frame, and no phone event', async ({ browser, request }) => {
-    test.setTimeout(150_000)
+  test('an empty camera yields one FACE_NOT_DETECTED episode, not a row per frame, and no object event', async ({ browser, request }) => {
+    test.setTimeout(180_000)
     const title = unique('AI Real Model Exam')
     const exam = await seedExam(request, title, true)
     // Production runtime and detectors; only the sampling interval is shortened.
     const page = await candidatePage(browser, { config: { inferenceIntervalMs: 100, latencyBudgetMs: 60_000 } })
     const attemptId = await enterExam(page, request, title, exam.id)
 
-    const events = await until(request, attemptId, (all) => ofType(all, 'FACE_NOT_DETECTED').length >= 1, 60_000)
+    // The YOLOX-S model (36 MB) and ONNX Runtime load before the first frame: allow for a slow cold start.
+    const events = await until(request, attemptId, (all) => ofType(all, 'FACE_NOT_DETECTED').length >= 1, 90_000)
     await page.waitForTimeout(4000)
     const later = await aiEvents(request, attemptId)
     expect(ofType(later, 'FACE_NOT_DETECTED')).toHaveLength(1)
     expect(ofType(later, 'FACE_NOT_DETECTED')[0]!.metadata.phase).toBe('started')
-    expect(later.map((e) => e.event_type)).not.toContain('PHONE_DETECTED')
+    // The real object model (YOLOX) on an empty synthetic camera: no phone, book, laptop or device.
+    for (const type of ['PHONE_DETECTED', 'BOOK_DETECTED', 'LAPTOP_DETECTED', 'HANDHELD_DEVICE_DETECTED']) {
+      expect(later.map((e) => e.event_type)).not.toContain(type)
+    }
     const ai = later.filter((e) => e.category === 'AI_OBSERVATION' || e.category === 'AI_HEALTH')
     expect(new Set(ai.map((e) => e.event_type))).toEqual(new Set(['AI_STATUS', 'FACE_NOT_DETECTED']))
     void events

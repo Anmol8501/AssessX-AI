@@ -144,6 +144,8 @@ export function AssessmentBuilderPage() {
             onReorder={async (questionIds) => {
               await run(() => actions.reorderQuestions(id, questionIds), 'Could not reorder the questions.')
             }}
+            onAddCoding={(versionId) => run(() => actions.addCodingQuestion(id, versionId), 'Could not add the coding problem.')}
+            onUpdateMarks={(questionId, marks) => run(() => actions.updateQuestion(id, questionId, { marks } as QuestionInput), 'Could not save the marks.')}
           />
         )}
 

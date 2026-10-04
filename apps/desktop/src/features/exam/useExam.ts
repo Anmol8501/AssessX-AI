@@ -190,6 +190,11 @@ export function useAnswers(attemptId: string, initial: AttemptAnswer[], onLocked
             await api<AttemptAnswer>(base, { method: 'PUT', body: { selected_option_ids: selected } })
             if (mounted.current) setSaveStates((s) => ({ ...s, [questionId]: 'saved' }))
           } catch (caught) {
+            if (caught instanceof ApiError && caught.code === 'attempt_on_hold') {
+              // The exam is locked (on hold): the answer stays on screen as unsaved, and the lock is
+              // shown at once. Retry re-sends it after the administrator releases the exam.
+              window.dispatchEvent(new Event('assessx:attempt-control-refresh'))
+            }
             if (caught instanceof ApiError && caught.code === 'attempt_locked') {
               // Not a save failure: the exam ended. Retrying would be pointless and misleading.
               pending.current[questionId] = undefined

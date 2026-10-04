@@ -10,7 +10,7 @@ import {
   YOLOX_PREFER_WEBGPU,
   YOLOX_WARMUP_TIMEOUT_MS,
 } from './config'
-import { DEFAULT_OBJECT_MODEL, YOLOX_TINY, type ObjectModelId } from '../objectDetection/models'
+import { DEFAULT_OBJECT_MODEL, YOLOX_S, YOLOX_TINY, type ObjectModelId } from '../objectDetection/models'
 import type { Accelerator, ObjectBackendReport, TaskName, WorkerRequest, WorkerResponse } from './protocol'
 
 type WorkerFactory = () => Worker
@@ -60,7 +60,7 @@ export class MediaPipeRuntime implements AIRuntime {
     options: {
       createWorker?: WorkerFactory
       origin?: string
-      /** Which object model the worker loads; EfficientDet-Lite0 unless explicitly configured. */
+      /** Which object model mode the worker loads; `yolox` (YOLOX-S on WebGPU, else YOLOX-Tiny) unless configured. */
       objectModel?: ObjectModelId
       /** Test-only override of the YOLOX model URL (e.g. to exercise a missing model). */
       objectModelUrl?: string
@@ -118,8 +118,10 @@ export class MediaPipeRuntime implements AIRuntime {
           landmarkerMaxFaces: LANDMARKER_MAX_FACES,
           objectModel: this.objectModel,
           yolox: {
-            modelUrl: this.objectModelUrl ?? urls.yoloxModel,
-            sha256: YOLOX_TINY.sha256,
+            models: {
+              yolox_s: { url: this.objectModelUrl ?? urls.yoloxModels.yolox_s, sha256: YOLOX_S.sha256 },
+              yolox_tiny: { url: this.objectModelUrl ?? urls.yoloxModels.yolox_tiny, sha256: YOLOX_TINY.sha256 },
+            },
             wasmPaths: urls.ortWasmPaths,
             preferWebGPU: YOLOX_PREFER_WEBGPU,
             warmupTimeoutMs: YOLOX_WARMUP_TIMEOUT_MS,

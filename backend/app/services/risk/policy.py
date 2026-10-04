@@ -94,6 +94,12 @@ END_MARKERS: frozenset[ProctoringEventType] = frozenset().union(*PAIR_ENDS.value
 
 _READINESS = "Pre-exam device readiness check; any prohibited app was closed before the exam could start."
 #: Events that never contribute, and why. Listed in every assessment so the omission is explicit.
+_OBJECTS = (
+    "Object detection uses provisional, not yet calibrated thresholds — "
+    "reviewed in the evidence timeline, not scored."
+)
+_CODING = "Coding activity — a fact about solving the problem, not a risk signal."
+
 EXCLUDED: dict[ProctoringEventType, str] = {
     E.SESSION_STARTED: "Session lifecycle.",
     E.SESSION_RESUMED: "Session lifecycle.",
@@ -108,6 +114,19 @@ EXCLUDED: dict[ProctoringEventType, str] = {
     E.DEVICE_CHECK_FAILED: _READINESS,
     E.AI_STATUS: "AI monitoring health — reported as coverage, never as candidate behaviour.",
     E.GAZE_AWAY: "Gaze is disabled (not a validated signal).",
+    # Coding activity (coding assessments, stage C4): what the candidate did while solving a problem.
+    # Facts for the timeline, never risk signals.
+    # Objects in view (2026-10-02): shown to reviewers as observations with their duration and
+    # confidence, but not scored until the provisional thresholds are calibrated on real data.
+    E.PHONE_DETECTED: _OBJECTS,
+    E.BOOK_DETECTED: _OBJECTS,
+    E.LAPTOP_DETECTED: _OBJECTS,
+    E.HANDHELD_DEVICE_DETECTED: _OBJECTS,
+    E.CODING_QUESTION_OPENED: _CODING,
+    E.CODE_PASTED: _CODING,
+    E.CODE_RUN_REQUESTED: _CODING,
+    E.CODE_SUBMITTED: _CODING,
+    E.CODE_LANGUAGE_CHANGED: _CODING,
 }
 
 # --- correlation ---------------------------------------------------------------------------------

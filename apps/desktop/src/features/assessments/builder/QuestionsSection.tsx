@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { AlertIcon, ArrowLeftIcon, ArrowRightIcon, CheckIcon, EyeIcon } from '@/components/icons'
 import { Button, Card, CardHeader, ConfirmDialog, EmptyState } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { routes } from '@/app/routes'
+import { ButtonLink, Input } from '@/components/ui'
+import { CodingProblemPicker } from '@/features/coding/admin/CodingProblemPicker'
 import { QuestionForm } from '../QuestionForm'
-import { QUESTION_TYPE_LABEL, type AssessmentDetail, type Question, type QuestionInput } from '../types'
+import { allowsCoding, allowsObjective, ASSESSMENT_TYPE_LABEL, QUESTION_TYPE_LABEL, type AssessmentDetail, type Question, type QuestionInput } from '../types'
 import { LockedNotice } from './LockedNotice'
 import { QuestionPreview } from './QuestionPreview'
 
-type Editor = { mode: 'closed' } | { mode: 'add' } | { mode: 'edit'; question: Question }
+type Editor = { mode: 'closed' } | { mode: 'add' } | { mode: 'pick' } | { mode: 'edit'; question: Question }
 
 interface QuestionsSectionProps {
   assessment: AssessmentDetail
@@ -21,6 +24,10 @@ interface QuestionsSectionProps {
   onDelete(questionId: string): Promise<void>
   onDuplicate(questionId: string): Promise<void>
   onReorder(questionIds: string[]): Promise<void>
+  /** Coding assessments: adds a published coding problem version. */
+  onAddCoding(problemVersionId: string): Promise<boolean>
+  /** Coding questions: only the marks are edited here (the problem lives in its version). */
+  onUpdateMarks(questionId: string, marks: number): Promise<boolean>
   onDismissError(): void
 }
 
@@ -35,12 +42,31 @@ export function QuestionsSection({
   onDelete,
   onDuplicate,
   onReorder,
+  onAddCoding,
+  onUpdateMarks,
   onDismissError,
 }: QuestionsSectionProps) {
   const [editor, setEditor] = useState<Editor>({ mode: 'closed' })
   const [previewing, setPreviewing] = useState<Question | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Question | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const canObjective = allowsObjective(assessment.assessment_type)
+  const canCoding = allowsCoding(assessment.assessment_type)
+  const pinned = new Set(assessment.questions.flatMap((q) => (q.coding_version ? [q.coding_version.problem_id] : [])))
+  const addButtons = (
+    <div className="flex gap-2">
+      {canObjective && (
+        <Button size="sm" onClick={() => setEditor({ mode: 'add' })}>
+          + Add Question
+        </Button>
+      )}
+      {canCoding && (
+        <Button size="sm" variant={canObjective ? 'secondary' : 'primary'} onClick={() => setEditor({ mode: 'pick' })}>
+          + Add Coding Problem
+        </Button>
+      )}
+    </div>
+  )
 
   const questions = assessment.questions
   const idle = editor.mode === 'closed' && !saving && busyQuestionId === null && !locked
@@ -74,14 +100,8 @@ export function QuestionsSection({
       <Card>
         <CardHeader
           title="Questions"
-          description={`${assessment.question_count} question(s) · ${assessment.allocated_marks} of ${assessment.total_marks} marks allocated`}
-          actions={
-            editor.mode === 'closed' && !locked ? (
-              <Button size="sm" onClick={() => setEditor({ mode: 'add' })}>
-                + Add Question
-              </Button>
-            ) : undefined
-          }
+          description={`${ASSESSMENT_TYPE_LABEL[assessment.assessment_type]} · ${assessment.question_count} question(s) · ${assessment.allocated_marks} of ${assessment.total_marks} marks allocated`}
+          actions={editor.mode === 'closed' && !locked ? addButtons : undefined}
         />
 
         {error && editor.mode === 'closed' && (
@@ -94,13 +114,17 @@ export function QuestionsSection({
         {questions.length === 0 && editor.mode === 'closed' ? (
           <EmptyState
             title="No questions yet"
-            description="Add the first question to this assessment."
-            action={locked ? undefined : <Button onClick={() => setEditor({ mode: 'add' })}>+ Add Question</Button>}
+            description={canCoding && !canObjective ? 'Add the first coding problem to this assessment.' : 'Add the first question to this assessment.'}
+            action={locked ? undefined : addButtons}
           />
         ) : (
           <ul className="divide-line divide-y">
             {questions.map((question, index) =>
-              editor.mode === 'edit' && editor.question.id === question.id ? (
+              editor.mode === 'edit' && editor.question.id === question.id && question.type === 'CODING' ? (
+                <li key={question.id} className="bg-surface px-5 py-4">
+                  <MarksForm question={question} saving={saving} onCancel={closeEditor} onSave={async (marks) => { if (await onUpdateMarks(question.id, marks)) setEditor({ mode: 'closed' }) }} />
+                </li>
+              ) : editor.mode === 'edit' && editor.question.id === question.id ? (
                 <li key={question.id} className="bg-surface px-5 py-4">
                   <QuestionForm question={question} submitting={saving} error={error} onSubmit={submit} onCancel={closeEditor} />
                 </li>
@@ -138,6 +162,12 @@ export function QuestionsSection({
                         <p className="text-ink-subtle mt-1 text-[12.5px]">
                           {QUESTION_TYPE_LABEL[question.type]} · {question.marks} {question.marks === 1 ? 'mark' : 'marks'}
                         </p>
+                        {question.coding_version && (
+                          <p className="text-ink-muted mt-1.5 text-[12.5px]">
+                            v{question.coding_version.version} · {question.coding_version.difficulty.toLowerCase()} · {question.coding_version.languages.join(', ')} ·{' '}
+                            {question.coding_version.partial_scoring ? 'partial scoring' : 'all tests must pass'}
+                          </p>
+                        )}
                         <ul className="mt-2.5 space-y-1">
                           {question.options.map((option) => (
                             <li
@@ -160,15 +190,23 @@ export function QuestionsSection({
                     </div>
 
                     <div className="flex shrink-0 gap-1">
-                      <Button variant="ghost" size="sm" disabled={!idle} leadingIcon={<EyeIcon className="text-[15px]" />} onClick={() => setPreviewing(question)}>
-                        Preview
-                      </Button>
+                      {question.coding_version ? (
+                        <ButtonLink variant="ghost" size="sm" to={routes.admin.codingProblem(question.coding_version.problem_id)}>
+                          Open problem
+                        </ButtonLink>
+                      ) : (
+                        <Button variant="ghost" size="sm" disabled={!idle} leadingIcon={<EyeIcon className="text-[15px]" />} onClick={() => setPreviewing(question)}>
+                          Preview
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" disabled={!idle} onClick={() => { onDismissError(); setEditor({ mode: 'edit', question }) }}>
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm" disabled={!idle} onClick={() => void onDuplicate(question.id)}>
-                        Duplicate
-                      </Button>
+                      {question.type !== 'CODING' && (
+                        <Button variant="ghost" size="sm" disabled={!idle} onClick={() => void onDuplicate(question.id)}>
+                          Duplicate
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" disabled={!idle} onClick={() => setPendingDelete(question)}>
                         Delete
                       </Button>
@@ -183,6 +221,21 @@ export function QuestionsSection({
         {editor.mode === 'add' && (
           <div className="border-line bg-surface border-t px-5 py-4">
             <QuestionForm submitting={saving} error={error} onSubmit={submit} onCancel={closeEditor} />
+          </div>
+        )}
+        {editor.mode === 'pick' && (
+          <div className="border-line bg-surface border-t px-5 py-4">
+            {error && (
+              <p className="bg-danger-soft text-danger mb-3 rounded-md px-3 py-2 text-[13px]" role="alert">
+                {error}
+              </p>
+            )}
+            <CodingProblemPicker
+              excludeProblemIds={pinned}
+              busy={saving}
+              onCancel={closeEditor}
+              onPick={(versionId) => void onAddCoding(versionId).then((ok) => ok && setEditor({ mode: 'closed' }))}
+            />
           </div>
         )}
       </Card>
@@ -213,5 +266,36 @@ export function QuestionsSection({
         onCancel={() => setPendingDelete(null)}
       />
     </>
+  )
+}
+
+/** A coding question's marks: the only part of it edited from the assessment. */
+function MarksForm({ question, saving, onSave, onCancel }: { question: Question; saving: boolean; onSave(marks: number): void; onCancel(): void }) {
+  const [marks, setMarks] = useState(String(question.marks))
+  const value = Number(marks)
+  const valid = Number.isInteger(value) && value >= 1 && value <= 100
+  return (
+    <form
+      className="flex flex-wrap items-end gap-3"
+      aria-label="Coding question marks"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (valid) onSave(value)
+      }}
+    >
+      <div>
+        <p className="text-ink text-[13.5px] font-medium">{question.text}</p>
+        <label className="text-ink-muted mt-2 block text-[12.5px]" htmlFor={`marks-${question.id}`}>
+          Marks for this assessment
+        </label>
+        <Input id={`marks-${question.id}`} type="number" min={1} max={100} value={marks} onChange={(e) => setMarks(e.target.value)} />
+      </div>
+      <Button type="submit" size="sm" loading={saving} disabled={!valid}>
+        Save marks
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        Cancel
+      </Button>
+    </form>
   )
 }

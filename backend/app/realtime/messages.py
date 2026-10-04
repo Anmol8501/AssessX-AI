@@ -27,6 +27,8 @@ class MessageType(enum.StrEnum):
     UNWATCH = "UNWATCH"
     # candidate/admin → server: whether the candidate is currently publishing media
     PUBLISH_STATE = "PUBLISH_STATE"
+    #: server → candidate: the attempt's tab-switch count or hold changed (exam control).
+    ATTEMPT_CONTROL = "ATTEMPT_CONTROL"
 
 
 def message(type_: MessageType, **fields: Any) -> dict[str, Any]:

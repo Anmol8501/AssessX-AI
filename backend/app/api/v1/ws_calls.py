@@ -7,7 +7,8 @@ Each side is held by one person at a time (a call is one-to-one); the same perso
 their old connection.
 
 Relaying is strictly between the two sides of this call: offers only from the candidate, answers only
-from the interviewer, ICE candidates and media state either way, each size-bounded. Chat messages are
+from the interviewer, ICE candidates and media state either way, each size-bounded. The interviewer
+may ask the candidate for a fresh offer (RENEGOTIATE) when video did not connect. Chat messages are
 stored first, then delivered to both. No media passes through — WebRTC is peer-to-peer — and nothing here
 is recorded.
 """
@@ -131,6 +132,8 @@ async def _handle(ws: WebSocket, call_id: uuid.UUID, side: str, user: User, data
         await call_hub.send(
             call_id, peer, _msg(CallMessage.ICE, candidate=data["candidate"], **_offer_id(data))
         )
+    elif kind == CallMessage.RENEGOTIATE.value and side == "interviewer":
+        await call_hub.send(call_id, peer, _msg(CallMessage.RENEGOTIATE))
     elif kind == CallMessage.MEDIA_STATE.value:
         state = {k: bool(data.get(k)) for k in ("audio", "video", "screen")}
         await call_hub.send(call_id, peer, _msg(CallMessage.MEDIA_STATE, role=side, **state))

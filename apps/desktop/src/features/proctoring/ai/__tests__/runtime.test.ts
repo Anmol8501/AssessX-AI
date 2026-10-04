@@ -70,7 +70,7 @@ describe('MediaPipe runtime', () => {
     expect(load.type).toBe('load')
     if (load.type === 'load') {
       expect(load.config.models.faceLandmarker).toBe('http://tauri.localhost/models/face_landmarker.task')
-      expect(load.config.objectCategories).toEqual(['cell phone'])
+      expect(load.config.objectCategories).toEqual(['cell phone', 'book', 'laptop', 'remote'])
       expect(load.config.preferGpu).toBe(false)
     }
     expect(FakeWorker.instances).toHaveLength(1)

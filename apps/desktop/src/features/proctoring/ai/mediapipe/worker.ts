@@ -4,13 +4,14 @@
  *
  * All computer-vision work happens here, off the exam's UI thread. The page transfers each sampled
  * frame (an `ImageBitmap`, moved, not copied); the worker runs the face detector, the face
- * landmarker (only when there is a face to measure) and the phone detector on it, closes the bitmap,
+ * landmarker (only when there is a face to measure) and the object detector on it, closes the bitmap,
  * and posts back a small factual result (see `protocol.ts` for what is — and deliberately is not —
  * returned). Models are loaded once per worker and reused for every frame. Nothing is stored,
  * written or sent anywhere else.
  */
 import { FaceDetector, FaceLandmarker, ObjectDetector } from '@mediapipe/tasks-vision'
-import type { ObjectModelId } from '../objectDetection/models'
+import type { RunningObjectModel } from '../objectDetection/models'
+import { regionsFor } from '../objectDetection/tiling'
 import type { YoloxBackend } from '../objectDetection/yoloxBackend'
 import { frameStatistics } from './statistics'
 import {
@@ -42,9 +43,11 @@ const STATISTICS_WIDTH = 64
 let faceDetector: FaceDetector | null = null
 let faceLandmarker: FaceLandmarker | null = null
 let objectDetector: ObjectDetector | null = null
-/** Opt-in alternative object model (YOLOX-Tiny); exactly one of this or `objectDetector` is used. */
+/** The YOLOX object model (default); exactly one of this or `objectDetector` is used. */
 let yolox: YoloxBackend | null = null
-let objectModel: ObjectModelId = 'efficientdet_lite0'
+let objectModel: RunningObjectModel = 'efficientdet_lite0'
+/** Processed frames so far, for the object detector's region rotation (see objectDetection/tiling.ts). */
+let objectFrameIndex = 0
 let lastTimestamp = 0
 let statisticsCanvas: OffscreenCanvas | null = null
 
@@ -136,21 +139,23 @@ async function load(config: WorkerLoadConfig): Promise<WorkerResponse> {
     errors.push(`faceLandmarker: ${errorText(error)}`)
   }
 
-  // Object detection: EfficientDet-Lite0 (MediaPipe, default) or YOLOX-Tiny (ONNX Runtime, opt-in).
-  // A failed YOLOX load is reported as unavailable — never silently replaced by EfficientDet, whose
-  // scores mean something different.
-  objectModel = config.objectModel
+  // Object detection: YOLOX (ONNX Runtime; default — YOLOX-S on WebGPU, else YOLOX-Tiny) or, for
+  // comparison builds, EfficientDet-Lite0 (MediaPipe). A failed YOLOX load is reported as unavailable
+  // — never silently replaced by EfficientDet, whose scores mean something different.
+  objectFrameIndex = 0
   let objectBackend: ObjectBackendReport | null = null
-  if (config.objectModel === 'yolox_tiny') {
+  if (config.objectModel === 'yolox' || config.objectModel === 'yolox_s' || config.objectModel === 'yolox_tiny') {
     try {
       const { YoloxBackend } = await import('../objectDetection/yoloxBackend')
-      yolox = await YoloxBackend.create(config.yolox)
+      yolox = await YoloxBackend.create(config.objectModel, config.yolox)
       objectBackend = yolox.report
+      objectModel = yolox.report.model
       tasks.objectDetector = 'READY'
     } catch (error) {
-      errors.push(`objectDetector (yolox_tiny): ${errorText(error)}`)
+      errors.push(`objectDetector (${config.objectModel}): ${errorText(error)}`)
     }
   } else if (config.objectModel === 'efficientdet_lite0') {
+    objectModel = 'efficientdet_lite0'
     const objectStarted = performance.now()
     try {
       const created = await createTask(
@@ -160,9 +165,9 @@ async function load(config: WorkerLoadConfig): Promise<WorkerResponse> {
             runningMode: 'VIDEO',
             categoryAllowlist: config.objectCategories,
             // The model's metadata sets no score cut-off, so it would return every anchor as a
-            // candidate. Only the single most confident candidate is requested; no threshold is
-            // invented (see detectors/object.ts).
-            maxResults: 1,
+            // candidate. Only the most confident few are requested (enough for the best of each
+            // reported class); thresholds are applied by the event layer, per model.
+            maxResults: 12,
           }),
         config.preferGpu,
         config.wasmLoaderPath,
@@ -293,7 +298,10 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
   }
 
   let objects: DetectedObject[] | null = null
-  if (objectDetector) {
+  const regions = regionsFor(objectFrameIndex++, yolox ? yolox.provider : 'mediapipe')
+  if ((objectDetector || yolox) && regions.length === 0) {
+    tasks.objectDetector = 'SKIPPED' // not this frame (CPU path runs every other frame): unknown, not "nothing"
+  } else if (objectDetector) {
     mark = performance.now()
     try {
       const result = objectDetector.detectForVideo(bitmap, timestamp)
@@ -303,6 +311,7 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
           category: detection.categories[0]!.categoryName,
           score: detection.categories[0]!.score ?? null,
           box: normalize(detection.boundingBox!, width, height),
+          region: 'full' as const,
         }))
     } catch {
       tasks.objectDetector = 'FAILED'
@@ -311,7 +320,7 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
   } else if (yolox) {
     mark = performance.now()
     try {
-      objects = await yolox.detect(bitmap, 1)
+      objects = await yolox.detect(bitmap, regions)
     } catch {
       tasks.objectDetector = 'FAILED'
     }

@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { AlertIcon, CheckIcon } from '@/components/icons'
-import { Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui'
+import { Button, Card, CardBody, CardHeader, Field, Input, RadioGroup } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { LockedNotice } from './LockedNotice'
-import type { AssessmentDetail, AssessmentPatch } from '../types'
+import { ASSESSMENT_TYPES, type AssessmentDetail, type AssessmentPatch, type AssessmentType } from '../types'
 
 interface Errors {
   title?: string
@@ -24,6 +24,7 @@ interface BasicInfoSectionProps {
 
 export function BasicInfoSection({ assessment, saving, error, saved, locked = false, onSave }: BasicInfoSectionProps) {
   const [title, setTitle] = useState(assessment.title)
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>(assessment.assessment_type)
   const [description, setDescription] = useState(assessment.description ?? '')
   const [instructions, setInstructions] = useState(assessment.instructions ?? '')
   const [duration, setDuration] = useState(String(assessment.duration_minutes))
@@ -47,6 +48,8 @@ export function BasicInfoSection({ assessment, saving, error, saved, locked = fa
     if (Object.keys(next).length > 0) return
 
     onSave({
+      // Only sent when changed: the server refuses a type the existing questions don't fit.
+      ...(assessmentType !== assessment.assessment_type ? { assessment_type: assessmentType } : {}),
       title: title.trim(),
       description: description.trim() || null,
       instructions: instructions.trim() || null,
@@ -68,6 +71,15 @@ export function BasicInfoSection({ assessment, saving, error, saved, locked = fa
               {error}
             </div>
           )}
+
+          <RadioGroup<AssessmentType>
+            label="Assessment type"
+            name="assessment_type"
+            options={ASSESSMENT_TYPES}
+            value={assessmentType}
+            onChange={setAssessmentType}
+            disabled={saving || locked}
+          />
 
           <Field label="Title" error={errors.title}>
             {({ id, describedBy, invalid }) => (

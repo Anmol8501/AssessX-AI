@@ -4,6 +4,7 @@ import { Logo } from '@/components/Logo'
 import { Button, Card } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { CameraPreview } from './CameraPreview'
+import { ExamRules } from './environment/ExamControl'
 import { DEVICE_LABEL, type LocalDeviceStatus } from './devices'
 import { useAudioLevel } from './useAudioLevel'
 import type { MediaDevice } from './useMediaDevice'
@@ -74,11 +75,13 @@ export function ProctoringCheck({ examTitle, camera, microphone, session, resumi
             </ul>
           </div>
 
-          <p className="text-ink-subtle mt-6 flex items-start gap-2 text-[12.5px]">
+          <ExamRules className="border-line mt-6 rounded-md border px-4 py-3" />
+
+          <p className="text-ink-subtle mt-4 flex items-start gap-2 text-[12.5px]">
             <InfoIcon className="mt-0.5 shrink-0 text-[14px]" />
-            The picture is shown only to you, on this device. Nothing from your camera or microphone is recorded or
-            uploaded — AssessX only records whether each device is available. Both stay on while you take the exam and
-            are switched off when it ends.
+            Nothing from your camera or microphone is recorded or uploaded. An exam supervisor may view your camera live
+            during the exam, and AssessX records events such as leaving the exam window — never video or audio. Both
+            stay on while you take the exam and are switched off when it ends.
           </p>
 
           <div className="mt-6 flex items-center justify-between gap-3">

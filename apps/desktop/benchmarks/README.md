@@ -52,6 +52,31 @@ D-FINE ONNX files are exported locally from the official checkpoints (see the do
 `results/comparison-integration.md`. `live-session.mjs --production` runs both through the production
 worker on the live webcam.
 
+## Object detection with and without tiling (`objects/`)
+
+Runs the app's own YOLOX backend (through the Vite dev server) on the cached COCO set, whole frame
+only versus whole frame plus the four zoomed tiles, for YOLOX-S and YOLOX-Tiny. It reports, at the
+app's provisional thresholds, how often each class reaches the threshold (phones by size) and how
+often images without that object falsely do. Numbers only.
+
+```
+npm run dev                                   # in another terminal
+node benchmarks/objects/tiling.mjs            # → objects/results/tiling.md (+ .json)
+```
+
+## Object calibration session (`webcam/objects-calibration.spec.ts`)
+
+A guided session on the real webcam: phones near, far, small, partly visible and on the desk; books;
+another laptop or tablet; a calculator or remote; and look-alikes. For each step it records per-class
+confidences and which object events the real event processor raised, then suggests thresholds. No
+image is captured. Results go to `.cache/webcam/objects-*.{md,json}`. See
+docs/PHASE-5D-OBJECT-DETECTION.md.
+
+```
+npm run calibrate:objects                                  # YOLOX-S (WebGPU)
+SESSION_OBJECT_MODEL=yolox_tiny npm run calibrate:objects  # the CPU fallback
+```
+
 ## Validation dataset (`validation/`)
 
 Schema, template, validator and collection/labelling protocol for a future representative webcam

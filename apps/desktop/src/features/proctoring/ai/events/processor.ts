@@ -20,7 +20,7 @@ import { aiStatusOf, sameStatus, type AIStatusReport } from './status'
  *
  * What is reported is factual: which condition, when, for how long, and the measurement that
  * triggered it. There is no score, no severity and no statement about the candidate's intent;
- * phone / object-detection output is never reported, and neither is `GAZE_AWAY` (disabled: see
+ * objects are reported only after confirmation over several frames, and `GAZE_AWAY` never is (disabled: see
  * `DISABLED_EVENT_TYPES`). Head orientation is measured against the candidate's own neutral yaw,
  * calibrated once at the start (`headCalibration.ts`).
  */

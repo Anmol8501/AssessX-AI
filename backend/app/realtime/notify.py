@@ -10,6 +10,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.models.attempt import AssessmentAttempt
 from app.models.proctoring import ProctoringSession
 from app.models.proctoring_event import ProctoringEvent
 from app.realtime.hub import hub
@@ -22,6 +23,18 @@ def session_changed(db: Session, attempt_id: uuid.UUID) -> None:
     from app.services.monitoring import MonitoringService
 
     hub.publish_threadsafe(MonitoringService(db).session_delta(attempt_id))
+
+
+def attempt_control(db: Session, attempt: AssessmentAttempt) -> None:
+    """The attempt's tab-switch count or hold changed: tell the candidate's app, then the wall."""
+    from app.realtime.messages import MessageType
+    from app.schemas.attempt import AttemptControl
+
+    payload = AttemptControl.of(attempt).model_dump(mode="json")
+    hub.send_to_candidate_threadsafe(
+        attempt.id, {"type": MessageType.ATTEMPT_CONTROL.value, "attempt_id": str(attempt.id), **payload}
+    )
+    session_changed(db, attempt.id)
 
 
 def event_recorded(db: Session, session: ProctoringSession, event: ProctoringEvent) -> None:

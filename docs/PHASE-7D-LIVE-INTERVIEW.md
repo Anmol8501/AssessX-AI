@@ -91,6 +91,11 @@ Admin: "End call" ──▶ POST …/calls/{id}/end ──▶ call ENDED (audite
   * The candidate always offers; each offer has a fresh `offer_id`, and answers or ICE for any other id
     are ignored. Signals are processed **one at a time in arrival order**, so an ICE candidate cannot
     overtake its offer.
+  * **Video never waits forever.** An attempt that has not connected within 20 s (or a connection that
+    fails, or stays disconnected for 6 s) is retried: the candidate makes a fresh offer. After 3
+    attempts both sides show **"Video couldn't connect — chat still works"**, with the likely reason
+    (whether the server has a TURN relay) and a **Retry video** button. The interviewer's Retry sends
+    `RENEGOTIATE`, which the server relays only from the interviewer to the candidate.
   * Every offer pre-negotiates three slots — **microphone, camera, screen**. Muting, turning the camera
     off and screen sharing (`getDisplayMedia` via `replaceTrack`) therefore never renegotiate.
   * Mute and camera-off disable the local track and announce `MEDIA_STATE`.
@@ -150,6 +155,7 @@ WebSocket: `/api/v1/ws/interview-calls/{call_id}?token=…`.
 | `PEER_LEFT {role}` | The other side disconnected. |
 | `OFFER`, `ANSWER`, `ICE` (each with `offer_id`) | Relayed signaling. |
 | `MEDIA_STATE {role, audio, video, screen}` | The other side's toggles. |
+| `RENEGOTIATE` (to the candidate only) | The interviewer pressed Retry video: send a fresh offer. |
 | `CHAT {message}` | A stored chat message. |
 | `CALL_ENDED` | The call has ended. |
 | `ERROR {error: forbidden \| occupied}` | Refused. |
@@ -188,9 +194,15 @@ Live interviews use the same ICE servers as live monitoring ([`DEPLOYMENT-RENDER
 * TURN when `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` are set on Render. The token is
   secret and stays on the server; apps receive short-lived credentials.
 
-Without TURN, calls connect on most home networks but may fail on mobile hotspots, campus or office
-Wi-Fi, and carrier-grade NAT. Setting the two variables is a manual step for the operator. Nothing is
-built into the installer, and no rebuild is needed.
+Without TURN, calls connect only when the two networks can reach each other directly. They often
+cannot: mobile data and hotspots (carrier-grade NAT), campus, hostel or office Wi-Fi that isolates
+devices, and some home routers. The call then shows "Video couldn't connect" while chat keeps working.
+**A first production test (2026-10-02) hit exactly this.** Setting the two variables is a manual step
+for the operator. Nothing is built into the installer, and no rebuild is needed.
+
+**Cost:** Cloudflare's pricing page (checked 2026-10-02) says SFU and TURN cost $0.05 per GB of egress,
+and "the first 1,000 GB each month is free", shared between the two. Only calls that actually need the
+relay use it; a 30-minute relayed 720p call is roughly 0.5–0.7 GB.
 
 ## Tests
 
@@ -209,8 +221,8 @@ built into the installer, and no rebuild is needed.
 3. **The CallHub is in-process.** As with live monitoring, both sides must reach the same API instance
    (Render runs one). Scaling out would need a shared relay, and Redis is deliberately not introduced.
 4. **TURN against Cloudflare is not tested from this repository.** The same caveat applies to live
-   monitoring. Without TURN, restrictive networks may not connect, and the UI then stays on "Connecting
-   video…" while chat still works.
+   monitoring. Without TURN, restrictive networks may not connect. After three automatic attempts the UI
+   says "Video couldn't connect", offers Retry video, and chat still works.
 5. **Screen sharing in the installed app has not been verified on a physical machine.** The e2e test
    runs in Microsoft Edge (WebView2's engine) with a synthetic screen; WebView2 shows its own picker.
 6. **No scheduling.** A call is started on demand. The candidate's page re-checks every 10 s and shows

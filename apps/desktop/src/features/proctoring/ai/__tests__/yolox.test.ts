@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PhoneDetector } from '../detectors/object'
 import type { WorkerRequest } from '../mediapipe/protocol'
 import { MediaPipeRuntime } from '../mediapipe/runtime'
-import { configuredObjectModel, DEFAULT_OBJECT_MODEL, YOLOX_TINY } from '../objectDetection/models'
-import { anchorCount, decodeClass, letterbox, nms, toBgrTensor } from '../objectDetection/yolox'
+import { configuredObjectModel, DEFAULT_OBJECT_MODEL, OBJECT_CLASSES, YOLOX_S, YOLOX_TINY, yoloxAttempts } from '../objectDetection/models'
+import { FULL_FRAME, mergeRegions, pixelRect, regionsFor, TILES, toFrame } from '../objectDetection/tiling'
+import { anchorCount, decodeClass, decodeClasses, letterbox, nms, toBgrTensor } from '../objectDetection/yolox'
 import { selectComponents } from '../seam'
 import { frame, payload, raw } from './fixtures'
 
@@ -22,20 +23,88 @@ function outputWith(anchor: number, values: { cx: number; cy: number; w: number;
   return out
 }
 
-describe('YOLOX-Tiny contract', () => {
-  it('the pinned signature is internally consistent', () => {
+describe('YOLOX contracts', () => {
+  it('the pinned signatures are internally consistent', () => {
     expect(anchorCount(YOLOX_TINY.size, YOLOX_TINY.strides)).toBe(YOLOX_TINY.output.shape[1]) // 3549
+    expect(anchorCount(YOLOX_S.size, YOLOX_S.strides)).toBe(YOLOX_S.output.shape[1]) // 8400
     expect(YOLOX_TINY.input.shape).toEqual([1, 3, 416, 416])
+    expect(YOLOX_S.input.shape).toEqual([1, 3, 640, 640])
     expect(STRIDE).toBe(5 + 80)
-    expect(YOLOX_TINY.classIndex).toBe(67)
     expect(YOLOX_TINY.sha256).toMatch(/^[0-9a-f]{64}$/)
+    expect(YOLOX_S.sha256).toMatch(/^[0-9a-f]{64}$/)
   })
 
-  it('selects EfficientDet-Lite0 unless YOLOX is explicitly configured, and rejects unknown values', () => {
-    expect(configuredObjectModel(undefined)).toEqual({ model: DEFAULT_OBJECT_MODEL })
-    expect(configuredObjectModel('  ')).toEqual({ model: 'efficientdet_lite0' })
+  it('reports four COCO classes: phone 67, book 73, laptop 63, remote 65', () => {
+    expect(OBJECT_CLASSES.map((c) => [c.id, c.cocoIndex])).toEqual([
+      ['cell_phone', 67],
+      ['book', 73],
+      ['laptop', 63],
+      ['remote', 65],
+    ])
+  })
+
+  it('defaults to the yolox mode, accepts the others, and rejects unknown values', () => {
+    expect(DEFAULT_OBJECT_MODEL).toBe('yolox')
+    expect(configuredObjectModel(undefined)).toEqual({ model: 'yolox' })
+    expect(configuredObjectModel('  ')).toEqual({ model: 'yolox' })
     expect(configuredObjectModel('yolox_tiny')).toEqual({ model: 'yolox_tiny' })
-    expect(configuredObjectModel('yolox')).toHaveProperty('error')
+    expect(configuredObjectModel('efficientdet_lite0')).toEqual({ model: 'efficientdet_lite0' })
+    expect(configuredObjectModel('yolov8')).toHaveProperty('error')
+  })
+
+  it('tries YOLOX-S on WebGPU first and never runs YOLOX-S on the CPU in the default mode', () => {
+    expect(yoloxAttempts('yolox', true)).toEqual([
+      { model: 'yolox_s', provider: 'webgpu' },
+      { model: 'yolox_tiny', provider: 'webgpu' },
+      { model: 'yolox_tiny', provider: 'wasm' },
+    ])
+    expect(yoloxAttempts('yolox', false)).toEqual([{ model: 'yolox_tiny', provider: 'wasm' }])
+    expect(yoloxAttempts('efficientdet_lite0', true)).toEqual([])
+  })
+})
+
+describe('small-object tiling', () => {
+  it('looks at the whole frame plus one rotating tile on WebGPU', () => {
+    expect(regionsFor(0, 'webgpu')).toEqual([FULL_FRAME, TILES[0]])
+    expect(regionsFor(3, 'webgpu')).toEqual([FULL_FRAME, TILES[3]])
+    expect(regionsFor(4, 'webgpu')).toEqual([FULL_FRAME, TILES[0]])
+  })
+
+  it('on the CPU, runs every other frame, alternating the whole frame and the next tile', () => {
+    const plan = Array.from({ length: 10 }, (_, i) => regionsFor(i, 'wasm'))
+    expect(plan).toEqual([[FULL_FRAME], [], [TILES[0]], [], [FULL_FRAME], [], [TILES[1]], [], [FULL_FRAME], []])
+    expect(regionsFor(14, 'wasm')).toEqual([TILES[3]])
+  })
+
+  it('EfficientDet looks at the whole frame every frame', () => {
+    expect(regionsFor(7, 'mediapipe')).toEqual([FULL_FRAME])
+  })
+
+  it('the four tiles cover the frame with overlap', () => {
+    for (const x of [0, 0.39, 0.5, 0.61, 0.99]) {
+      for (const y of [0, 0.39, 0.5, 0.61, 0.99]) {
+        expect(TILES.some((t) => x >= t.x && x <= t.x + t.width && y >= t.y && y <= t.y + t.height)).toBe(true)
+      }
+    }
+    // A point in the middle is inside every tile; the seams overlap by 0.2 of the frame.
+    expect(TILES.every((t) => 0.5 >= t.x && 0.5 <= t.x + t.width)).toBe(true)
+  })
+
+  it('maps a box found in a tile back onto the frame, and a tile to pixels', () => {
+    const mapped = toFrame({ x: 0.5, y: 0.5, width: 0.1, height: 0.2 }, TILES[3]!)
+    expect(mapped.x).toBeCloseTo(0.7)
+    expect(mapped.y).toBeCloseTo(0.7)
+    expect(mapped.width).toBeCloseTo(0.06)
+    expect(mapped.height).toBeCloseTo(0.12)
+    expect(pixelRect(TILES[3]!, 1280, 720)).toEqual({ sx: 512, sy: 288, sw: 768, sh: 432 })
+    expect(pixelRect(FULL_FRAME, 640, 360)).toEqual({ sx: 0, sy: 0, sw: 640, sh: 360 })
+  })
+
+  it('keeps an object seen in both the frame and a tile once, at its higher score', () => {
+    const full = { score: 0.4, box: { x: 0.6, y: 0.6, width: 0.1, height: 0.1 } }
+    const tile = { score: 0.7, box: { x: 0.61, y: 0.61, width: 0.08, height: 0.08 } } // inside the full-frame box
+    const elsewhere = { score: 0.3, box: { x: 0.1, y: 0.1, width: 0.05, height: 0.05 } }
+    expect(mergeRegions([full, tile, elsewhere], 0.45, 3)).toEqual([tile, elsewhere])
   })
 })
 
@@ -79,6 +148,19 @@ describe('YOLOX postprocessing', () => {
     expect(best.box.width).toBeCloseTo(8 / 0.65 / 640, 5)
   })
 
+  it('decodes several classes from one output, each from its own column', () => {
+    const out = outputWith(100, { cx: 0, cy: 0, w: 0, h: 0, obj: 0.5, cls: { 67: 0.8, 73: 0.4, 63: 0 } })
+    const decoded = decodeClasses(out, STRIDE, [67, 73, 63, 65], YOLOX_TINY.strides, box, 640, 480, 0.01)
+    expect(decoded.get(67)).toHaveLength(1)
+    expect(decoded.get(67)![0]!.score).toBeCloseTo(0.4)
+    expect(decoded.get(73)).toHaveLength(1)
+    expect(decoded.get(73)![0]!.score).toBeCloseTo(0.2)
+    expect(decoded.get(63)).toEqual([]) // below the decode floor: dropped
+    expect(decoded.get(65)).toEqual([])
+    // The same anchor has the same box for every class.
+    expect(decoded.get(67)![0]!.box).toEqual(decoded.get(73)![0]!.box)
+  })
+
   it('reads the cell-phone column only', () => {
     const anchor = 100
     const out = outputWith(anchor, { cx: 0, cy: 0, w: 0, h: 0, obj: 1, cls: { 66: 0.99, 68: 0.99 } })
@@ -104,14 +186,14 @@ describe('object model selection and reporting', () => {
     delete globals.__assessxAI
   })
 
-  it('production defaults to EfficientDet-Lite0; the seam can opt into YOLOX-Tiny', () => {
+  it('production defaults to the yolox mode; the seam can choose another', () => {
     globals.Worker = class {}
-    expect((selectComponents().runtime as MediaPipeRuntime).objectModel).toBe('efficientdet_lite0')
+    expect((selectComponents().runtime as MediaPipeRuntime).objectModel).toBe('yolox')
     globals.__assessxAI = { objectModel: 'yolox_tiny' }
     expect((selectComponents().runtime as MediaPipeRuntime).objectModel).toBe('yolox_tiny')
   })
 
-  it('sends the YOLOX configuration (integrity digest, runtime path, WebGPU preference) to the worker', async () => {
+  it('sends the YOLOX configuration (both models, integrity digests, runtime path, WebGPU preference) to the worker', async () => {
     const posted: WorkerRequest[] = []
     let onmessage: ((e: MessageEvent) => void) | null = null
     const fakeWorker = {
@@ -123,15 +205,18 @@ describe('object model selection and reporting', () => {
         onmessage = h
       },
     }
-    const runtime = new MediaPipeRuntime({ createWorker: () => fakeWorker as unknown as Worker, origin: 'http://tauri.localhost', objectModel: 'yolox_tiny' })
+    const runtime = new MediaPipeRuntime({ createWorker: () => fakeWorker as unknown as Worker, origin: 'http://tauri.localhost' })
     const loading = runtime.load()
     const load = posted[0]!
     expect(load.type).toBe('load')
     if (load.type === 'load') {
-      expect(load.config.objectModel).toBe('yolox_tiny')
+      expect(load.config.objectModel).toBe('yolox')
+      expect(load.config.objectCategories).toEqual(['cell phone', 'book', 'laptop', 'remote'])
       expect(load.config.yolox).toMatchObject({
-        modelUrl: 'http://tauri.localhost/models/yolox_tiny.onnx',
-        sha256: YOLOX_TINY.sha256,
+        models: {
+          yolox_s: { url: 'http://tauri.localhost/models/yolox_s.onnx', sha256: YOLOX_S.sha256 },
+          yolox_tiny: { url: 'http://tauri.localhost/models/yolox_tiny.onnx', sha256: YOLOX_TINY.sha256 },
+        },
         wasmPaths: 'http://tauri.localhost/onnxruntime/',
         preferWebGPU: true,
       })
@@ -144,11 +229,33 @@ describe('object model selection and reporting', () => {
     expect(runtime.info.objectDetector).toEqual(report)
   })
 
-  it('every phone observation names the model that produced it', async () => {
+  it('every object observation names its class, the model that produced it, its size and region', async () => {
     const detector = new PhoneDetector()
     await detector.init()
-    const [observation] = detector.process(frame(), raw(payload({ objectModel: 'yolox_tiny', objects: [{ category: 'cell phone', score: 0.42, box: { x: 0, y: 0, width: 0.1, height: 0.1 } }] })))
-    expect(observation?.metadata).toEqual({ objectClass: 'cell_phone', objectModel: 'yolox_tiny' })
-    expect(observation?.confidence).toBe(0.42)
+    const observations = detector.process(
+      frame(),
+      raw(
+        payload({
+          objectModel: 'yolox_s',
+          objects: [
+            { category: 'cell phone', score: 0.42, box: { x: 0, y: 0, width: 0.1, height: 0.2 }, region: 'tile' },
+            { category: 'cell phone', score: 0.3, box: { x: 0.5, y: 0.5, width: 0.1, height: 0.1 }, region: 'full' },
+          ],
+        }),
+      ),
+    )
+    expect(observations.map((o) => o.metadata.objectClass)).toEqual(['cell_phone', 'book', 'laptop', 'remote'])
+    expect(observations[0]?.metadata).toEqual({ objectClass: 'cell_phone', objectModel: 'yolox_s', boxAreaRatio: 0.02, region: 'tile' })
+    expect(observations[0]?.confidence).toBe(0.42) // the best candidate
+    expect(observations[1]).toMatchObject({ confidence: 0, metadata: { objectClass: 'book', objectModel: 'yolox_s' } }) // none seen
+  })
+
+  it('a frame the object model skipped produces no object observation (unknown, never none)', async () => {
+    const detector = new PhoneDetector()
+    await detector.init()
+    const skipped = payload({ objectModel: 'yolox_tiny', objects: null })
+    skipped.tasks.objectDetector = 'SKIPPED'
+    expect(detector.process(frame(), raw(skipped))).toEqual([])
+    expect(detector.state).toBe('RUNNING') // skipping is healthy, not a failure
   })
 })

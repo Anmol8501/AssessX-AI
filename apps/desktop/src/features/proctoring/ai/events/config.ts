@@ -11,9 +11,13 @@
  * reliably; a candidate moving far back still filled ≥ 0.049 of the frame). They must be validated on
  * representative data before anyone relies on them, and they carry no judgement about the candidate.
  *
- * There is deliberately **no phone / object entry**: Phase 5B found no defensible phone threshold,
- * so object-detection output is never turned into an event.
+ * **Objects (2026-10-02).** At the product owner's request, object detection now produces events —
+ * `PHONE_DETECTED`, `BOOK_DETECTED`, `LAPTOP_DETECTED` and `HANDHELD_DEVICE_DETECTED` — with the
+ * PROVISIONAL per-model, per-class thresholds in `OBJECT_THRESHOLDS` and confirmation over several
+ * frames. They are to be tuned with the guided calibration session (docs/PHASE-5D-OBJECT-DETECTION.md).
  */
+
+import type { ObjectClassId, RunningObjectModel } from '../objectDetection/models'
 
 /** The AI observation event types Phase 5C produces (the server's `AI_EPISODE_TYPES`). */
 export const AI_EVENT_TYPES = [
@@ -24,8 +28,38 @@ export const AI_EVENT_TYPES = [
   'CAMERA_TOO_DARK',
   'FACE_TOO_FAR',
   'FACE_TOO_CLOSE',
+  'PHONE_DETECTED',
+  'BOOK_DETECTED',
+  'LAPTOP_DETECTED',
+  'HANDHELD_DEVICE_DETECTED',
 ] as const
 export type AIEventType = (typeof AI_EVENT_TYPES)[number]
+
+export type ObjectEventType = 'PHONE_DETECTED' | 'BOOK_DETECTED' | 'LAPTOP_DETECTED' | 'HANDHELD_DEVICE_DETECTED'
+
+/** Which event each reported object class produces. */
+export const OBJECT_EVENT: Record<ObjectClassId, ObjectEventType> = {
+  cell_phone: 'PHONE_DETECTED',
+  book: 'BOOK_DETECTED',
+  laptop: 'LAPTOP_DETECTED',
+  remote: 'HANDHELD_DEVICE_DETECTED',
+}
+
+/**
+ * PROVISIONAL object thresholds: the model's confidence in its best candidate of a class at or above
+ * which that frame counts as "seen". Per model, because scores are not comparable between models.
+ *
+ * Phone values come from the 2026-09 measurements (docs/PHASE-5B-OBJECT-MODEL-EVALUATION.md): on the
+ * live webcam, frames without a phone reached at most ~0.37 (YOLOX-S) / ~0.36 (YOLOX-Tiny) /
+ * ~0.47 (EfficientDet-Lite0), while phone steps reached 0.8–0.9. A single frame above the threshold
+ * is never enough — see the object timing below. Book, laptop and remote have **no measurements
+ * yet**; their values are conservative guesses to be replaced by the calibration session.
+ */
+export const OBJECT_THRESHOLDS: Record<RunningObjectModel, Record<ObjectClassId, number>> = {
+  yolox_s: { cell_phone: 0.45, book: 0.5, laptop: 0.55, remote: 0.5 },
+  yolox_tiny: { cell_phone: 0.45, book: 0.5, laptop: 0.55, remote: 0.5 },
+  efficientdet_lite0: { cell_phone: 0.55, book: 0.55, laptop: 0.6, remote: 0.55 },
+}
 
 /**
  * Event types the processor must **not** produce, whatever the configuration says.
@@ -54,6 +88,13 @@ export interface ConditionTiming {
   cooldownMs: number
   /** An open episode whose condition cannot be measured for this long resolves as `measurement_unavailable`. */
   unknownResolveMs: number
+  /**
+   * Objects only: while an episode is pending, frames without the object (or not measured) do not
+   * restart the count — the `minFrames` sightings only have to fall within `pendingWindowMs` of the
+   * first. Needed because a small object is often seen in one zoomed tile, or only in some frames.
+   */
+  tolerantPending?: boolean
+  pendingWindowMs?: number
 }
 
 export interface AIEventThresholds {
@@ -72,6 +113,15 @@ export interface AIEventThresholds {
   faceTooFarAreaRatio: number
   /** …above this is a face very close to the camera. Provisional. */
   faceTooCloseAreaRatio: number
+  /** Object confidence thresholds, per running model and class. Provisional (see `OBJECT_THRESHOLDS`). */
+  objects: Record<RunningObjectModel, Record<ObjectClassId, number>>
+  /**
+   * Added to the threshold when the best candidate was found only in a zoomed tile. Enlarged crops
+   * make look-alikes score higher: on the COCO set (benchmarks/objects/results/tiling.md) +0.05 cut
+   * YOLOX-S's phone false positives from 10% to 8% of phone-free images while keeping most of the
+   * gain on tiny phones (55% → 53%; 35% without tiles). Provisional.
+   */
+  objectTileMargin: number
 }
 
 /**
@@ -109,6 +159,21 @@ const standard = (startAfterMs: number, minFrames: number): ConditionTiming => (
   unknownResolveMs: 5000,
 })
 
+/**
+ * Objects: two sightings within 6 s start an episode (one stray frame never does); it ends after 5 s
+ * and 5 measured frames without a sighting. PROVISIONAL, like everything here.
+ */
+const objectTiming: ConditionTiming = {
+  startAfterMs: 0,
+  minFrames: 2,
+  tolerantPending: true,
+  pendingWindowMs: 6000,
+  resolveAfterMs: 5000,
+  minClearFrames: 5,
+  cooldownMs: 5000,
+  unknownResolveMs: 15000,
+}
+
 export const DEFAULT_AI_EVENT_CONFIG: AIEventConfig = {
   timing: {
     // 3 frames (was 5): the real sample rate measured on a webcam is ~1.2 frames/s, so 5 frames
@@ -120,6 +185,10 @@ export const DEFAULT_AI_EVENT_CONFIG: AIEventConfig = {
     CAMERA_TOO_DARK: standard(5000, 6),
     FACE_TOO_FAR: standard(5000, 6),
     FACE_TOO_CLOSE: standard(5000, 6),
+    PHONE_DETECTED: objectTiming,
+    BOOK_DETECTED: objectTiming,
+    LAPTOP_DETECTED: objectTiming,
+    HANDHELD_DEVICE_DETECTED: objectTiming,
   },
   thresholds: {
     // Deviation from the candidate's calibrated neutral (was an absolute 25° yaw / 20° pitch).
@@ -130,6 +199,8 @@ export const DEFAULT_AI_EVENT_CONFIG: AIEventConfig = {
     // Was 0.015, which a candidate moving well back from a laptop camera (≥ 0.049) never reached.
     faceTooFarAreaRatio: 0.03,
     faceTooCloseAreaRatio: 0.35,
+    objects: OBJECT_THRESHOLDS,
+    objectTileMargin: 0.05,
   },
   headCalibration: {
     samples: 5,
@@ -160,7 +231,7 @@ export function withOverrides(
   }
   return {
     timing,
-    thresholds: { ...base.thresholds, ...overrides.thresholds },
+    thresholds: { ...base.thresholds, ...overrides.thresholds, objects: overrides.thresholds?.objects ?? base.thresholds.objects },
     headCalibration: { ...base.headCalibration, ...overrides.headCalibration },
     frameStaleMs: overrides.frameStaleMs ?? base.frameStaleMs,
     statusStableMs: overrides.statusStableMs ?? base.statusStableMs,

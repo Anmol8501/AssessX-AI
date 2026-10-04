@@ -12,7 +12,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.assessment import QuestionNavigation
-from app.models.attempt import AttemptStatus
+from app.models.attempt import AssessmentAttempt, AttemptStatus
 from app.models.question import QuestionType
 from app.schemas.assignment import MyAssessment
 from app.schemas.proctoring import ProctoringSessionOut
@@ -54,6 +54,45 @@ class AttemptAnswerOut(BaseModel):
     updated_at: datetime
 
 
+class CodingProgressRow(BaseModel):
+    question_id: uuid.UUID
+    status: str
+    submissions: int
+    best_passed: int | None
+    total: int | None
+
+
+class AttemptControl(BaseModel):
+    """Exam control for one attempt: the tab-switch count against the rule, and whether it is on hold.
+
+    The same shape is pushed live to the candidate's app (`ATTEMPT_CONTROL`) and returned with the
+    attempt and its clock, so a reload or a missed push still shows the right state. The
+    administrator's note is never part of it.
+    """
+
+    tab_switches: int
+    #: The switch that reaches this count puts the attempt on hold; the ones before it are warnings.
+    tab_switch_limit: int
+    on_hold: bool
+    hold_reason: str | None
+    held_at: datetime | None
+    #: The exam was ended by an administrator (the answers saved so far were submitted).
+    ended_by_admin: bool
+
+    @classmethod
+    def of(cls, attempt: AssessmentAttempt) -> "AttemptControl":
+        from app.services.attempt_control import TAB_SWITCH_LIMIT
+
+        return cls(
+            tab_switches=attempt.tab_switch_count or 0,
+            tab_switch_limit=TAB_SWITCH_LIMIT,
+            on_hold=attempt.is_on_hold,
+            hold_reason=attempt.hold_reason.value if attempt.is_on_hold and attempt.hold_reason else None,
+            held_at=attempt.held_at if attempt.is_on_hold else None,
+            ended_by_admin=attempt.ended_by_id is not None,
+        )
+
+
 class AttemptSession(BaseModel):
     """The authoritative clock for one attempt, and nothing else.
 
@@ -75,6 +114,8 @@ class AttemptSession(BaseModel):
     finalized_at: datetime | None
     server_time: datetime
     remaining_seconds: int
+    #: Exam control — also how the app notices a hold or release if a live push was missed.
+    control: AttemptControl | None = None
 
 
 class AttemptDetail(BaseModel):
@@ -111,6 +152,15 @@ class AttemptDetail(BaseModel):
     #: Per attempt rather than per assessment: it reflects the setting at the moment the attempt
     #: started, so a later change to the assessment does not change a running exam.
     proctoring: ProctoringSessionOut | None
+    #: MCQ only, coding only, or mixed — what the exam screen labels questions as.
+    assessment_type: str = "MCQ"
+    #: Coding questions' progress (empty for an MCQ-only assessment).
+    coding: list[CodingProgressRow] = []
+    #: Copy and paste are allowed inside the code editor (an assessment setting; elsewhere they stay
+    #: restricted in a proctored exam).
+    coding_allow_paste: bool = False
+    #: Exam control: tab switches and whether the attempt is on hold (frozen).
+    control: AttemptControl | None = None
 
 
 class ExamDetail(MyAssessment):

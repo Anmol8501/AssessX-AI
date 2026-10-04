@@ -1,6 +1,6 @@
 """ORM models. Import everything here so Alembic and `Base.metadata` see every table."""
 
-from app.models.assessment import Assessment, AssessmentStatus, QuestionNavigation
+from app.models.assessment import Assessment, AssessmentStatus, AssessmentType, QuestionNavigation
 from app.models.assignment import AssessmentAssignment, AssignmentStatus
 from app.models.attempt import (
     ACTIVE_ATTEMPT_STATUSES,
@@ -12,6 +12,16 @@ from app.models.attempt import (
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.auth_session import AuthSession
 from app.models.base import Base
+from app.models.code_execution import CodeExecution, ExecutionKind, ExecutionStatus, Verdict
+from app.models.coding import (
+    CodingDifficulty,
+    CodingProblem,
+    CodingProblemVersion,
+    CodingTestCase,
+    CodingVersionStatus,
+    TestCaseVisibility,
+)
+from app.models.coding_draft import CodingDraft
 from app.models.interview import (
     CompletionReason,
     Interview,
@@ -48,7 +58,7 @@ from app.models.proctoring_event import (
     ProctoringEventSource,
     ProctoringEventType,
 )
-from app.models.question import SINGLE_ANSWER_TYPES, Question, QuestionOption, QuestionType
+from app.models.question import OBJECTIVE_TYPES, SINGLE_ANSWER_TYPES, Question, QuestionOption, QuestionType
 from app.models.result import AttemptResult
 from app.models.review import (
     AttemptReview,
@@ -62,6 +72,19 @@ from app.models.review import (
 from app.models.user import User, UserRole
 
 __all__ = [
+    "CodingDraft",
+    "CodeExecution",
+    "ExecutionKind",
+    "ExecutionStatus",
+    "Verdict",
+    "TestCaseVisibility",
+    "OBJECTIVE_TYPES",
+    "CodingVersionStatus",
+    "CodingTestCase",
+    "CodingProblemVersion",
+    "CodingProblem",
+    "CodingDifficulty",
+    "AssessmentType",
     "ACTIVE_ATTEMPT_STATUSES",
     "AnswerMark",
     "SINGLE_ANSWER_TYPES",

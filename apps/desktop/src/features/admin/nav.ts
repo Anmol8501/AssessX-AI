@@ -1,10 +1,11 @@
 import { routes } from '@/app/routes'
 import type { NavItem } from '@/components/shell/AppShell'
-import { AssessmentsIcon, CandidatesIcon, DashboardIcon, MonitoringIcon, ResultsIcon, ReviewIcon, SettingsIcon, InterviewIcon } from '@/components/icons'
+import { AssessmentsIcon, CandidatesIcon, CodeIcon, DashboardIcon, MonitoringIcon, ResultsIcon, ReviewIcon, SettingsIcon, InterviewIcon } from '@/components/icons'
 
 export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Dashboard', to: routes.admin.dashboard, icon: DashboardIcon, end: true },
   { label: 'Assessments', to: routes.admin.assessments, icon: AssessmentsIcon },
+  { label: 'Coding Problems', to: routes.admin.codingProblems, icon: CodeIcon },
   { label: 'Candidates', to: routes.admin.candidates, icon: CandidatesIcon },
   { label: 'Monitoring', to: routes.admin.monitoring, icon: MonitoringIcon },
   { label: 'Results', to: routes.admin.results, icon: ResultsIcon },

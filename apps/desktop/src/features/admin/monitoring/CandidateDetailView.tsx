@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import { EvidenceTimeline } from '../evidence/EvidenceTimeline'
 import { AttemptRiskPanel } from '../risk/AttemptRiskPanel'
 import { AIMonitoringSection } from './AIMonitoringSection'
+import { ExamControlPanel } from './ExamControlPanel'
 import { eventLabel } from './events'
 import { candidatePresenceLabel, deviceLabel, fullscreenLabel, tileStatus, type ConnectionState } from './status'
 import { toEvent, type MonitoringEvent, type MonitoringSession } from './types'
@@ -174,6 +175,7 @@ export function CandidateDetailView({ session, connection, signaling, onClose }:
                 <Detail label="Candidate app" value={presence.label} ok={presence.ok} />
               </dl>
 
+              <ExamControlPanel session={session} />
               <AIMonitoringSection ai={session.ai} />
               {/* Phase 6A: the server's risk state, refreshed as this candidate's events arrive. */}
               <AttemptRiskPanel attemptId={session.attemptId} live refreshKey={events[0]?.id} />

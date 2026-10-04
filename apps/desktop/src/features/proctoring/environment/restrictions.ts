@@ -88,6 +88,17 @@ const NAVIGATION = new Set([
   'CTRL+O',
 ])
 
+/**
+ * Inside the coding editor (CodeMirror), its own find shortcuts are part of writing code, so they are
+ * allowed there — and only there. Copy, cut and paste stay restricted like everywhere else.
+ */
+const CODE_EDITOR_ALLOWED = new Set(['CTRL+F', 'CTRL+G', 'CTRL+SHIFT+G'])
+
+export function inCodeEditor(target: EventTarget | null): boolean {
+  const closest = (target as { closest?: (selector: string) => unknown } | null)?.closest
+  return typeof closest === 'function' && closest.call(target, '.cm-editor') != null
+}
+
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
@@ -108,6 +119,7 @@ export function classifyKey(event: KeyLike, target: EventTarget | null = null): 
   if (PRINT.has(name)) return { eventType: 'PRINT_ATTEMPT', shortcut: name }
   if (DEVTOOLS.has(name)) return { eventType: 'DEVTOOLS_ATTEMPT', shortcut: name }
   if (name === 'PRINTSCREEN' || name.endsWith('+PRINTSCREEN')) return { eventType: 'SCREEN_CAPTURE_ATTEMPT', shortcut: name }
+  if (CODE_EDITOR_ALLOWED.has(name) && inCodeEditor(target)) return null
   if (NAVIGATION.has(name)) return { eventType: 'KEYBOARD_RESTRICTION_ATTEMPT', shortcut: name }
   // Every function key (F1 help, F3 find, F5 reload, F6 address bar, F7 caret browsing, F11 …).
   if (/^(CTRL\+|SHIFT\+|ALT\+)*F([1-9]|1[01])$/.test(name)) return { eventType: 'KEYBOARD_RESTRICTION_ATTEMPT', shortcut: name }

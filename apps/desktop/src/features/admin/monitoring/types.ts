@@ -35,6 +35,12 @@ export interface MonitoringSession {
   candidateConnected: boolean
   /** When that last changed, or null if the server has not seen the candidate app since it started. */
   candidatePresenceChangedAt: string | null
+  /** Exam control: tab switches counted by the server, and whether the exam is on hold (locked). */
+  tabSwitches: number
+  tabSwitchLimit: number
+  onHold: boolean
+  holdReason: 'TAB_SWITCH_LIMIT' | 'ADMIN' | null
+  heldAt: string | null
 }
 
 export type AIStatus = 'INITIALIZING' | 'RUNNING' | 'DEGRADED' | 'ERROR' | 'STOPPED'
@@ -59,6 +65,9 @@ export interface AIMonitoringState {
   /** Always `not_used`: gaze is not an event signal (GAZE_AWAY is disabled). Not shown as an indicator. */
   gaze: 'not_used'
   cameraQuality: 'good' | 'issue' | 'unknown'
+  /** Objects in view (2026-10-02): detected (which classes in `objectsSeen`), none, or unknown. */
+  objects: 'detected' | 'none' | 'unknown'
+  objectsSeen: string[]
   active: AIActiveObservation[]
 }
 
@@ -71,6 +80,8 @@ const NO_AI: AIMonitoringState = {
   headOrientation: 'unknown',
   gaze: 'not_used',
   cameraQuality: 'unknown',
+  objects: 'unknown',
+  objectsSeen: [],
   active: [],
 }
 
@@ -85,6 +96,8 @@ export function toAI(raw: Record<string, unknown> | null | undefined): AIMonitor
     headOrientation: (raw.head_orientation as string) ?? 'unknown',
     gaze: 'not_used',
     cameraQuality: (raw.camera_quality as AIMonitoringState['cameraQuality']) ?? 'unknown',
+    objects: (raw.objects as AIMonitoringState['objects']) ?? 'unknown',
+    objectsSeen: (raw.objects_seen as string[] | undefined) ?? [],
     active: ((raw.active as Record<string, unknown>[] | undefined) ?? []).map((item) => ({
       eventType: item.event_type as string,
       startedAt: item.started_at as string,
@@ -132,6 +145,11 @@ export function toSession(raw: Record<string, unknown>): MonitoringSession {
     ai: toAI(raw.ai as Record<string, unknown> | undefined),
     candidateConnected: raw.candidate_connected === true,
     candidatePresenceChangedAt: (raw.candidate_presence_changed_at as string | null | undefined) ?? null,
+    tabSwitches: (raw.tab_switches as number | undefined) ?? 0,
+    tabSwitchLimit: (raw.tab_switch_limit as number | undefined) ?? 3,
+    onHold: raw.on_hold === true,
+    holdReason: (raw.hold_reason as MonitoringSession['holdReason'] | undefined) ?? null,
+    heldAt: (raw.held_at as string | null | undefined) ?? null,
   }
 }
 

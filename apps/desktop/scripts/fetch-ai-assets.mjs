@@ -11,12 +11,13 @@
 //     against the SHA-256 digests below. A mismatch fails the build rather than shipping an
 //     unverified model.
 //
-// Object model (Phase 5B): EfficientDet-Lite0 always ships. The opt-in YOLOX-Tiny path needs its model
-// (SHA-256-verified, cached in .ai-cache/) and ONNX Runtime Web's WebAssembly:
-//   * `--mode=dev` (predev: dev server and E2E tests) prepares them, since the tests exercise both;
-//   * `--mode=build` (prebuild, also run by `tauri build`) includes them ONLY when the build sets
-//     VITE_OBJECT_DETECTOR_MODEL=yolox_tiny, and otherwise removes them, so the default installer
-//     is unchanged. An unknown value fails the build instead of silently using the default.
+// Object models (product-owner decision, 2026-10-02): the default `yolox` mode ships YOLOX-S (used
+// on WebGPU) and YOLOX-Tiny (the CPU fallback), SHA-256-verified and cached in .ai-cache/, plus ONNX
+// Runtime Web's WebAssembly. EfficientDet-Lite0 always ships too (small; selectable for comparison).
+//   * `--mode=dev` (predev: dev server and E2E tests) prepares every model;
+//   * `--mode=build` (prebuild, also run by `tauri build`) includes the YOLOX models the build's
+//     VITE_OBJECT_DETECTOR_MODEL needs (`yolox`: both; `yolox_s` / `yolox_tiny`: that one;
+//     `efficientdet_lite0`: none, and no ONNX Runtime). An unknown value fails the build.
 //
 // This file is the provenance record for those models; docs/PHASE-5B-AI-DETECTORS.md explains them.
 
@@ -51,16 +52,26 @@ const MODELS = [
 
 const WASM_FILES = ['vision_wasm_module_internal.js', 'vision_wasm_module_internal.wasm']
 
-/** Opt-in YOLOX-Tiny (Megvii-BaseDetection/YOLOX release 0.1.1rc0, commit e1052df7; Apache-2.0). */
+/** YOLOX (Megvii-BaseDetection/YOLOX release 0.1.1rc0, commit e1052df7; Apache-2.0). */
+const YOLOX_RELEASE = 'https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0'
 const YOLOX = {
-  file: 'yolox_tiny.onnx',
-  url: 'https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx',
-  sha256: '427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7',
+  yolox_s: {
+    file: 'yolox_s.onnx',
+    url: `${YOLOX_RELEASE}/yolox_s.onnx`,
+    sha256: 'c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063',
+  },
+  yolox_tiny: {
+    file: 'yolox_tiny.onnx',
+    url: `${YOLOX_RELEASE}/yolox_tiny.onnx`,
+    sha256: '427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7',
+  },
 }
+/** Which YOLOX models each object-model mode needs. */
+const YOLOX_NEEDED = { yolox: ['yolox_s', 'yolox_tiny'], yolox_s: ['yolox_s'], yolox_tiny: ['yolox_tiny'], efficientdet_lite0: [] }
 /** ONNX Runtime Web files loaded at run time by the non-bundled WebGPU build (see vite.config.ts). */
 // (onnxruntime-web 1.30's WebGPU build loads the "asyncify" runtime — checked in dist/ort.webgpu.min.mjs.)
 const ORT_FILES = ['ort-wasm-simd-threaded.asyncify.mjs', 'ort-wasm-simd-threaded.asyncify.wasm']
-const OBJECT_MODELS = ['efficientdet_lite0', 'yolox_tiny']
+const OBJECT_MODELS = Object.keys(YOLOX_NEEDED)
 
 const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex')
 
@@ -105,23 +116,30 @@ async function ensureModel({ file, url, sha256: expected }, dir = join(publicDir
 /** The object model a build/dev run uses, read the way Vite reads it (.env files + environment). */
 function objectModel(mode) {
   const env = loadEnv(mode === 'build' ? 'production' : 'development', root, 'VITE_')
-  const value = (env.VITE_OBJECT_DETECTOR_MODEL ?? '').trim() || 'efficientdet_lite0'
+  const value = (env.VITE_OBJECT_DETECTOR_MODEL ?? '').trim() || 'yolox'
   if (!OBJECT_MODELS.includes(value)) {
     throw new Error(`VITE_OBJECT_DETECTOR_MODEL="${value}" is not one of ${OBJECT_MODELS.join(', ')}`)
   }
   return value
 }
 
-async function yoloxAssets(include) {
-  const modelTarget = join(publicDir, 'models', YOLOX.file)
+async function yoloxAssets(needed) {
   const ortTarget = join(publicDir, 'onnxruntime')
-  if (!include) {
-    await rm(modelTarget, { force: true })
+  const states = []
+  for (const [id, spec] of Object.entries(YOLOX)) {
+    const modelTarget = join(publicDir, 'models', spec.file)
+    if (!needed.includes(id)) {
+      await rm(modelTarget, { force: true })
+      continue
+    }
+    const cached = await ensureModel(spec, join(root, '.ai-cache'))
+    await copyFile(join(root, '.ai-cache', spec.file), modelTarget)
+    states.push(`${id} ${cached}`)
+  }
+  if (needed.length === 0) {
     await rm(ortTarget, { recursive: true, force: true })
     return 'excluded'
   }
-  const cached = await ensureModel(YOLOX, join(root, '.ai-cache'))
-  await copyFile(join(root, '.ai-cache', YOLOX.file), modelTarget)
   await rm(ortTarget, { recursive: true, force: true }) // no stale runtime files from another version
   await mkdir(ortTarget, { recursive: true })
   const ortSource = join(root, 'node_modules', 'onnxruntime-web', 'dist')
@@ -129,7 +147,7 @@ async function yoloxAssets(include) {
     if (!(await exists(join(ortSource, file)))) throw new Error(`ONNX Runtime file missing: ${file} (run npm install)`)
     await copyFile(join(ortSource, file), join(ortTarget, file))
   }
-  return `included (${cached})`
+  return `included (${states.join(', ')})`
 }
 
 try {
@@ -138,9 +156,9 @@ try {
   await copyWasm()
   const results = []
   for (const m of MODELS) results.push(`${m.file}: ${await ensureModel(m)}`)
-  // Dev/test runs exercise both object models; a build ships YOLOX only when it selects it.
-  const yolox = await yoloxAssets(mode === 'dev' || model === 'yolox_tiny')
-  console.log(`[ai-assets] ${mode}, object model ${model}; runtime copied; ${results.join(', ')}; YOLOX-Tiny + ONNX Runtime: ${yolox}`)
+  // Dev/test runs prepare every model; a build ships the YOLOX models its mode needs.
+  const yolox = await yoloxAssets(mode === 'dev' ? YOLOX_NEEDED.yolox : YOLOX_NEEDED[model])
+  console.log(`[ai-assets] ${mode}, object model ${model}; runtime copied; ${results.join(', ')}; YOLOX + ONNX Runtime: ${yolox}`)
 } catch (error) {
   console.error(`[ai-assets] ${error instanceof Error ? error.message : String(error)}`)
   process.exit(1)

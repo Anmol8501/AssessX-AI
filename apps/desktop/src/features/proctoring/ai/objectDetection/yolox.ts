@@ -41,12 +41,60 @@ export interface Candidate {
   box: NormalizedBox
 }
 
+/** Candidates of one class, keyed by its COCO-80 index. */
+export type ClassCandidates = Map<number, Candidate[]>
+
 /**
- * Decodes one class from the raw output `[N, 5 + classes]` into scored boxes in the source frame.
- * Anchors are laid out level by level (strides ascending), row-major within a level. For anchor
- * (x, y) at stride s: centre = (raw + grid) · s, size = exp(raw) · s, in input pixels; divided by the
- * letterbox scale to return to source pixels. Score = objectness × class probability.
+ * Decodes the raw output `[N, 5 + classes]` into scored boxes in the source image, for each of
+ * `classIndices`. Anchors are laid out level by level (strides ascending), row-major within a level.
+ * For anchor (x, y) at stride s: centre = (raw + grid) · s, size = exp(raw) · s, in input pixels;
+ * divided by the letterbox scale to return to source pixels. Score = objectness × class probability.
+ * Anchors scoring below `floor` for a class are dropped (a performance floor, far below any
+ * threshold — not a decision).
  */
+export function decodeClasses(
+  output: ArrayLike<number>,
+  stride: number,
+  classIndices: readonly number[],
+  strides: readonly number[],
+  box: Letterbox,
+  sourceWidth: number,
+  sourceHeight: number,
+  floor = 0,
+): ClassCandidates {
+  const result: ClassCandidates = new Map(classIndices.map((c) => [c, []]))
+  let anchor = 0
+  for (const s of strides) {
+    const grid = Math.round(box.size / s)
+    for (let gy = 0; gy < grid; gy++) {
+      for (let gx = 0; gx < grid; gx++) {
+        const o = anchor * stride
+        anchor++
+        const objectness = output[o + 4] ?? 0
+        let boxed: NormalizedBox | null = null
+        for (const classIndex of classIndices) {
+          const score = objectness * (output[o + 5 + classIndex] ?? 0)
+          if (score < floor) continue
+          if (!boxed) {
+            const cx = ((output[o] ?? 0) + gx) * s
+            const cy = ((output[o + 1] ?? 0) + gy) * s
+            const w = Math.exp(output[o + 2] ?? 0) * s
+            const h = Math.exp(output[o + 3] ?? 0) * s
+            const x0 = clamp((cx - w / 2) / box.scale / sourceWidth)
+            const y0 = clamp((cy - h / 2) / box.scale / sourceHeight)
+            const x1 = clamp((cx + w / 2) / box.scale / sourceWidth)
+            const y1 = clamp((cy + h / 2) / box.scale / sourceHeight)
+            boxed = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
+          }
+          result.get(classIndex)!.push({ score, box: boxed })
+        }
+      }
+    }
+  }
+  return result
+}
+
+/** One class (kept for the benchmarks and earlier tests): `decodeClasses` for a single index. */
 export function decodeClass(
   output: ArrayLike<number>,
   stride: number,
@@ -56,28 +104,7 @@ export function decodeClass(
   sourceWidth: number,
   sourceHeight: number,
 ): Candidate[] {
-  const candidates: Candidate[] = []
-  let anchor = 0
-  for (const s of strides) {
-    const grid = Math.round(box.size / s)
-    for (let gy = 0; gy < grid; gy++) {
-      for (let gx = 0; gx < grid; gx++) {
-        const o = anchor * stride
-        anchor++
-        const score = (output[o + 4] ?? 0) * (output[o + 5 + classIndex] ?? 0)
-        const cx = ((output[o] ?? 0) + gx) * s
-        const cy = ((output[o + 1] ?? 0) + gy) * s
-        const w = Math.exp(output[o + 2] ?? 0) * s
-        const h = Math.exp(output[o + 3] ?? 0) * s
-        const x0 = clamp((cx - w / 2) / box.scale / sourceWidth)
-        const y0 = clamp((cy - h / 2) / box.scale / sourceHeight)
-        const x1 = clamp((cx + w / 2) / box.scale / sourceWidth)
-        const y1 = clamp((cy + h / 2) / box.scale / sourceHeight)
-        candidates.push({ score, box: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } })
-      }
-    }
-  }
-  return candidates
+  return decodeClasses(output, stride, [classIndex], strides, box, sourceWidth, sourceHeight).get(classIndex) ?? []
 }
 
 export function anchorCount(size: number, strides: readonly number[]): number {
@@ -88,7 +115,7 @@ function clamp(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-function iou(a: NormalizedBox, b: NormalizedBox): number {
+export function iou(a: NormalizedBox, b: NormalizedBox): number {
   const w = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x))
   const h = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
   const inter = w * h
@@ -98,7 +125,8 @@ function iou(a: NormalizedBox, b: NormalizedBox): number {
 
 /**
  * Greedy class-wise NMS (highest score first; drop boxes overlapping a kept one by more than `iouLimit`),
- * keeping at most `maxResults`. No score threshold is applied — that decision is not made in Phase 5B.
+ * keeping at most `maxResults`. No score threshold is applied here: the decision belongs to the event
+ * layer (`events/conditions.ts`), which applies per-model, per-class provisional thresholds.
  */
 export function nms(candidates: Candidate[], iouLimit: number, maxResults: number): Candidate[] {
   const sorted = [...candidates].sort((a, b) => b.score - a.score)

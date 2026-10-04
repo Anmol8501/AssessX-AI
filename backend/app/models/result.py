@@ -52,6 +52,7 @@ class AttemptResult(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "correct_count >= 0 AND incorrect_count >= 0 AND unanswered_count >= 0",
             name="ck_results_counts_non_negative",
         ),
+        CheckConstraint("partial_count >= 0", name="ck_results_partial_non_negative"),
     )
 
     attempt_id: Mapped[uuid.UUID] = mapped_column(
@@ -79,6 +80,13 @@ class AttemptResult(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     correct_count: Mapped[int] = mapped_column(Integer, nullable=False)
     incorrect_count: Mapped[int] = mapped_column(Integer, nullable=False)
     unanswered_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: Coding questions with partial marks (coding assessments, stage C4).
+    partial_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    #: Section totals; None when the attempt has no question of that kind (and for older results).
+    mcq_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mcq_maximum: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coding_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    coding_maximum: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

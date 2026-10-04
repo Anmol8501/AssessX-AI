@@ -2,9 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { routes } from '@/app/routes'
 import { AlertIcon, ArrowLeftIcon } from '@/components/icons'
-import { Button, Card, CardBody, Field, Input, PageHeader } from '@/components/ui'
+import { Button, Card, CardBody, Field, Input, PageHeader, RadioGroup } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { ASSESSMENT_TYPES, type AssessmentType } from '../types'
 import { describeError, useAssessmentActions } from '../useAssessments'
 
 interface Errors {
@@ -25,6 +26,7 @@ export function CreateAssessmentPage() {
   const navigate = useNavigate()
   const { createAssessment } = useAssessmentActions()
   const [values, setValues] = useState(EMPTY)
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>('MCQ')
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -52,6 +54,7 @@ export function CreateAssessmentPage() {
     try {
       const created = await createAssessment({
         title: values.title.trim(),
+        assessment_type: assessmentType,
         description: values.description.trim() || null,
         instructions: values.instructions.trim() || null,
         duration_minutes: duration!,
@@ -99,6 +102,15 @@ export function CreateAssessmentPage() {
                 {formError}
               </div>
             )}
+
+            <RadioGroup<AssessmentType>
+              label="Assessment type"
+              name="assessment_type"
+              options={ASSESSMENT_TYPES}
+              value={assessmentType}
+              onChange={setAssessmentType}
+              disabled={submitting}
+            />
 
             <Field label="Title" error={errors.title}>
               {({ id, describedBy, invalid }) => (

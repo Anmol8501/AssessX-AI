@@ -6,6 +6,8 @@ import { AssessmentResultsPage } from '@/features/admin/pages/AssessmentResultsP
 import { AssessmentBuilderPage } from '@/features/assessments/pages/AssessmentBuilderPage'
 import { AssessmentsPage } from '@/features/assessments/pages/AssessmentsPage'
 import { CreateAssessmentPage } from '@/features/assessments/pages/CreateAssessmentPage'
+import { CodingProblemPage } from '@/features/coding/admin/CodingProblemPage'
+import { CodingProblemsPage } from '@/features/coding/admin/CodingProblemsPage'
 import { CandidatesPage } from '@/features/admin/pages/CandidatesPage'
 import { LiveMonitoringPage } from '@/features/admin/monitoring/LiveMonitoringPage'
 import { SettingsPage } from '@/features/admin/pages/SettingsPage'
@@ -68,6 +70,8 @@ export const router = createHashRouter([
               { path: 'assessments', element: <AssessmentsPage /> },
               { path: 'assessments/new', element: <CreateAssessmentPage /> },
               { path: 'assessments/:assessmentId', element: <AssessmentBuilderPage /> },
+              { path: 'coding-problems', element: <CodingProblemsPage /> },
+              { path: 'coding-problems/:problemId', element: <CodingProblemPage /> },
               { path: 'candidates', element: <CandidatesPage /> },
               { path: 'monitoring', element: <LiveMonitoringPage /> },
               { path: 'results', element: <AdminResultsPage /> },

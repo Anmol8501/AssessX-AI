@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { routes } from '@/app/routes'
 import { EMPTY_INTERVIEW } from '../../types'
-import { callSocketUrl, chatText, elapsedSeconds, formatElapsed, MAX_CHAT, mergeMessages, peerMedia, slotAt, SLOTS } from '../callLogic'
+import { callSocketUrl, chatText, elapsedSeconds, formatElapsed, hasRelay, MAX_CHAT, mergeMessages, peerMedia, slotAt, SLOTS } from '../callLogic'
 import type { ChatMessage } from '../types'
 
 const msg = (id: string, at: string, body = id): ChatMessage => ({
@@ -21,6 +21,13 @@ describe('live call signaling', () => {
   it('pre-negotiates microphone, camera and screen in a fixed order', () => {
     expect(SLOTS).toEqual(['audio', 'camera', 'screen'])
     expect([0, 1, 2, 3, -1].map(slotAt)).toEqual(['audio', 'camera', 'screen', null, null])
+  })
+
+  it('knows whether the server offers a TURN relay', () => {
+    expect(hasRelay([{ urls: ['stun:stun.cloudflare.com:3478'] }])).toBe(false)
+    expect(hasRelay([])).toBe(false)
+    expect(hasRelay([{ urls: 'stun:a' }, { urls: ['turn:turn.cloudflare.com:3478?transport=udp'], username: 'u', credential: 'c' }])).toBe(true)
+    expect(hasRelay([{ urls: 'TURNS:turn.example.com:5349' }])).toBe(true)
   })
 
   it('reads the peer media flags strictly', () => {

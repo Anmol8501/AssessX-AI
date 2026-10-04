@@ -10,11 +10,13 @@ import uuid
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import delete
 
 from app.core.errors import Conflict
 from app.models.assessment import Assessment
 from app.models.attempt import AttemptStatus
 from app.models.base import utcnow
+from app.models.question import Question
 from app.models.result import AttemptResult
 from app.services.evaluation import AnswerOutcome, EvaluationService, percentage_of
 from tests.conftest import Helpers
@@ -393,7 +395,24 @@ def test_the_result_never_carries_an_answer_key(client, helpers: Helpers, users,
     assert "explanation" not in response.text
     assert "correct_answer" not in response.text
     for question in response.json()["questions"]:
-        assert set(question) == {"position", "marks", "marks_awarded", "outcome"}
+        # Coding added optional facts (a coding question's best submission); for a multiple-choice
+        # question they are empty, and nothing anywhere names a correct option.
+        assert set(question) == {
+            "position",
+            "marks",
+            "marks_awarded",
+            "outcome",
+            "kind",
+            "tests_passed",
+            "tests_total",
+            "verdict",
+            "language",
+        }
+        assert (
+            question["kind"] == "OBJECTIVE"
+            and question["tests_total"] is None
+            and question["verdict"] is None
+        )
 
 
 def test_the_breakdown_says_how_each_question_went_without_saying_what_was_right(
@@ -689,14 +708,19 @@ def test_nothing_from_phase_4_has_appeared(client, helpers: Helpers, users, db):
 
 
 def test_an_attempt_with_no_questions_left_still_evaluates(client, helpers: Helpers, users, db):
-    """A published assessment can still have its questions deleted, so evaluation has to cope."""
+    """Questions are locked once an attempt exists (the API refuses to delete them), but rows written
+    before that rule (or removed below the API) must still evaluate: an empty paper scores 0 of 0."""
     exam = assigned_exam(client, helpers, users)
     show_results(db, exam)
     headers = candidate_headers(helpers)
     attempt = start(client, headers, exam["id"])
     admin = admin_headers(helpers)
     for question in attempt["questions"]:
-        client.delete(f"/api/v1/assessments/{exam['id']}/questions/{question['id']}", headers=admin)
+        refused = client.delete(f"/api/v1/assessments/{exam['id']}/questions/{question['id']}", headers=admin)
+        assert refused.status_code == 409 and refused.json()["error"]["code"] == "assessment_in_use"
+    db.execute(delete(Question).where(Question.assessment_id == uuid.UUID(exam["id"])))
+    db.flush()
+    db.expire_all()
     submit(client, headers, attempt["id"])
 
     body = result_of(client, headers, attempt["id"])

@@ -1,95 +1,115 @@
 import type * as Ort from 'onnxruntime-web/webgpu'
 import type { DetectedObject, ObjectBackendReport, YoloxLoadConfig } from '../mediapipe/protocol'
-import { YOLOX_TINY } from './models'
-import { decodeClass, letterbox, nms, toBgrTensor } from './yolox'
+import { OBJECT_CLASSES, YOLOX_SPECS, yoloxAttempts, type ObjectModelId, type YoloxSpec } from './models'
+import { mergeRegions, pixelRect, toFrame, type Region } from './tiling'
+import { decodeClasses, letterbox, nms, toBgrTensor, type Candidate } from './yolox'
+
+/** Scores below this are dropped while decoding — a performance floor far below every threshold. */
+const DECODE_FLOOR = 0.01
+/** Candidates kept per class after merging regions. */
+const PER_CLASS = 3
 
 /**
- * YOLOX-Tiny object detection through ONNX Runtime Web, running inside the AI worker (Phase 5B,
- * opt-in). It returns the same `DetectedObject[]` the MediaPipe object detector returns, so the
- * `PhoneDetector` and everything downstream are unchanged.
+ * YOLOX object detection through ONNX Runtime Web, inside the AI worker.
  *
- *   * **Integrity first.** The model file is fetched and its SHA-256 compared with the pinned digest
- *     before it is used; a missing or altered file fails the load with a clear reason.
- *   * **WebGPU when it actually works, else WebAssembly.** WebGPU is tried only if the worker has a
- *     GPU adapter, and is accepted only after a warm-up inference succeeds in time; otherwise the
- *     WebAssembly (CPU) backend is used. The path taken is reported, never assumed.
- *   * **Cold start separated from steady state.** Loading, the warm-up inference (kernel/shader
- *     compilation) and the first post-warm-up inference are timed separately.
- *   * **No threshold.** Only the most confident phone candidate after NMS is returned.
+ *   * **Model and backend, in order** (`yoloxAttempts`): for the default `yolox` mode, YOLOX-S on
+ *     WebGPU, else YOLOX-Tiny on WebGPU, else YOLOX-Tiny on WebAssembly. WebGPU is accepted only after
+ *     a warm-up inference succeeds in time. What was used, and why anything was skipped, is reported.
+ *   * **Integrity first.** Each model file is fetched and its SHA-256 compared with the pinned digest
+ *     before use; a missing or altered file fails that attempt with a clear reason.
+ *   * **Every reported class** (phone, book, laptop, remote) is decoded from the same inference.
+ *   * **Regions** (see `tiling.ts`): the whole frame and/or zoomed tiles, merged per class.
+ *   * **No decision here.** Candidates carry raw model confidence; the event layer applies thresholds.
  */
 export class YoloxBackend {
   private readonly ort: typeof Ort
   private readonly session: Ort.InferenceSession
+  private readonly spec: YoloxSpec
   private canvas: OffscreenCanvas | null = null
   readonly report: ObjectBackendReport
 
-  private constructor(ort: typeof Ort, session: Ort.InferenceSession, report: ObjectBackendReport) {
+  private constructor(ort: typeof Ort, session: Ort.InferenceSession, spec: YoloxSpec, report: ObjectBackendReport) {
     this.ort = ort
     this.session = session
+    this.spec = spec
     this.report = report
   }
 
-  static async create(config: YoloxLoadConfig): Promise<YoloxBackend> {
-    // Loaded only when YOLOX is selected, so the default build never runs ONNX Runtime.
+  get provider(): 'webgpu' | 'wasm' {
+    return this.report.accelerator === 'webgpu' ? 'webgpu' : 'wasm'
+  }
+
+  static async create(mode: ObjectModelId, config: YoloxLoadConfig): Promise<YoloxBackend> {
+    // Loaded only when a YOLOX mode is selected, so other builds never run ONNX Runtime.
     const ort = await import('onnxruntime-web/webgpu')
     ort.env.wasm.wasmPaths = config.wasmPaths
     ort.env.wasm.numThreads = 1 // the app's WebView is not cross-origin isolated
     ort.env.wasm.proxy = false
 
-    const started = performance.now()
-    const response = await fetch(config.modelUrl)
-    if (!response.ok) throw new Error(`YOLOX-Tiny model missing (HTTP ${response.status})`)
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    const digest = await sha256Hex(bytes)
-    if (digest !== config.sha256) throw new Error(`YOLOX-Tiny model failed its integrity check (SHA-256 ${digest.slice(0, 12)}…)`)
-    const fetchMs = performance.now() - started
+    const gpu = config.preferWebGPU && (await hasGpuAdapter())
+    const attempts = yoloxAttempts(mode, gpu)
+    if (attempts.length === 0) throw new Error(`"${mode}" is not a YOLOX mode`)
+    const skipped: string[] = config.preferWebGPU && !gpu ? ['WebGPU adapter not available'] : []
+    const bytes = new Map<string, Uint8Array>()
 
-    const attempts: ('webgpu' | 'wasm')[] = config.preferWebGPU && (await hasGpuAdapter()) ? ['webgpu', 'wasm'] : ['wasm']
-    let fallback: string | null = config.preferWebGPU && attempts.length === 1 ? 'WebGPU adapter not available' : null
-    const failures: string[] = []
-    for (const provider of attempts) {
-      const createStarted = performance.now()
+    for (const { model, provider } of attempts) {
+      const spec = YOLOX_SPECS[model]
       let session: Ort.InferenceSession | null = null
+      const started = performance.now()
       try {
-        session = await ort.InferenceSession.create(bytes, { executionProviders: [provider], graphOptimizationLevel: 'all' })
-        checkSignature(session)
-        const loadMs = fetchMs + (performance.now() - createStarted)
-        const backend = new YoloxBackend(ort, session, { model: 'yolox_tiny', accelerator: provider, loadMs, warmupMs: null, firstInferenceMs: null, fallback })
-        const blank = new ort.Tensor('float32', new Float32Array(3 * YOLOX_TINY.size * YOLOX_TINY.size).fill(YOLOX_TINY.padValue), [...YOLOX_TINY.input.shape])
+        let file = bytes.get(model)
+        if (!file) {
+          file = await fetchVerified(config.models[model].url, config.models[model].sha256, spec)
+          bytes.set(model, file)
+        }
+        session = await ort.InferenceSession.create(file, { executionProviders: [provider], graphOptimizationLevel: 'all' })
+        checkSignature(session, spec)
+        const report: ObjectBackendReport = {
+          model,
+          accelerator: provider,
+          loadMs: performance.now() - started,
+          warmupMs: null,
+          firstInferenceMs: null,
+          fallback: skipped.length ? skipped.join(' | ') : null,
+        }
+        const backend = new YoloxBackend(ort, session, spec, report)
+        const blank = new ort.Tensor('float32', new Float32Array(3 * spec.size * spec.size).fill(spec.padValue), [...spec.input.shape])
         const warmupStarted = performance.now()
         await withTimeout(backend.run(blank), provider === 'webgpu' ? config.warmupTimeoutMs : Number.POSITIVE_INFINITY, 'warm-up timed out')
-        backend.report.warmupMs = performance.now() - warmupStarted
+        report.warmupMs = performance.now() - warmupStarted
         const firstStarted = performance.now()
         await backend.run(blank)
-        backend.report.firstInferenceMs = performance.now() - firstStarted
+        report.firstInferenceMs = performance.now() - firstStarted
         return backend
       } catch (error) {
         await session?.release().catch(() => undefined)
-        const message = error instanceof Error ? error.message : String(error)
-        failures.push(`${provider}: ${message}`)
-        if (provider === 'webgpu') fallback = `WebGPU rejected: ${message}`
+        skipped.push(`${model}/${provider}: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
     // Every attempt's cause is kept: the first failure is usually the informative one.
-    throw new Error(`No ONNX Runtime backend could run YOLOX-Tiny — ${failures.join(' | ')}`)
+    throw new Error(`No YOLOX model could run — ${skipped.join(' | ')}`)
   }
 
-  /** Most confident phone candidate(s) in the frame, in the frame's own normalised coordinates. */
-  async detect(bitmap: ImageBitmap, maxResults = 1): Promise<DetectedObject[]> {
-    const size = YOLOX_TINY.size
-    const placement = letterbox(bitmap.width, bitmap.height, size)
-    if (!this.canvas) this.canvas = new OffscreenCanvas(size, size)
-    const context = this.canvas.getContext('2d', { willReadFrequently: true })
-    if (!context) throw new Error('2D canvas unavailable for YOLOX preprocessing')
-    context.fillStyle = `rgb(${YOLOX_TINY.padValue},${YOLOX_TINY.padValue},${YOLOX_TINY.padValue})`
-    context.fillRect(0, 0, size, size)
-    context.drawImage(bitmap, 0, 0, placement.width, placement.height)
-    const pixels = context.getImageData(0, 0, size, size).data
-    context.clearRect(0, 0, size, size) // the preprocessed copy is not kept
-    const input = new this.ort.Tensor('float32', toBgrTensor(pixels, size), [...YOLOX_TINY.input.shape])
-    const output = await this.run(input)
-    const candidates = decodeClass(output, YOLOX_TINY.output.shape[2], YOLOX_TINY.classIndex, YOLOX_TINY.strides, placement, bitmap.width, bitmap.height)
-    return nms(candidates, YOLOX_TINY.nmsIou, maxResults).map((c) => ({ category: YOLOX_TINY.classLabel, score: c.score, box: c.box }))
+  /**
+   * The most confident candidates of every reported class in the given regions of the frame, in the
+   * frame's own normalised coordinates (`PER_CLASS` per class at most, merged across regions).
+   */
+  async detect(bitmap: ImageBitmap, regions: readonly Region[]): Promise<DetectedObject[]> {
+    const indices = OBJECT_CLASSES.map((c) => c.cocoIndex)
+    const all = new Map<number, (Candidate & { region: 'full' | 'tile' })[]>(indices.map((i) => [i, []]))
+    for (const region of regions) {
+      const found = await this.detectRegion(bitmap, region, indices)
+      const kind = region.width >= 1 && region.height >= 1 ? 'full' : 'tile'
+      for (const [classIndex, candidates] of found) {
+        for (const c of candidates) all.get(classIndex)!.push({ score: c.score, box: toFrame(c.box, region), region: kind })
+      }
+    }
+    const objects: DetectedObject[] = []
+    for (const cls of OBJECT_CLASSES) {
+      const merged = mergeRegions(all.get(cls.cocoIndex) ?? [], this.spec.nmsIou, PER_CLASS) as (Candidate & { region: 'full' | 'tile' })[]
+      for (const c of merged) objects.push({ category: cls.label, score: c.score, box: c.box, region: c.region })
+    }
+    return objects
   }
 
   async release(): Promise<void> {
@@ -97,19 +117,48 @@ export class YoloxBackend {
     this.canvas = null
   }
 
+  private async detectRegion(bitmap: ImageBitmap, region: Region, indices: number[]): Promise<Map<number, Candidate[]>> {
+    const spec = this.spec
+    const { sx, sy, sw, sh } = pixelRect(region, bitmap.width, bitmap.height)
+    const placement = letterbox(sw, sh, spec.size)
+    if (!this.canvas || this.canvas.width !== spec.size) this.canvas = new OffscreenCanvas(spec.size, spec.size)
+    const context = this.canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) throw new Error('2D canvas unavailable for YOLOX preprocessing')
+    context.fillStyle = `rgb(${spec.padValue},${spec.padValue},${spec.padValue})`
+    context.fillRect(0, 0, spec.size, spec.size)
+    context.drawImage(bitmap, sx, sy, sw, sh, 0, 0, placement.width, placement.height)
+    const pixels = context.getImageData(0, 0, spec.size, spec.size).data
+    context.clearRect(0, 0, spec.size, spec.size) // the preprocessed copy is not kept
+    const input = new this.ort.Tensor('float32', toBgrTensor(pixels, spec.size), [...spec.input.shape])
+    const output = await this.run(input)
+    const decoded = decodeClasses(output, spec.output.shape[2], indices, spec.strides, placement, sw, sh, DECODE_FLOOR)
+    const result = new Map<number, Candidate[]>()
+    for (const [classIndex, candidates] of decoded) result.set(classIndex, nms(candidates, spec.nmsIou, PER_CLASS))
+    return result
+  }
+
   private async run(input: Ort.Tensor): Promise<Float32Array> {
-    const results = await this.session.run({ [YOLOX_TINY.input.name]: input })
-    const output = results[YOLOX_TINY.output.name]
-    if (!output) throw new Error('YOLOX-Tiny produced no output')
+    const results = await this.session.run({ [this.spec.input.name]: input })
+    const output = results[this.spec.output.name]
+    if (!output) throw new Error(`${this.spec.id} produced no output`)
     const data = (await output.getData()) as Float32Array
     output.dispose() // release any GPU buffer; CPU input tensors need no explicit release
     return data
   }
 }
 
-function checkSignature(session: Ort.InferenceSession): void {
-  if (!session.inputNames.includes(YOLOX_TINY.input.name) || !session.outputNames.includes(YOLOX_TINY.output.name)) {
-    throw new Error(`Unexpected YOLOX-Tiny model signature (inputs ${session.inputNames.join(',')}; outputs ${session.outputNames.join(',')})`)
+async function fetchVerified(url: string, expected: string, spec: YoloxSpec): Promise<Uint8Array> {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`${spec.id} model missing (HTTP ${response.status})`)
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  const digest = await sha256Hex(bytes)
+  if (digest !== expected) throw new Error(`${spec.id} model failed its integrity check (SHA-256 ${digest.slice(0, 12)}…)`)
+  return bytes
+}
+
+function checkSignature(session: Ort.InferenceSession, spec: YoloxSpec): void {
+  if (!session.inputNames.includes(spec.input.name) || !session.outputNames.includes(spec.output.name)) {
+    throw new Error(`Unexpected ${spec.id} model signature (inputs ${session.inputNames.join(',')}; outputs ${session.outputNames.join(',')})`)
   }
 }
 

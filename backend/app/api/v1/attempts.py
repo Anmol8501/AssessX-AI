@@ -22,6 +22,7 @@ from app.models.base import utcnow
 from app.schemas.assignment import MyAssessment
 from app.schemas.attempt import (
     AttemptAnswerOut,
+    AttemptControl,
     AttemptDetail,
     AttemptSession,
     CandidateQuestion,
@@ -31,6 +32,7 @@ from app.schemas.attempt import (
 from app.schemas.proctoring import ProctoringSessionOut
 from app.schemas.result import CandidateResult, QuestionResult, ResultSummary
 from app.services.attempts import AttemptService
+from app.services.coding.drafts import DraftService
 from app.services.results import ResultService
 
 router = APIRouter(prefix="/candidates/me", tags=["exam attempt"])
@@ -55,6 +57,7 @@ def _session(attempt: AssessmentAttempt) -> AttemptSession:
         finalized_at=attempt.finalized_at,
         server_time=now,
         remaining_seconds=attempt.remaining_seconds(now),
+        control=AttemptControl.of(attempt),
     )
 
 
@@ -88,6 +91,10 @@ def _attempt_detail(attempt: AssessmentAttempt, service: AttemptService) -> Atte
             if attempt.proctoring_session is not None
             else None
         ),
+        control=AttemptControl.of(attempt),
+        assessment_type=assessment.assessment_type.value,
+        coding_allow_paste=assessment.coding_allow_paste,
+        coding=DraftService(service.db).progress(attempt),
     )
 
 
@@ -175,6 +182,22 @@ def submit_attempt(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) ->
     return _attempt_detail(service.submit(user, attempt_id), service)
 
 
+def question_result(outcome) -> QuestionResult:  # noqa: ANN001 — an evaluation QuestionOutcome
+    """One question's line in a result. Coding questions add their best submission's facts."""
+    best = outcome.coding
+    return QuestionResult(
+        position=outcome.position,
+        marks=outcome.marks,
+        marks_awarded=outcome.marks_awarded,
+        outcome=outcome.outcome,
+        kind="CODING" if best is not None or outcome.question_type == "CODING" else "OBJECTIVE",
+        tests_passed=best.passed if best else None,
+        tests_total=best.total if best else None,
+        verdict=best.verdict if best else None,
+        language=best.language if best else None,
+    )
+
+
 @router.get("/attempts/{attempt_id}/result", response_model=CandidateResult)
 def attempt_result(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) -> CandidateResult:
     """The candidate's own result for one finished attempt.
@@ -190,6 +213,29 @@ def attempt_result(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) ->
 
     assessment = attempt.assessment
     released = assessment.show_results
+    if result is None:
+        # Ended, but a code submission is still being judged: the result is produced when it finishes.
+        return CandidateResult(
+            attempt_id=attempt.id,
+            assessment_id=assessment.id,
+            assessment_title=assessment.title,
+            attempt_number=attempt.attempt_number,
+            attempt_status=attempt.status,
+            submitted_at=attempt.submitted_at,
+            finalized_at=attempt.finalized_at,
+            released=released,
+            score=None,
+            maximum_score=None,
+            percentage=None,
+            passed=None,
+            correct_count=None,
+            incorrect_count=None,
+            unanswered_count=None,
+            evaluated_at=None,
+            questions=[],
+            evaluating=True,
+            partial_count=None,
+        )
     return CandidateResult(
         attempt_id=attempt.id,
         assessment_id=assessment.id,
@@ -207,15 +253,12 @@ def attempt_result(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) ->
         incorrect_count=result.incorrect_count if released else None,
         unanswered_count=result.unanswered_count if released else None,
         evaluated_at=result.evaluated_at if released else None,
-        questions=[
-            QuestionResult(
-                position=outcome.position,
-                marks=outcome.marks,
-                marks_awarded=outcome.marks_awarded,
-                outcome=outcome.outcome,
-            )
-            for outcome in (results.outcomes(attempt) if released else [])
-        ],
+        questions=[question_result(outcome) for outcome in (results.outcomes(attempt) if released else [])],
+        partial_count=result.partial_count if released else None,
+        mcq_score=result.mcq_score if released else None,
+        mcq_maximum=result.mcq_maximum if released else None,
+        coding_score=result.coding_score if released else None,
+        coding_maximum=result.coding_maximum if released else None,
     )
 
 
@@ -242,6 +285,11 @@ def my_results(user: CandidateUser, db: DbSession) -> list[ResultSummary]:
             unanswered_count=result.unanswered_count,
             evaluated_at=result.evaluated_at,
             submitted_at=result.attempt.submitted_at,
+            partial_count=result.partial_count,
+            mcq_score=result.mcq_score,
+            mcq_maximum=result.mcq_maximum,
+            coding_score=result.coding_score,
+            coding_maximum=result.coding_maximum,
         )
         for result in ResultService(db).list_for_candidate(user)
         if result.assessment.show_results

@@ -3,7 +3,12 @@ import { ArrowLeftIcon, ArrowRightIcon } from '@/components/icons'
 import { Logo } from '@/components/Logo'
 import { Button, Card, ConfirmDialog, ErrorState } from '@/components/ui'
 import { ExamTimer } from '@/features/exam/ExamTimer'
+import { CodingWorkspace } from '@/features/coding/candidate/CodingWorkspace'
+import { questionLabels } from '@/features/coding/candidate/codingLogic'
+import type { CodingProgress, CodingStatus } from '@/features/coding/types'
+import { isAnswered } from '@/features/exam/answered'
 import { QuestionNavigator } from '@/features/exam/QuestionNavigator'
+import { useApi } from '@/features/session'
 import { QuestionView } from '@/features/exam/QuestionView'
 import { useAnswers, useSubmitExam } from '@/features/exam/useExam'
 import { useExamClock } from '@/features/exam/useExamClock'
@@ -43,7 +48,15 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
   const question = questions[index]
   // Phase 2B's setting, honoured here: SEQUENTIAL means forward-only, FREE means any order.
   const canJump = attempt.question_navigation === 'FREE'
-  const answeredCount = questions.filter((q) => (answers[q.id]?.length ?? 0) > 0).length
+  const labels = questionLabels(questions, attempt.assessment_type)
+
+  // Coding progress for the navigator: from the attempt, refreshed when a draft or submission changes it.
+  const api = useApi()
+  const [coding, setCoding] = useState<Record<string, CodingStatus>>(() => byQuestion(attempt.coding ?? []))
+  const refreshCoding = useCallback(() => {
+    api<CodingProgress[]>(`/api/v1/candidates/me/attempts/${attempt.id}/coding-progress`).then((rows) => setCoding(byQuestion(rows)), () => undefined)
+  }, [api, attempt.id])
+  const answeredCount = questions.filter((q) => isAnswered(q, answers, coding)).length
 
   // The server ended the attempt while this screen was open — re-read it and show the outcome
   // rather than letting the candidate carry on answering a closed exam.
@@ -84,7 +97,10 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
         <div className="text-ink-subtle flex shrink-0 items-center gap-4 text-[12.5px]">
           {headerExtra}
           <span className="tabular-nums">
-            Question {index + 1} of {questions.length}
+            {/* MCQ-only exams keep the original "Question n of N"; coding and mixed exams name the item. */}
+            {attempt.assessment_type && attempt.assessment_type !== 'MCQ'
+              ? `${labels[index]} · ${index + 1} of ${questions.length}`
+              : `Question ${index + 1} of ${questions.length}`}
           </span>
           <ExamTimer clock={clock} />
           {/* No way out but finishing: once an exam starts it runs to submission or to the
@@ -95,6 +111,38 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
         </div>
       </header>
 
+      {question.type === 'CODING' ? (
+        <div className="flex min-h-0 w-full flex-1 flex-col gap-3 px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <QuestionNavigator
+              questions={questions}
+              answers={answers}
+              currentIndex={index}
+              canJump={canJump}
+              onJump={setIndex}
+              labels={labels}
+              codingStatus={coding}
+              compact
+            />
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setIndex((i) => i - 1)} disabled={index === 0 || !canJump} leadingIcon={<ArrowLeftIcon />}>
+                Previous
+              </Button>
+              <Button size="sm" onClick={() => setIndex((i) => i + 1)} disabled={index === questions.length - 1} trailingIcon={<ArrowRightIcon />}>
+                Next
+              </Button>
+            </div>
+          </div>
+          {submitError && (
+            <p className="text-danger text-[13px]" role="alert">
+              {submitError}
+            </p>
+          )}
+          <div className="min-h-0 flex-1">
+            <CodingWorkspace key={question.id} attemptId={attempt.id} questionId={question.id} number={index + 1} onProgress={refreshCoding} />
+          </div>
+        </div>
+      ) : (
       <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 gap-6 px-8 py-7">
         <main className="flex min-w-0 flex-1 flex-col">
           <Card className="flex min-h-0 flex-1 flex-col px-7 py-6">
@@ -142,10 +190,13 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
               currentIndex={index}
               canJump={canJump}
               onJump={setIndex}
+              labels={labels}
+              codingStatus={coding}
             />
           </Card>
         </aside>
       </div>
+      )}
 
       <ConfirmDialog
         open={confirmingSubmit}
@@ -171,4 +222,8 @@ export function Centred({ children }: { children: ReactNode }) {
       <Card className="w-full max-w-md">{children}</Card>
     </div>
   )
+}
+
+function byQuestion(rows: CodingProgress[]): Record<string, CodingStatus> {
+  return Object.fromEntries(rows.map((r) => [r.question_id, r.status]))
 }

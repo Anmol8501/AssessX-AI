@@ -14,6 +14,7 @@ from app.schemas.assessment import (
     ReorderQuestions,
 )
 from app.schemas.assignment import AssignCandidates, AssignmentOut, AssignmentResult
+from app.schemas.coding import CodingAnalytics, CodingQuestionCreate, CodingQuestionVersion
 from app.schemas.question import QuestionCreate, QuestionOut, QuestionUpdate
 from app.schemas.result import AdminResult, AssessmentResults
 from app.services.assessments import AssessmentService
@@ -29,6 +30,7 @@ def _summary(assessment: Assessment) -> AssessmentSummary:
     return AssessmentSummary(
         id=assessment.id,
         title=assessment.title,
+        assessment_type=assessment.assessment_type,
         description=assessment.description,
         status=assessment.status,
         duration_minutes=assessment.duration_minutes,
@@ -177,6 +179,11 @@ def assessment_results(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) ->
                 unanswered_count=result.unanswered_count,
                 submitted_at=result.attempt.submitted_at,
                 evaluated_at=result.evaluated_at,
+                partial_count=result.partial_count,
+                mcq_score=result.mcq_score,
+                mcq_maximum=result.mcq_maximum,
+                coding_score=result.coding_score,
+                coding_maximum=result.coding_maximum,
             )
             for result in results
         ],
@@ -202,6 +209,40 @@ def create_question(
     assessment_id: uuid.UUID, payload: QuestionCreate, _: AdminUser, db: DbSession
 ) -> QuestionOut:
     return QuestionOut.model_validate(AssessmentService(db).add_question(assessment_id, payload))
+
+
+@router.get("/{assessment_id}/coding-analytics", response_model=CodingAnalytics)
+def coding_analytics(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> CodingAnalytics:
+    """Coding analytics: per problem, per candidate (by name, never ranked) and MCQ / coding / total
+    averages. Facts only."""
+    from app.services.coding.analytics import coding_analytics as build
+
+    AssessmentService(db).get(assessment_id)
+    return CodingAnalytics.model_validate(build(db, assessment_id))
+
+
+@router.post(
+    "/{assessment_id}/coding-questions", response_model=QuestionOut, status_code=status.HTTP_201_CREATED
+)
+def add_coding_question(
+    assessment_id: uuid.UUID, payload: CodingQuestionCreate, _: AdminUser, db: DbSession
+) -> QuestionOut:
+    """Adds a published coding problem version. Refused unless the assessment type allows coding."""
+    return QuestionOut.model_validate(AssessmentService(db).add_coding_question(assessment_id, payload))
+
+
+@router.post("/{assessment_id}/questions/{question_id}/coding-version", response_model=QuestionOut)
+def set_coding_version(
+    assessment_id: uuid.UUID,
+    question_id: uuid.UUID,
+    payload: CodingQuestionVersion,
+    _: AdminUser,
+    db: DbSession,
+) -> QuestionOut:
+    """Moves a coding question to another published version of the same problem (before any attempt)."""
+    return QuestionOut.model_validate(
+        AssessmentService(db).set_coding_version(assessment_id, question_id, payload.problem_version_id)
+    )
 
 
 @router.post("/{assessment_id}/questions/reorder", response_model=list[QuestionOut])

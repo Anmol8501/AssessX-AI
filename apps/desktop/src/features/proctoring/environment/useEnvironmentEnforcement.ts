@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { desktopBridge, securityMode, type CapabilityStatus, type DesktopBridge, type LockdownStatus, type WindowSnapshot } from './bridge'
-import { classifyKey } from './restrictions'
+import { classifyKey, inCodeEditor } from './restrictions'
+
+const CLIPBOARD_TYPES = new Set(['COPY_ATTEMPT', 'CUT_ATTEMPT', 'PASTE_ATTEMPT'])
 import type { EventMetadata } from './useEventReporter'
 
 /** How often the display configuration is re-read in the desktop app. */
@@ -23,7 +25,7 @@ const NOTICE: Record<string, string> = {
   CONTEXT_MENU_ATTEMPT: 'Right-click menus are disabled during this assessment.',
   PRINT_ATTEMPT: 'Printing is disabled during this assessment.',
   DEVTOOLS_ATTEMPT: 'Developer tools are disabled during this assessment.',
-  KEYBOARD_RESTRICTION_ATTEMPT: 'That shortcut is disabled during this assessment.',
+  KEYBOARD_RESTRICTION_ATTEMPT: 'Keyboard shortcuts (Ctrl, Alt and the Windows key) are not allowed during this exam.',
   SCREEN_CAPTURE_ATTEMPT: 'Screenshots are disabled during this assessment.',
   FOCUS_REGAINED: 'AssessX must remain the active application during the exam.',
   MULTIPLE_MONITORS_DETECTED: 'More than one display is connected. This has been noted for your exam.',
@@ -60,7 +62,16 @@ function capabilitiesOf(status: LockdownStatus, native: boolean): Record<string,
  *
  * Returns the notices to show and whether the candidate must return to fullscreen.
  */
-export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge = desktopBridge()) {
+export interface EnforcementOptions {
+  /** Copy, cut and paste are allowed inside the code editor (the assessment's coding setting). */
+  editorClipboard?: boolean
+}
+
+export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge = desktopBridge(), options: EnforcementOptions = {}) {
+  const editorClipboard = useRef(Boolean(options.editorClipboard))
+  useEffect(() => {
+    editorClipboard.current = Boolean(options.editorClipboard)
+  })
   const [notices, setNotices] = useState<Notice[]>([])
   const [fullscreenRequired, setFullscreenRequired] = useState(false)
   const [fullscreenAvailable, setFullscreenAvailable] = useState(true)
@@ -274,6 +285,8 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
     const onKeyDown = (event: KeyboardEvent) => {
       const restriction = classifyKey(event, event.target)
       if (!restriction) return
+      // The assessment allows copy and paste in the code editor: the editor handles them there.
+      if (editorClipboard.current && CLIPBOARD_TYPES.has(restriction.eventType) && inCodeEditor(event.target)) return
       event.preventDefault()
       event.stopPropagation()
       if (event.repeat) return // holding the key is one attempt
@@ -285,6 +298,15 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
       if (event.code === 'PrintScreen') emit('SCREEN_CAPTURE_ATTEMPT', { shortcut: 'PRINTSCREEN', blocked: false, channel: 'keyboard' })
     }
     const onClipboard = (type: 'COPY_ATTEMPT' | 'CUT_ATTEMPT' | 'PASTE_ATTEMPT') => (event: ClipboardEvent) => {
+      if (editorClipboard.current && inCodeEditor(event.target)) {
+        // Allowed by the assessment. A paste is recorded as a fact (its length only — never its text).
+        if (type === 'PASTE_ATTEMPT') {
+          const length = event.clipboardData?.getData('text/plain').length ?? 0
+          const number = Number((event.target as Element).closest?.('[data-question-number]')?.getAttribute('data-question-number'))
+          report('CODE_PASTED', { length, ...(Number.isInteger(number) && number > 0 ? { question_number: number } : {}) })
+        }
+        return
+      }
       event.preventDefault() // nothing is read from or written to the clipboard
       emit(type, { blocked: true, channel: 'clipboard-event' })
     }
@@ -331,7 +353,7 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
       window.removeEventListener('focus', onFocus)
       document.body.classList.remove('exam-lockdown')
     }
-  }, [emit, loseFocus, regainFocus])
+  }, [emit, loseFocus, regainFocus, report])
 
   return {
     notices,

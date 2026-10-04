@@ -13,6 +13,8 @@ import {
   PageHeader,
   StatusBadge,
 } from '@/components/ui'
+import { CodingAnalyticsPanel } from '@/features/coding/admin/CodingAnalyticsPanel'
+import { sectionText } from '@/features/exam/resultText'
 import { formatPercentage, useAssessmentResults } from '@/features/exam/useResults'
 import { EvidenceTimeline } from '../evidence/EvidenceTimeline'
 import { AttemptRiskPanel } from '../risk/AttemptRiskPanel'
@@ -115,6 +117,12 @@ export function AssessmentResultsPage() {
                     </td>
                     <td className="text-ink px-5 py-3 text-[13.5px] tabular-nums">
                       {result.score} / {result.maximum_score}
+                      {result.coding_maximum !== null && (
+                        <span className="text-ink-subtle block text-[12px]">
+                          {result.mcq_maximum !== null && `MCQ ${sectionText(result.mcq_score, result.mcq_maximum)} · `}
+                          Code {sectionText(result.coding_score, result.coding_maximum)}
+                        </span>
+                      )}
                     </td>
                     <td className="text-ink px-5 py-3 text-[13.5px] tabular-nums">
                       {formatPercentage(result.percentage)}
@@ -122,6 +130,7 @@ export function AssessmentResultsPage() {
                     <td className="text-ink-subtle px-5 py-3 text-[12.5px] tabular-nums">
                       {result.correct_count} / {result.incorrect_count} / {result.unanswered_count}
                       <span className="sr-only"> correct, incorrect, unanswered</span>
+                      {result.partial_count ? <span className="block">{result.partial_count} partly correct</span> : null}
                     </td>
                     <td className="px-5 py-3">
                       <StatusBadge tone={result.passed ? 'ok' : 'danger'}>
@@ -148,6 +157,7 @@ export function AssessmentResultsPage() {
       <p className="text-ink-subtle mt-3 text-[12px]">
         Breakdown shows correct / incorrect / unanswered questions.
       </p>
+      {results.length > 0 && <CodingAnalyticsPanel assessmentId={assessmentId} />}
       {riskFor && <RiskDialog {...riskFor} onClose={() => setRiskFor(null)} />}
     </>
   )

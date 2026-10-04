@@ -1,4 +1,4 @@
-import { YOLOX_TINY } from '../objectDetection/models'
+import { OBJECT_CLASSES, YOLOX_S, YOLOX_TINY } from '../objectDetection/models'
 import type { TaskName } from './protocol'
 
 /**
@@ -7,9 +7,9 @@ import type { TaskName } from './protocol'
  * Decided:
  *   * Runtime: MediaPipe Tasks Vision (`@mediapipe/tasks-vision`, Apache-2.0) — the KB/TRD name
  *     MediaPipe for face landmarks, head orientation and gaze.
- *   * Object model: MediaPipe EfficientDet-Lite0 (COCO), reporting **cell phone only**. This is a
- *     product-owner decision (2026-09-26) and a recorded deviation from the documents' "YOLO"
- *     wording, chosen because Ultralytics YOLO is AGPL-3.0.
+ *   * Object model (product-owner decision, 2026-10-02): YOLOX-S on WebGPU, else YOLOX-Tiny (Megvii,
+ *     Apache-2.0 — not Ultralytics YOLO, which is AGPL-3.0), reporting a phone, a book, a laptop or
+ *     tablet, and a remote/calculator-like device. EfficientDet-Lite0 stays selectable for comparison.
  *
  * UNRESOLVED — requires Phase 5 technical decision (provisional values, not validated targets):
  *   * `PREFER_GPU`: whether to try MediaPipe's GPU (WebGL) delegate first. **Off.** Diagnosed
@@ -31,15 +31,15 @@ export const LOAD_TIMEOUT_MS = 60_000
 export const INFERENCE_TIMEOUT_MS = 5_000
 
 /**
- * YOLOX-Tiny (opt-in object model): try WebGPU first and accept it only if a warm-up inference
- * finishes within `YOLOX_WARMUP_TIMEOUT_MS`; otherwise WebAssembly. Both are UNRESOLVED provisional
- * values like the ones above — WebGPU is not required, and the CPU path always exists.
+ * YOLOX: try WebGPU first and accept it only if a warm-up inference finishes within
+ * `YOLOX_WARMUP_TIMEOUT_MS`; otherwise YOLOX-Tiny on WebAssembly. Provisional values like the ones
+ * above — WebGPU is not required, and the CPU path always exists.
  */
 export const YOLOX_PREFER_WEBGPU = true
 export const YOLOX_WARMUP_TIMEOUT_MS = 30_000
 
-/** COCO label used by EfficientDet-Lite0 for a mobile phone. */
-export const OBJECT_CATEGORIES = ['cell phone']
+/** COCO labels of the reported object classes (EfficientDet-Lite0's allow-list). */
+export const OBJECT_CATEGORIES: string[] = OBJECT_CLASSES.map((c) => c.label)
 
 /** Served from the app itself (`public/`), prepared by `scripts/fetch-ai-assets.mjs`. */
 export const MODEL_FILES: Record<TaskName, string> = {
@@ -54,7 +54,10 @@ export const RUNTIME_VERSION = '1.0.1' // @mediapipe/tasks-vision, pinned exactl
 export function assetUrls(origin: string) {
   const at = (path: string) => new URL(path, origin).toString()
   return {
-    yoloxModel: at(`/models/${YOLOX_TINY.file}`),
+    yoloxModels: {
+      yolox_s: at(`/models/${YOLOX_S.file}`),
+      yolox_tiny: at(`/models/${YOLOX_TINY.file}`),
+    },
     ortWasmPaths: at('/onnxruntime/'),
     wasmLoaderPath: at('/mediapipe/wasm/vision_wasm_module_internal.js'),
     wasmBinaryPath: at('/mediapipe/wasm/vision_wasm_module_internal.wasm'),

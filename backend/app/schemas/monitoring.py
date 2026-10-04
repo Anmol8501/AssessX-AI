@@ -44,6 +44,10 @@ class AIMonitoringState(BaseModel):
     head_orientation: str  # forward | left | right | unknown (up/down only on rows from before 2026-09-30)
     gaze: str  # not_used
     camera_quality: str  # good | issue | unknown
+    #: Objects in view (2026-10-02): "detected" while an object episode is open (and which classes),
+    #: "none" while the object detector is measuring and none is, "unknown" when it is not measuring.
+    objects: str = "unknown"  # detected | none | unknown
+    objects_seen: list[str] = []  # cell_phone | book | laptop | remote
     active: list[AIActiveObservation]
 
 
@@ -72,6 +76,12 @@ class MonitoringSession(BaseModel):
     candidate_connected: bool = False
     #: When that last changed (None if the server has not seen the candidate app since it started).
     candidate_presence_changed_at: datetime | None = None
+    #: Exam control: tab switches counted by the server, and whether the attempt is on hold.
+    tab_switches: int = 0
+    tab_switch_limit: int = 3
+    on_hold: bool = False
+    hold_reason: str | None = None
+    held_at: datetime | None = None
 
 
 class MonitoringSummary(BaseModel):

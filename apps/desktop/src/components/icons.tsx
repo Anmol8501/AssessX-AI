@@ -136,6 +136,13 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
   </Icon>
 )
+export const CodeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m8 8-4 4 4 4" />
+    <path d="m16 8 4 4-4 4" />
+    <path d="m13.5 5-3 14" />
+  </Icon>
+)
 export const InterviewIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M4 5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />

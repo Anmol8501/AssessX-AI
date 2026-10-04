@@ -256,6 +256,10 @@ def test_signaling_flows_only_between_the_two_sides(client, helpers: Helpers, ad
                 "video": True,
                 "screen": True,
             }
+            # Only the interviewer may ask for a fresh offer; the candidate's request is dropped.
+            cand.send_json({"type": "RENEGOTIATE"})
+            interviewer.send_json({"type": "RENEGOTIATE", "extra": "x"})
+            assert cand.receive_json() == {"type": "RENEGOTIATE"}
         assert interviewer.receive_json() == {"type": "PEER_LEFT", "role": "candidate"}
 
 

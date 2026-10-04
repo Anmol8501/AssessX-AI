@@ -5,8 +5,9 @@ The same check powers the review screen (as a list of issues) and the DRAFT → 
 backend would refuse.
 """
 
-from app.models.assessment import Assessment
-from app.models.question import SINGLE_ANSWER_TYPES, Question
+from app.core.config import get_settings
+from app.models.assessment import Assessment, AssessmentType
+from app.models.question import OBJECTIVE_TYPES, SINGLE_ANSWER_TYPES, Question
 from app.schemas.assessment import ReadinessIssue, ReadinessReport
 from app.schemas.question import MIN_CHOICE_OPTIONS, TRUE_FALSE_LABELS, QuestionType
 
@@ -21,6 +22,14 @@ def _question_issues(question: Question, number: int) -> list[ReadinessIssue]:
         issues.append(
             ReadinessIssue(field=field, message=f"Question {number} must be worth at least 1 mark.")
         )
+    if question.type is QuestionType.CODING:
+        # The problem's own content was checked when its version was published.
+        version = question.coding_version
+        if version is None or not version.is_published:
+            issues.append(
+                ReadinessIssue(field=field, message=f"Question {number} needs a published coding problem.")
+            )
+        return issues
 
     options = question.options
     if any(not option.text.strip() for option in options):
@@ -86,6 +95,29 @@ def evaluate(assessment: Assessment) -> ReadinessReport:
     questions = sorted(assessment.questions, key=lambda q: q.position)
     if not questions:
         issues.append(ReadinessIssue(field="questions", message="Add at least one question."))
+    # The assessment type is enforced when questions are added; checked again here as the final gate.
+    coding = [q for q in questions if q.type is QuestionType.CODING]
+    objective = [q for q in questions if q.type in OBJECTIVE_TYPES]
+    if assessment.assessment_type is AssessmentType.MCQ and coding:
+        issues.append(
+            ReadinessIssue(
+                field="questions", message="An MCQ-only assessment cannot contain coding questions."
+            )
+        )
+    if assessment.assessment_type is AssessmentType.CODING and objective:
+        issues.append(
+            ReadinessIssue(
+                field="questions",
+                message="A coding-only assessment cannot contain multiple-choice questions.",
+            )
+        )
+    if coding and not get_settings().coding_execution_enabled:
+        issues.append(
+            ReadinessIssue(
+                field="questions",
+                message="Coding questions can't be published yet: the code runner has not been set up.",
+            )
+        )
 
     for number, question in enumerate(questions, start=1):
         issues.extend(_question_issues(question, number))

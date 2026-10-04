@@ -176,8 +176,9 @@ async function latest(page: Page, type: string, accept: (o: SeamObservation) => 
     .poll(
       async () => {
         const observations = (await seamState(page))?.recentObservations ?? []
-        found = [...observations].reverse().find((o) => o.observationType === type)
-        return found !== undefined && accept(found)
+        // The newest observation of this type that meets `accept` (one frame carries one per object class).
+        found = [...observations].reverse().find((o) => o.observationType === type && accept(o))
+        return found !== undefined
       },
       { timeout },
     )
@@ -236,7 +237,7 @@ test.describe('AI infrastructure (test-only mock runtime)', () => {
 })
 
 test.describe('AI detectors (real MediaPipe runtime)', () => {
-  test('with no face in view: face absence is observed, pose/gaze stay silent, the phone score is raw', async ({ browser, request }) => {
+  test('with no face in view: face absence is observed, pose/gaze stay silent, object scores are raw', async ({ browser, request }) => {
     test.setTimeout(120_000)
     const title = unique('AI Real No Face')
     await seedExam(request, title, true)
@@ -247,8 +248,12 @@ test.describe('AI detectors (real MediaPipe runtime)', () => {
     const presence = await latest(page, 'FACE_PRESENCE')
     expect(presence.metadata).toEqual({ facePresent: false, faceCount: 0 })
 
-    const phone = await latest(page, 'OBJECT_DETECTION')
-    expect(phone.metadata).toEqual({ objectClass: 'cell_phone', objectModel: 'efficientdet_lite0' }) // default model; no invented detected/not-detected
+    // The default object model is YOLOX (YOLOX-S on WebGPU, else YOLOX-Tiny); one observation per
+    // class, raw confidence only — the detected/not-detected decision belongs to the event layer.
+    const phone = await latest(page, 'OBJECT_DETECTION', (o) => o.metadata.objectClass === 'cell_phone')
+    expect(['yolox_s', 'yolox_tiny']).toContain(phone.metadata.objectModel)
+    expect(phone.metadata).not.toHaveProperty('detected')
+    for (const objectClass of ['book', 'laptop', 'remote']) await latest(page, 'OBJECT_DETECTION', (o) => o.metadata.objectClass === objectClass)
     await latest(page, 'FRAME_QUALITY')
 
     const state = (await seamState(page))!
@@ -335,7 +340,7 @@ test.describe('AI detectors (real MediaPipe runtime)', () => {
   })
 })
 
-test.describe('Opt-in YOLOX-Tiny object model (real runtime)', () => {
+test.describe('YOLOX-Tiny forced (the CPU fallback model, real runtime)', () => {
   const YOLOX = { objectModel: 'yolox_tiny', config: { inferenceIntervalMs: 100, latencyBudgetMs: 60_000 } }
 
   test('YOLOX-Tiny runs behind the same detector, warmed up, and labels its observations', async ({ browser, request }) => {
@@ -346,8 +351,8 @@ test.describe('Opt-in YOLOX-Tiny object model (real runtime)', () => {
     await enterExam(page, request, title)
     await expect(aiStatus(page, 'active')).toBeVisible({ timeout: 90_000 })
 
-    const phone = await latest(page, 'OBJECT_DETECTION')
-    expect(phone.metadata).toEqual({ objectClass: 'cell_phone', objectModel: 'yolox_tiny' })
+    const phone = await latest(page, 'OBJECT_DETECTION', (o) => o.metadata.objectClass === 'cell_phone')
+    expect(phone.metadata).toMatchObject({ objectClass: 'cell_phone', objectModel: 'yolox_tiny' })
     expect(phone.confidence).not.toBeNull() // raw model confidence only — no decision
     const state = (await seamState(page))!
     const backend = state.telemetry.runtime!.objectDetector!

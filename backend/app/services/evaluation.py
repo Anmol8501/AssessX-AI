@@ -10,23 +10,29 @@ The rules are deliberately small, and identical for all three objective types:
 * an empty selection is *unanswered*, not wrong, and scores zero either way;
 * no partial credit and no negative marking.
 
-Anything subjective (short answer, long answer, coding) is out of scope and cannot occur, because
-`QuestionType` has no such member yet.
+Coding questions (coding assessments, stage C4) are scored from the candidate's **best** judged
+submission: full marks when it was accepted; with partial scoring, the marks times the share of test weight
+it passed, rounded down (never over-awarded); otherwise nothing. A coding question with no judged
+submission is unanswered. While any submission of the attempt is still being judged, the result waits
+(`ensure_result` returns None); the runner's completion finishes it.
 """
 
 import enum
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict
 from app.models.attempt import AssessmentAttempt, AttemptAnswer
 from app.models.base import utcnow
-from app.models.question import Question
+from app.models.code_execution import CodeExecution, ExecutionKind, ExecutionStatus, Verdict
+from app.models.question import Question, QuestionType
 from app.models.result import AttemptResult
 from app.repositories.attempts import AttemptRepository
 from app.repositories.questions import QuestionRepository
@@ -46,6 +52,21 @@ class AnswerOutcome(enum.StrEnum):
     CORRECT = "CORRECT"
     INCORRECT = "INCORRECT"
     UNANSWERED = "UNANSWERED"
+    #: Coding with partial scoring: some marks, not all.
+    PARTIAL = "PARTIAL"
+
+
+@dataclass(frozen=True)
+class CodingBest:
+    """A coding question's best judged submission — what it is scored from."""
+
+    execution_id: uuid.UUID
+    verdict: str
+    passed: int
+    total: int
+    passed_weight: int
+    total_weight: int
+    language: str
 
 
 @dataclass(frozen=True)
@@ -57,6 +78,9 @@ class QuestionOutcome:
     marks: int
     marks_awarded: int
     outcome: AnswerOutcome
+    #: Coding questions only: the submission the marks came from.
+    coding: CodingBest | None = None
+    question_type: str = "OBJECTIVE"
 
 
 @dataclass(frozen=True)
@@ -70,6 +94,40 @@ class Scoring:
     correct_count: int
     incorrect_count: int
     unanswered_count: int
+    partial_count: int = 0
+    #: Section totals, None when the attempt has no question of that kind.
+    mcq_score: int | None = None
+    mcq_maximum: int | None = None
+    coding_score: int | None = None
+    coding_maximum: int | None = None
+
+
+def coding_marks(marks: int, partial: bool, best: CodingBest) -> int:
+    """Marks for one judged submission. Rounded down, so a candidate is never over-awarded."""
+    if best.verdict == "ACCEPTED":
+        return marks
+    if partial and best.total_weight > 0:
+        return (marks * best.passed_weight) // best.total_weight
+    return 0
+
+
+def score_coding(question: Question, submissions: list[CodingBest]) -> QuestionOutcome:
+    """Scores a coding question from its best judged submission (ties: the earliest)."""
+    partial = bool(question.coding_version and question.coding_version.partial_scoring)
+    if not submissions:
+        return QuestionOutcome(
+            question.id, question.position, question.marks, 0, AnswerOutcome.UNANSWERED, None, "CODING"
+        )
+    best = max(submissions, key=lambda s: coding_marks(question.marks, partial, s))
+    awarded = coding_marks(question.marks, partial, best)
+    outcome = (
+        AnswerOutcome.CORRECT
+        if awarded == question.marks
+        else AnswerOutcome.PARTIAL
+        if awarded > 0
+        else AnswerOutcome.INCORRECT
+    )
+    return QuestionOutcome(question.id, question.position, question.marks, awarded, outcome, best, "CODING")
 
 
 def score_question(question: Question, answer: AttemptAnswer | None) -> QuestionOutcome:
@@ -91,17 +149,30 @@ def score_question(question: Question, answer: AttemptAnswer | None) -> Question
     return QuestionOutcome(question.id, question.position, question.marks, 0, AnswerOutcome.INCORRECT)
 
 
-def score_attempt(questions: list[Question], answers: list[AttemptAnswer]) -> Scoring:
+def score_attempt(
+    questions: list[Question],
+    answers: list[AttemptAnswer],
+    coding: dict[uuid.UUID, list[CodingBest]] | None = None,
+) -> Scoring:
     """Scores every question of an attempt.
 
     Driven by the questions, not the answers: a question the candidate never opened has no answer
     row at all and still has to count towards the maximum.
     """
     by_question = {answer.question_id: answer for answer in answers}
-    outcomes = [score_question(question, by_question.get(question.id)) for question in questions]
+    coding = coding or {}
+    outcomes = [
+        score_coding(question, coding.get(question.id, []))
+        if question.type is QuestionType.CODING
+        else score_question(question, by_question.get(question.id))
+        for question in questions
+    ]
 
     score = sum(outcome.marks_awarded for outcome in outcomes)
     maximum = sum(outcome.marks for outcome in outcomes)
+    coding_ids = {q.id for q in questions if q.type is QuestionType.CODING}
+    mcq = [o for o in outcomes if o.question_id not in coding_ids]
+    code = [o for o in outcomes if o.question_id in coding_ids]
     return Scoring(
         outcomes=outcomes,
         score=score,
@@ -110,6 +181,11 @@ def score_attempt(questions: list[Question], answers: list[AttemptAnswer]) -> Sc
         correct_count=sum(o.outcome is AnswerOutcome.CORRECT for o in outcomes),
         incorrect_count=sum(o.outcome is AnswerOutcome.INCORRECT for o in outcomes),
         unanswered_count=sum(o.outcome is AnswerOutcome.UNANSWERED for o in outcomes),
+        partial_count=sum(o.outcome is AnswerOutcome.PARTIAL for o in outcomes),
+        mcq_score=sum(o.marks_awarded for o in mcq) if mcq else None,
+        mcq_maximum=sum(o.marks for o in mcq) if mcq else None,
+        coding_score=sum(o.marks_awarded for o in code) if code else None,
+        coding_maximum=sum(o.marks for o in code) if code else None,
     )
 
 
@@ -132,7 +208,22 @@ class EvaluationService:
         self.questions = QuestionRepository(db)
         self.attempts = AttemptRepository(db)
 
-    def ensure_result(self, attempt: AssessmentAttempt) -> AttemptResult:
+    #: How long a finished attempt waits for submissions still being judged before they are failed as
+    #: system errors (never the candidate's fault) and the result is produced without them.
+    EVALUATION_WAIT = timedelta(minutes=10)
+
+    def pending_submissions(self, attempt: AssessmentAttempt) -> list[CodeExecution]:
+        return list(
+            self.db.scalars(
+                select(CodeExecution).where(
+                    CodeExecution.attempt_id == attempt.id,
+                    CodeExecution.kind == ExecutionKind.SUBMIT,
+                    CodeExecution.status.in_((ExecutionStatus.QUEUED, ExecutionStatus.RUNNING)),
+                )
+            )
+        )
+
+    def ensure_result(self, attempt: AssessmentAttempt) -> AttemptResult | None:
         """The attempt's result, evaluating it once if it has not been evaluated yet.
 
         Idempotent by design and by constraint: an existing result is returned untouched, and a
@@ -148,6 +239,16 @@ class EvaluationService:
         existing = self.results.get_for_attempt(attempt.id)
         if existing is not None:
             return existing
+
+        pending = self.pending_submissions(attempt)
+        if pending:
+            if attempt.finalized_at and utcnow() - attempt.finalized_at < self.EVALUATION_WAIT:
+                return None  # "being evaluated": the runner's completion finishes it
+            for execution in pending:
+                execution.status = ExecutionStatus.FAILED
+                execution.verdict = Verdict.SYSTEM_ERROR
+                execution.completed_at = utcnow()
+            self.db.flush()
 
         scoring = self.score(attempt)
         assessment = attempt.assessment
@@ -165,6 +266,11 @@ class EvaluationService:
             correct_count=scoring.correct_count,
             incorrect_count=scoring.incorrect_count,
             unanswered_count=scoring.unanswered_count,
+            partial_count=scoring.partial_count,
+            mcq_score=scoring.mcq_score,
+            mcq_maximum=scoring.mcq_maximum,
+            coding_score=scoring.coding_score,
+            coding_maximum=scoring.coding_maximum,
             evaluated_at=utcnow(),
         )
         try:
@@ -197,7 +303,32 @@ class EvaluationService:
         """
         questions = self.questions.list_for_assessment(attempt.assessment_id)
         answers = self.attempts.list_answers(attempt.id)
-        return score_attempt(questions, answers)
+        return score_attempt(questions, answers, self.coding_submissions(attempt))
+
+    def coding_submissions(self, attempt: AssessmentAttempt) -> dict[uuid.UUID, list[CodingBest]]:
+        """Every judged submission of the attempt, by question, oldest first (so ties go to the earliest)."""
+        out: dict[uuid.UUID, list[CodingBest]] = {}
+        for e in self.db.scalars(
+            select(CodeExecution)
+            .where(
+                CodeExecution.attempt_id == attempt.id,
+                CodeExecution.kind == ExecutionKind.SUBMIT,
+                CodeExecution.status == ExecutionStatus.COMPLETED,
+            )
+            .order_by(CodeExecution.created_at)
+        ):
+            out.setdefault(e.question_id, []).append(
+                CodingBest(
+                    e.id,
+                    e.verdict.value if e.verdict else "SYSTEM_ERROR",
+                    e.passed or 0,
+                    e.total or 0,
+                    e.passed_weight or 0,
+                    e.total_weight or 0,
+                    e.language,
+                )
+            )
+        return out
 
     def outcomes_for(self, attempt: AssessmentAttempt) -> list[QuestionOutcome]:
         """The per-question breakdown shown to a candidate: what each question was worth and how

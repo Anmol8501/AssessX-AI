@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
 import { loadIceServers } from '@/features/admin/monitoring/webrtc'
+import { CONTROL_EVENT } from './useAttemptControl'
 import type { MediaDevice } from '../useMediaDevice'
 
 const RECONNECT_MAX_MS = 8000
@@ -81,7 +82,10 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
       const id = `${Date.now().toString(36)}-${mine}`
       pc = connection
       offerId = id
-      for (const track of tracks) connection.addTrack(track, cam ?? mic!)
+      for (const track of tracks) {
+        const sender = connection.addTrack(track, cam ?? mic!)
+        if (track.kind === 'video') void limitLiveVideo(sender, track)
+      }
       connection.onicecandidate = (event) => {
         if (event.candidate) {
           send({ type: 'ICE_CANDIDATE', attempt_id: attemptId, candidate: JSON.stringify(event.candidate), offer_id: id })
@@ -96,7 +100,10 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
     const onSignal = (message: Signal) => {
       void (async () => {
         try {
-          if (message.type === 'WATCH') {
+          if (message.type === 'ATTEMPT_CONTROL') {
+            // Exam control (tab switches, hold): handed to the exam screen, which owns that state.
+            window.dispatchEvent(new CustomEvent(CONTROL_EVENT, { detail: message }))
+          } else if (message.type === 'WATCH') {
             await publish()
           } else if (message.type === 'UNWATCH') {
             closePc()
@@ -148,4 +155,24 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
       socket?.close()
     }
   }, [attemptId])
+}
+
+/** The live view's video width. The camera itself runs at a higher resolution for the on-device AI. */
+const LIVE_VIDEO_WIDTH = 640
+
+/**
+ * Sends the live view at about `LIVE_VIDEO_WIDTH` wide however large the camera image is, so the
+ * camera's higher resolution (kept for small-object detection on the device) costs no extra upload.
+ * Best effort: if the browser refuses, the video is sent as it is.
+ */
+async function limitLiveVideo(sender: RTCRtpSender, track: MediaStreamTrack): Promise<void> {
+  const width = track.getSettings().width ?? 0
+  if (width <= LIVE_VIDEO_WIDTH || typeof sender.getParameters !== 'function') return
+  try {
+    const parameters = sender.getParameters()
+    const encodings = parameters.encodings?.length ? parameters.encodings : [{}]
+    await sender.setParameters({ ...parameters, encodings: encodings.map((e) => ({ ...e, scaleResolutionDownBy: width / LIVE_VIDEO_WIDTH })) })
+  } catch {
+    // Not supported here: the live view simply uses the camera's own resolution.
+  }
 }
