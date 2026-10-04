@@ -38,12 +38,17 @@ const gaze = (h: number, v: number) => obs('GAZE', { gazeHorizontal: h, gazeVert
 const quality = (meanLuminance: number, faceAreaRatio?: number) =>
   obs('FRAME_QUALITY', { meanLuminance, luminanceStdDev: 0.2, ...(faceAreaRatio !== undefined ? { faceAreaRatio } : {}) })
 const normal = () => [face(1), head(2, 3), gaze(0.1, 0), quality(0.45, 0.12)]
+/** One object class's best candidate, as the object detector reports it. */
+const object = (objectClass: string, confidence: number, objectModel = 'yolox_s', boxAreaRatio?: number, region = 'full') =>
+  obs('OBJECT_DETECTION', { objectClass, objectModel, region, ...(boxAreaRatio !== undefined ? { boxAreaRatio } : {}) }, confidence)
+/** The object model ran and saw nothing of any class. */
+const noObjects = () => ['cell_phone', 'book', 'laptop', 'remote'].map((c) => object(c, 0.01))
 
 // -- 1. reading conditions ---------------------------------------------------------------------------
 
 describe('readConditions', () => {
   it('reads a normal frame as every condition absent', () => {
-    const r = readConditions(normal(), T, 0) // neutral yaw calibrated at 0°
+    const r = readConditions([...normal(), ...noObjects()], T, 0) // neutral yaw calibrated at 0°
     for (const reading of Object.values(r)) expect(reading.state).toBe('absent')
   })
 
@@ -123,21 +128,40 @@ describe('readConditions', () => {
     expect(readConditions([face(1), quality(0.4, 0.6)], T).FACE_TOO_CLOSE.state).toBe('present')
   })
 
-  it('ignores object detection entirely — no phone condition exists', () => {
-    const phone = obs('OBJECT_DETECTION', { objectClass: 'cell phone', objectModel: 'efficientdet_lite0' }, 0.99)
-    const r = readConditions([...normal(), phone], T)
-    expect(Object.keys(r).sort()).toEqual(
+  it('reads each object class against the running model\'s threshold, with the measurement as metadata', () => {
+    const r = readConditions(
       [
-        'CAMERA_TOO_DARK',
-        'FACE_NOT_DETECTED',
-        'FACE_TOO_CLOSE',
-        'FACE_TOO_FAR',
-        'GAZE_AWAY',
-        'HEAD_ORIENTATION_CHANGED',
-        'MULTIPLE_FACES_DETECTED',
-      ].sort(),
+        ...normal(),
+        object('cell_phone', 0.46, 'yolox_s', 0.004),
+        object('book', 0.49, 'yolox_s'),
+        object('laptop', 0.9, 'yolox_tiny'),
+        object('remote', 0.2, 'yolox_s'),
+      ],
+      T,
     )
-    expect(JSON.stringify(r)).not.toMatch(/phone|object/i)
+    expect(r.PHONE_DETECTED).toEqual({
+      state: 'present',
+      metadata: { detector: 'object_detection', object_class: 'cell_phone', confidence: 0.46, object_model: 'yolox_s', box_area_ratio: 0.004 },
+    })
+    expect(r.BOOK_DETECTED.state).toBe('absent') // 0.49 < 0.5
+    expect(r.LAPTOP_DETECTED.state).toBe('present')
+    expect(r.HANDHELD_DEVICE_DETECTED).toEqual({ state: 'absent', metadata: {} })
+    // EfficientDet's scores mean something else: its own, higher thresholds apply.
+    expect(readConditions([object('cell_phone', 0.5, 'efficientdet_lite0')], T).PHONE_DETECTED.state).toBe('absent')
+  })
+
+  it('asks a little more of an object found only in a zoomed tile', () => {
+    expect(readConditions([object('cell_phone', 0.47, 'yolox_s', 0.002, 'full')], T).PHONE_DETECTED.state).toBe('present')
+    expect(readConditions([object('cell_phone', 0.47, 'yolox_s', 0.002, 'tile')], T).PHONE_DETECTED.state).toBe('absent') // needs 0.50
+    expect(readConditions([object('cell_phone', 0.5, 'yolox_s', 0.002, 'tile')], T).PHONE_DETECTED.state).toBe('present')
+  })
+
+  it('treats a frame the object model did not process, or an unknown model, as unknown — never as no object', () => {
+    const r = readConditions(normal(), T)
+    for (const type of ['PHONE_DETECTED', 'BOOK_DETECTED', 'LAPTOP_DETECTED', 'HANDHELD_DEVICE_DETECTED'] as const) {
+      expect(r[type].state).toBe('unknown')
+    }
+    expect(readConditions([object('cell_phone', 0.99, 'mystery')], T).PHONE_DETECTED.state).toBe('unknown')
   })
 })
 
@@ -202,6 +226,29 @@ function feed(s: ConditionStabilizer, states: [string, number][]) {
 }
 
 describe('ConditionStabilizer', () => {
+  const OBJECT_TIMING = DEFAULT_AI_EVENT_CONFIG.timing.PHONE_DETECTED // 2 sightings within 6 s
+
+  it('objects: two sightings within the window start an episode, despite frames in between without one', () => {
+    const s = new ConditionStabilizer(OBJECT_TIMING)
+    // A small phone seen only in one zoomed tile: sighted, missed, unmeasured, sighted.
+    expect(feed(s, [['present', 0], ['absent', 500], ['unknown', 1000], ['present', 2000]])).toEqual(['none', 'none', 'none', 'start'])
+  })
+
+  it('objects: a single sighting never starts one, and sightings too far apart do not add up', () => {
+    const s = new ConditionStabilizer(OBJECT_TIMING)
+    expect(feed(s, [['present', 0], ['absent', 3000], ['absent', 6500], ['present', 7000], ['absent', 9000]])).not.toContain('start')
+    expect(feed(s, [['present', 9500]])).toEqual(['start']) // 7000 and 9500 are within 6 s
+  })
+
+  it('objects: an episode ends only after 5 s and 5 measured frames without a sighting', () => {
+    const s = new ConditionStabilizer(OBJECT_TIMING)
+    feed(s, [['present', 0], ['present', 500]])
+    expect(s.active).toBe(true)
+    const cleared = feed(s, [['absent', 1000], ['absent', 2000], ['unknown', 3000], ['absent', 4000], ['present', 4500], ['absent', 5000]])
+    expect(cleared).not.toContain('resolve')
+    expect(s.active).toBe(true) // the sighting at 4.5 s reset the clock
+  })
+
   it('never starts an episode from a single-frame spike', () => {
     const s = new ConditionStabilizer(TIMING)
     expect(feed(s, [['present', 0], ['absent', 500], ['absent', 1000], ['absent', 5000]])).not.toContain('start')
@@ -524,21 +571,42 @@ describe('AIEventProcessor', () => {
     const h = harness()
     h.processor.closeLeftovers([
       { eventType: 'GAZE_AWAY', episodeId: '00000000-0000-4000-8000-00000000000a' },
-      { eventType: 'PHONE_DETECTED' as never, episodeId: 'x' },
+      { eventType: 'CHEATING_DETECTED' as never, episodeId: 'x' },
     ])
     expect(h.sent).toEqual([
       { type: 'GAZE_AWAY', metadata: { phase: 'resolved', episode_id: '00000000-0000-4000-8000-00000000000a', resolution: 'monitoring_stopped' } },
     ])
   })
 
-  it('never reports a score, risk, verdict or phone field', () => {
+  it('a phone seen in two frames becomes one PHONE_DETECTED episode with its measurement', () => {
+    const h = harness({})
+    const phoneFrame = [...normal(), object('cell_phone', 0.72, 'yolox_s', 0.01), object('book', 0.01), object('laptop', 0.01), object('remote', 0.01)]
+    h.frames([...normal(), ...noObjects()], 0, 1000)
+    h.frames(phoneFrame, 1250, 2000)
+    h.frames([...normal(), ...noObjects()], 2250, 10_000)
+    const phone = h.sent.filter((s) => s.type === 'PHONE_DETECTED')
+    expect(phone.map((s) => s.metadata.phase)).toEqual(['started', 'resolved'])
+    expect(phone[0]!.metadata).toMatchObject({ detector: 'object_detection', object_class: 'cell_phone', confidence: 0.72, object_model: 'yolox_s', box_area_ratio: 0.01 })
+    expect(phone[1]!.metadata).toMatchObject({ resolution: 'condition_cleared' })
+    expect(h.sent.some((s) => ['BOOK_DETECTED', 'LAPTOP_DETECTED', 'HANDHELD_DEVICE_DETECTED'].includes(s.type))).toBe(false)
+  })
+
+  it('a phone score below the threshold, or one stray frame above it, is never an event', () => {
+    const h = harness({})
+    h.frames([...normal(), object('cell_phone', 0.4)], 0, 10_000) // below YOLOX-S's 0.45
+    h.frames([...normal(), object('cell_phone', 0.95)], 10_250, 10_250) // one stray frame
+    h.frames([...normal(), object('cell_phone', 0.1)], 10_500, 20_000)
+    expect(h.sent.filter((s) => s.type === 'PHONE_DETECTED')).toEqual([])
+  })
+
+  it('never reports a score, risk or verdict field', () => {
     const h = harness()
     const phone = obs('OBJECT_DETECTION', { objectClass: 'cell phone' }, 0.99)
     h.frames([face(3), head(-50, 30), gaze(-0.9, -0.9), quality(0.01, 0.9), phone], 0, 5000)
     h.frames([face(0), quality(0.01), phone], 5250, 12_000)
     h.processor.stop()
     const text = JSON.stringify(h.sent).toLowerCase()
-    for (const forbidden of ['score', 'risk', 'cheat', 'verdict', 'suspicious', 'phone', 'fraud', 'guilt']) {
+    for (const forbidden of ['score', 'risk', 'cheat', 'verdict', 'suspicious', 'fraud', 'guilt']) {
       expect(text).not.toContain(forbidden)
     }
     expect(h.sent.length).toBeGreaterThan(0)

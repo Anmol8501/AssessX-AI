@@ -140,6 +140,10 @@ export interface ScriptedScene {
   gazeHorizontal?: number
   gazeVertical?: number
   meanLuminance?: number
+  /** Objects in view: COCO label (`cell phone`, `book`, `laptop`, `remote`) and the model's score. */
+  objects?: { category: string; score: number }[]
+  /** Which object model the scene pretends produced them (default YOLOX-S). */
+  objectModel?: 'yolox_s' | 'yolox_tiny' | 'efficientdet_lite0'
   /** Make the face landmarker fail (head pose and gaze become unmeasurable). */
   landmarkerFails?: boolean
   /** Make inference throw from now on (the runtime enters ERROR). */
@@ -200,13 +204,18 @@ export class ScriptedMediaPipeRuntime implements AIRuntime {
     const payload = {
       kind: 'mediapipe',
       tasks: { faceDetector: 'OK', faceLandmarker: landmarkerStatus, objectDetector: 'OK' },
-      objectModel: 'efficientdet_lite0',
+      objectModel: scene.objectModel ?? 'yolox_s',
       faces,
       landmarkedFaces:
         landmarkerStatus === 'OK'
           ? [{ box: faces[0]!.box, transform: poseMatrix(scene.yawDeg ?? 0, scene.pitchDeg ?? 0), eyes }]
           : null,
-      objects: [],
+      objects: (scene.objects ?? []).map((o, index) => ({
+        category: o.category,
+        score: o.score,
+        box: { x: 0.55 + index * 0.05, y: 0.6, width: 0.08, height: 0.12 },
+        region: 'full',
+      })),
       statistics: { meanLuminance: scene.meanLuminance ?? 0.45, luminanceStdDev: 0.2 },
       timingsMs: { statistics: 0, faceDetector: 0, faceLandmarker: 0, objectDetector: 0, total: 0 },
     }

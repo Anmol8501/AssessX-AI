@@ -77,6 +77,8 @@ into tickets/chat.
 | `STUN_URLS` | default `stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302` | optional |
 | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` | a Cloudflare Realtime TURN key id and its API token — the token is *secret*. Enables the TURN relay for live video (see §7) | recommended for video across networks |
 | `TURN_CREDENTIAL_TTL_SECONDS` | default `14400` (4 h): lifetime of the TURN credentials issued to each app | optional |
+| `RUNNER_TOKEN` | the coding runner's shared secret — *secret*, ≥ 32 characters in production. Unset: the runner routes are off (404). Set the same value on the runner host (see `runner/README.md`) | with coding assessments |
+| `CODING_EXECUTION_ENABLED` | `true` lets assessments with coding questions be published. Set it only when a runner is running. A production API refuses to start with this set and no `RUNNER_TOKEN`, or with a `RUNNER_TOKEN` equal to `SECRET_KEY`. Operations: `docs/RUNNER-RUNBOOK.md` | with coding assessments |
 | `LLM_PROVIDER` | `none` (default — interview answers are recorded as not evaluated) or `anthropic`. Phase 7B AI answer evaluation. **`stub` is refused in production** | optional |
 | `LLM_API_KEY` | the provider's API key — *secret*. Server-side only: never in the desktop app, never logged or returned. Required when `LLM_PROVIDER=anthropic` (startup refuses otherwise). Calls cost money per answer evaluated — check the provider's current pricing | with `anthropic` |
 | `LLM_MODEL` | default `claude-haiku-4-5-20251001` | optional |
@@ -179,7 +181,8 @@ lines — without this, session tokens would be stored in Render's logs.
    * **TURN** relays the video when a network forbids a direct connection — common on mobile hotspots,
      campus/office Wi-Fi and carrier-grade NAT. It is enabled by setting `CLOUDFLARE_TURN_KEY_ID` and
      `CLOUDFLARE_TURN_API_TOKEN` on Render (Cloudflare dashboard → Realtime → TURN Server → create a
-     key; check Cloudflare's current pricing/free allowance there). The API token stays on the server;
+     key; Cloudflare's pricing page, checked 2026-10-02: the first 1,000 GB of SFU+TURN egress each month
+     is free, then $0.05/GB, and only relayed calls use it). The API token stays on the server;
      each app receives short-lived TURN credentials (`TURN_CREDENTIAL_TTL_SECONDS`), so nothing secret
      is built into the installer and no rebuild is needed to switch TURN on. **TURN has not been tested
      against Cloudflare from this repository** (only with a simulated Cloudflare reply).

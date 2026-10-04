@@ -9,6 +9,10 @@ DETECTION VALIDATION** (see Final validation): face presence/count, tracking, he
 frame quality are validated on a real webcam; the phone detector reports raw confidence only, because
 neither COCO nor real-webcam data supports a phone threshold with this model.
 
+> **Update 2026-10-02:** object detection now produces events — YOLOX-S/Tiny, four classes, zoomed
+> tiles for small objects, provisional thresholds with confirmation over several frames. See
+> [PHASE-5D-OBJECT-DETECTION.md](PHASE-5D-OBJECT-DETECTION.md).
+
 > **Numbering note.** The product owner calls this "Phase 5"; the roadmap numbers AI Proctoring as
 > Phase 6. Recorded, not reconciled — see `PHASE-5-PLAN.md`.
 

@@ -8,6 +8,7 @@
  */
 
 import type { MyAssessment, QuestionNavigation, QuestionType } from '@/features/assessments/types'
+import type { CodingProgress } from '@/features/coding/types'
 
 /** An attempt is open, or it ended one of two ways. Both endings are final. */
 export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'TIME_EXPIRED'
@@ -46,6 +47,19 @@ export interface AttemptAnswer {
  * counts down against that, so winding the machine's clock changes only what the candidate sees,
  * never what the server enforces.
  */
+/**
+ * Exam control (exam rules): the server's tab-switch count and whether the exam is on hold (locked).
+ * The second-to-last switch is the last warning; reaching `tab_switch_limit` locks the exam.
+ */
+export interface AttemptControl {
+  tab_switches: number
+  tab_switch_limit: number
+  on_hold: boolean
+  hold_reason: 'TAB_SWITCH_LIMIT' | 'ADMIN' | null
+  held_at: string | null
+  ended_by_admin: boolean
+}
+
 export interface AttemptSession {
   attempt_id: string
   status: AttemptStatus
@@ -55,6 +69,7 @@ export interface AttemptSession {
   finalized_at: string | null
   server_time: string
   remaining_seconds: number
+  control?: AttemptControl | null
 }
 
 /** An attempt with its paper, its answers and its clock — what a reload restores from. */
@@ -87,6 +102,14 @@ export interface AttemptDetail {
    * attempt started, so a later change to the assessment's setting does not affect it.
    */
   proctoring: ProctoringSession | null
+  /** Exam control: tab switches and whether the exam is on hold (locked). */
+  control?: AttemptControl | null
+  /** MCQ only, coding only or mixed — how the exam screen labels questions. */
+  assessment_type?: 'MCQ' | 'CODING' | 'MIXED'
+  /** Coding questions' progress (facts only, never a score). */
+  coding?: CodingProgress[]
+  /** Copy and paste are allowed inside the code editor (an assessment setting). */
+  coding_allow_paste?: boolean
 }
 
 /** The proctoring session's lifecycle. One direction only; `ENDED` follows the attempt ending. */
@@ -126,13 +149,17 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 /** The option ids the candidate has selected for one question. */
 export type AnswerState = string[]
 
-/** How one question turned out. `UNANSWERED` is kept distinct from `INCORRECT` on purpose. */
-export type AnswerOutcome = 'CORRECT' | 'INCORRECT' | 'UNANSWERED'
+/**
+ * How one question turned out. `UNANSWERED` is kept distinct from `INCORRECT` on purpose. `PARTIAL` is
+ * a coding question with some of its marks (partial scoring).
+ */
+export type AnswerOutcome = 'CORRECT' | 'INCORRECT' | 'UNANSWERED' | 'PARTIAL'
 
 export const OUTCOME_LABEL: Record<AnswerOutcome, string> = {
   CORRECT: 'Correct',
   INCORRECT: 'Incorrect',
   UNANSWERED: 'Unanswered',
+  PARTIAL: 'Partly correct',
 }
 
 /** One question's contribution. Carries no answer key — see `backend/app/schemas/result.py`. */
@@ -141,6 +168,21 @@ export interface QuestionResult {
   marks: number
   marks_awarded: number
   outcome: AnswerOutcome
+  /** Coding questions carry their best submission's facts: tests passed of all tests (never which ones), its verdict and language. */
+  kind: 'OBJECTIVE' | 'CODING'
+  tests_passed: number | null
+  tests_total: number | null
+  verdict: string | null
+  language: string | null
+}
+
+/** Coding assessments: questions with partial marks and the MCQ / coding section totals (null when the exam has no question of that kind). */
+export interface ResultSections {
+  partial_count: number | null
+  mcq_score: number | null
+  mcq_maximum: number | null
+  coding_score: number | null
+  coding_maximum: number | null
 }
 
 /**
@@ -150,7 +192,7 @@ export interface QuestionResult {
  * still been evaluated — the administrator can see the score — but every number here is `null`,
  * so a withheld result can never be mistaken for a failed one.
  */
-export interface CandidateResult {
+export interface CandidateResult extends ResultSections {
   attempt_id: string
   assessment_id: string
   assessment_title: string
@@ -169,10 +211,12 @@ export interface CandidateResult {
   unanswered_count: number | null
   evaluated_at: string | null
   questions: QuestionResult[]
+  /** The exam has ended but a code submission is still being judged; the result follows shortly. */
+  evaluating: boolean
 }
 
 /** A row in the candidate's results list. Only released results appear. */
-export interface ResultSummary {
+export interface ResultSummary extends ResultSections {
   attempt_id: string
   assessment_id: string
   assessment_title: string
@@ -190,7 +234,7 @@ export interface ResultSummary {
 }
 
 /** One candidate's result as the administrator's table shows it. */
-export interface AdminResult {
+export interface AdminResult extends ResultSections {
   attempt_id: string
   candidate_id: string
   candidate_name: string

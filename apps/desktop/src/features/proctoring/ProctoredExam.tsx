@@ -8,7 +8,11 @@ import { ApiError } from '@/lib/api'
 import { AIStatus, useAIPipeline } from './ai'
 import { toServerState } from './devices'
 import { DeviceReadiness } from './environment/DeviceReadiness'
+import { CODING_OPENED_EVENT } from '@/features/coding/candidate/CodingWorkspace'
 import { EnvironmentNotices } from './environment/EnvironmentNotices'
+import { AIWarnings, HoldOverlay, TabSwitchWarningDialog } from './environment/ExamControl'
+import { useAIWarnings } from './environment/useAIWarnings'
+import { useAttemptControl } from './environment/useAttemptControl'
 import { useDeviceReadiness, type ReadinessEvent } from './environment/useDeviceReadiness'
 import { useEnvironmentEnforcement } from './environment/useEnvironmentEnforcement'
 import { useEventReporter } from './environment/useEventReporter'
@@ -197,14 +201,31 @@ function EnforcedExam({
   children: ReactNode
 }) {
   const report = useEventReporter(attempt.id)
-  const { notices, fullscreenRequired, returnToFullscreen } = useEnvironmentEnforcement(report)
+  const { notices, fullscreenRequired, returnToFullscreen } = useEnvironmentEnforcement(report, undefined, {
+    editorClipboard: attempt.coding_allow_paste,
+  })
   // Phase 4C: publish this candidate's live camera/mic to a watching admin, reusing the streams
   // the proctoring check already opened. Released with this component when the exam ends.
   useMediaPublisher(attempt.id, camera, microphone)
   // Phase 5A/5B: the on-device AI perception pipeline runs on the same camera stream for the life of
   // the exam. Phase 5C: its observations become debounced, factual episode events (and AI health
   // becomes AI_STATUS) through the same reporter. Nothing here judges the candidate.
-  const ai = useAIPipeline(attempt.id, camera, report)
+  // Exam rules: the candidate sees a plain instruction while the AI observes something. Warnings only.
+  const aiWarnings = useAIWarnings(report)
+  const ai = useAIPipeline(attempt.id, camera, aiWarnings.report)
+  // Exam rules: the server counts tab switches and may put the exam on hold (locked).
+  const { control, warning, dismissWarning } = useAttemptControl(attempt.id, attempt.control)
+
+  // Coding activity: opening a problem is a fact on the timeline (runs and submissions are recorded by
+  // the server itself).
+  useEffect(() => {
+    const onOpened = (event: Event) => {
+      const number = (event as CustomEvent<{ questionNumber: number }>).detail?.questionNumber
+      if (Number.isInteger(number) && number > 0) report('CODING_QUESTION_OPENED', { question_number: number })
+    }
+    window.addEventListener(CODING_OPENED_EVENT, onOpened)
+    return () => window.removeEventListener(CODING_OPENED_EVENT, onOpened)
+  }, [report])
 
   const replayed = useRef(false)
   useEffect(() => {
@@ -228,9 +249,12 @@ function EnforcedExam({
       />
       <EnvironmentNotices
         notices={notices}
-        fullscreenRequired={fullscreenRequired}
+        fullscreenRequired={fullscreenRequired && !control.on_hold}
         onReturnToFullscreen={() => void returnToFullscreen()}
       />
+      {!control.on_hold && <AIWarnings conditions={aiWarnings.conditions} />}
+      {warning && !control.on_hold && !fullscreenRequired && <TabSwitchWarningDialog warning={warning} onClose={dismissWarning} />}
+      {control.on_hold && <HoldOverlay control={control} />}
     </>
   )
 }

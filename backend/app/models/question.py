@@ -9,6 +9,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from app.models.assessment import Assessment
+    from app.models.coding import CodingProblemVersion
 
 
 class QuestionType(enum.StrEnum):
@@ -18,10 +19,14 @@ class QuestionType(enum.StrEnum):
     MCQ = "MCQ"
     MULTIPLE_SELECT = "MULTIPLE_SELECT"
     TRUE_FALSE = "TRUE_FALSE"
+    #: A coding problem (coding assessments): pins one published problem version; has no options.
+    CODING = "CODING"
 
 
 #: Types whose answer key is exactly one option. Kept here so the rule lives with the model.
 SINGLE_ANSWER_TYPES = frozenset({QuestionType.MCQ, QuestionType.TRUE_FALSE})
+#: The objective types an "MCQ only" assessment allows: everything that is answered by choosing options.
+OBJECTIVE_TYPES = frozenset({QuestionType.MCQ, QuestionType.MULTIPLE_SELECT, QuestionType.TRUE_FALSE})
 
 
 class Question(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -35,6 +40,10 @@ class Question(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("marks > 0", name="ck_questions_marks_positive"),
         CheckConstraint("position >= 0", name="ck_questions_position_non_negative"),
+        # A coding question always pins a problem version, and nothing else ever does.
+        CheckConstraint(
+            "(type = 'CODING') = (coding_problem_version_id IS NOT NULL)", name="ck_questions_coding_version"
+        ),
     )
 
     assessment_id: Mapped[uuid.UUID] = mapped_column(
@@ -49,8 +58,14 @@ class Question(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     #: Display order within the assessment; assigned automatically in Phase 2A (reordering is 2B).
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: For CODING questions: the immutable problem version this assessment examines. RESTRICT, so a
+    #: version in use can never be deleted from under an assessment.
+    coding_problem_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("coding_problem_versions.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
 
     assessment: Mapped["Assessment"] = relationship(back_populates="questions")
+    coding_version: Mapped["CodingProblemVersion | None"] = relationship(lazy="joined")
     options: Mapped[list["QuestionOption"]] = relationship(
         back_populates="question",
         cascade="all, delete-orphan",

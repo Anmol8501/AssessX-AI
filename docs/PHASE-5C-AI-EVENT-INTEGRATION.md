@@ -18,6 +18,11 @@ calibrated neutral yaw (18° deviation) instead of an absolute 25° yaw / 20° p
 an event; `GAZE_AWAY` is **disabled**; `FACE_TOO_FAR` is 0.03 (was 0.015). All values remain
 provisional — this is calibration, not validation.
 
+> **Superseded on 2026-10-02:** at the product owner's request, objects (phone, book, laptop or
+> tablet, handheld device) are now events with provisional thresholds — see
+> [PHASE-5D-OBJECT-DETECTION.md](PHASE-5D-OBJECT-DETECTION.md). The paragraph below describes 5C as
+> delivered.
+
 **Phone detection is not an event.** Phase 5B found no defensible phone threshold (see
 [PHASE-5B-OBJECT-MODEL-EVALUATION.md](PHASE-5B-OBJECT-MODEL-EVALUATION.md)). There is no
 `PHONE_DETECTED` event type, object-detection output is ignored by the event processor, and the

@@ -236,6 +236,12 @@ class ProctoringService:
             )
             notify.event_recorded(self.db, session, event)
             notify.session_changed(self.db, attempt.id)  # e.g. a fullscreen change moves the tile
+            if event.event_type is ProctoringEventType.FOCUS_REGAINED:
+                from app.services.attempt_control import AttemptControlService
+
+                away = event.details.get("duration_ms")
+                if isinstance(away, int):
+                    AttemptControlService(self.db).focus_returned(attempt, away)
         return event, created
 
     # -- internals ------------------------------------------------------------------------

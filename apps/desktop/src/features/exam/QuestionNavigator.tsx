@@ -1,3 +1,6 @@
+import { CODING_STATUS_LABEL, shortLabel } from '@/features/coding/candidate/codingLogic'
+import { isAnswered } from './answered'
+import type { CodingStatus } from '@/features/coding/types'
 import { cn } from '@/lib/cn'
 import type { AnswerState, CandidateQuestion } from './types'
 
@@ -8,7 +11,14 @@ interface QuestionNavigatorProps {
   /** `false` under SEQUENTIAL navigation: the panel still shows progress, but cannot jump. */
   canJump: boolean
   onJump: (index: number) => void
+  /** Per-question labels (Question n / Problem n / Coding n); defaults to "Question n". */
+  labels?: string[]
+  /** Coding questions' status, by question id. */
+  codingStatus?: Record<string, CodingStatus>
+  /** A single row above a coding workspace, instead of the side panel. */
+  compact?: boolean
 }
+
 
 /**
  * The question panel: where the candidate is, and which questions they have answered.
@@ -22,8 +32,11 @@ export function QuestionNavigator({
   currentIndex,
   canJump,
   onJump,
+  labels,
+  codingStatus,
+  compact = false,
 }: QuestionNavigatorProps) {
-  const answered = questions.filter((q) => (answers[q.id]?.length ?? 0) > 0).length
+  const answered = questions.filter((q) => isAnswered(q, answers, codingStatus)).length
 
   return (
     <nav aria-label="Questions" className="flex flex-col gap-4">
@@ -34,11 +47,13 @@ export function QuestionNavigator({
         </p>
       </div>
 
-      <ol className="grid grid-cols-5 gap-2">
+      <ol className={compact ? 'flex flex-wrap gap-1.5' : 'grid grid-cols-5 gap-2'}>
         {questions.map((question, index) => {
-          const isAnswered = (answers[question.id]?.length ?? 0) > 0
+          const answeredHere = isAnswered(question, answers, codingStatus)
           const isCurrent = index === currentIndex
-          const status = isAnswered ? 'answered' : 'not answered'
+          const coding = question.type === 'CODING' ? (codingStatus?.[question.id] ?? 'NOT_STARTED') : null
+          const status = coding ? CODING_STATUS_LABEL[coding].toLowerCase() : answeredHere ? 'answered' : 'not answered'
+          const label = labels?.[index] ?? `Question ${index + 1}`
 
           return (
             <li key={question.id}>
@@ -47,19 +62,24 @@ export function QuestionNavigator({
                 onClick={() => onJump(index)}
                 disabled={!canJump && !isCurrent}
                 aria-current={isCurrent ? 'true' : undefined}
-                aria-label={`Question ${index + 1}, ${status}`}
-                title={`Question ${index + 1} — ${status}`}
+                aria-label={`${label}, ${status}`}
+                title={`${label} — ${status}`}
                 className={cn(
-                  'relative flex h-9 w-full items-center justify-center rounded-md border text-[13px] font-medium tabular-nums transition-colors',
+                  'relative flex h-9 items-center justify-center rounded-md border text-[13px] font-medium tabular-nums transition-colors',
+                  compact ? 'min-w-9 px-2' : 'w-full',
                   'disabled:cursor-not-allowed disabled:opacity-60',
                   isCurrent
                     ? 'border-accent bg-accent text-white'
-                    : isAnswered
+                    : coding === 'PASSED' || (!coding && answeredHere)
                       ? 'border-ok/40 bg-ok-soft text-ok'
-                      : 'border-line-strong bg-card text-ink-muted enabled:hover:border-ink-subtle enabled:hover:bg-gray-50',
+                      : coding === 'NOT_PASSED' || coding === 'PENDING'
+                        ? 'border-warn/50 bg-warn-soft text-warn'
+                        : coding === 'IN_PROGRESS'
+                          ? 'border-info/40 bg-info-soft text-info'
+                          : 'border-line-strong bg-card text-ink-muted enabled:hover:border-ink-subtle enabled:hover:bg-gray-50',
                 )}
               >
-                {index + 1}
+                {shortLabel(label)}
               </button>
             </li>
           )

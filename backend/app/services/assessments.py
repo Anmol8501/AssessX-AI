@@ -3,15 +3,19 @@
 import logging
 import uuid
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.errors import NotFound, ValidationFailed
-from app.models.assessment import Assessment, AssessmentStatus
-from app.models.question import Question, QuestionOption
+from app.core.errors import AssessmentInUse, NotFound, ValidationFailed
+from app.models.assessment import Assessment, AssessmentStatus, AssessmentType
+from app.models.attempt import AssessmentAttempt
+from app.models.coding import CodingProblemVersion
+from app.models.question import Question, QuestionOption, QuestionType
 from app.models.user import User
 from app.repositories.assessments import AssessmentRepository
 from app.repositories.questions import QuestionRepository
 from app.schemas.assessment import AssessmentCreate, AssessmentUpdate, ReadinessReport
+from app.schemas.coding import CodingQuestionCreate
 from app.schemas.question import QuestionCreate, QuestionOptionInput, QuestionUpdate, validate_answer_key
 from app.services import readiness
 
@@ -35,10 +39,106 @@ class AssessmentService:
             raise NotFound("Assessment not found.")
         return assessment
 
+    # -- coding assessments: the type rule and the lock -------------------------------------------------
+
+    @staticmethod
+    def type_allows(assessment_type: AssessmentType, question_type: QuestionType) -> bool:
+        if question_type is QuestionType.CODING:
+            return assessment_type in (AssessmentType.CODING, AssessmentType.MIXED)
+        return assessment_type in (AssessmentType.MCQ, AssessmentType.MIXED)
+
+    def _require_type(self, assessment: Assessment, question_type: QuestionType) -> None:
+        if not self.type_allows(assessment.assessment_type, question_type):
+            label = {AssessmentType.MCQ: "an MCQ-only", AssessmentType.CODING: "a coding-only"}.get(
+                assessment.assessment_type, "this"
+            )
+            kind = "coding" if question_type is QuestionType.CODING else "multiple-choice"
+            raise ValidationFailed(
+                f"You can't add {kind} questions to {label} assessment.",
+                details=[
+                    {
+                        "field": "type",
+                        "message": f"Not allowed in a {assessment.assessment_type.value} assessment.",
+                    }
+                ],
+            )
+
+    def _require_editable(self, assessment_id: uuid.UUID) -> None:
+        """Once any candidate has attempted the assessment, its questions are frozen: an edit would
+        change what earlier attempts were examined on."""
+        if self.db.scalar(
+            select(func.count())
+            .select_from(AssessmentAttempt)
+            .where(AssessmentAttempt.assessment_id == assessment_id)
+        ):
+            raise AssessmentInUse()
+
+    def _coding_version(self, version_id: uuid.UUID) -> CodingProblemVersion:
+        version = self.db.get(CodingProblemVersion, version_id)
+        if version is None:
+            raise NotFound("Coding problem version not found.")
+        if not version.is_published:
+            raise ValidationFailed(
+                "Only a published version of a coding problem can be added.",
+                details=[{"field": "problem_version_id", "message": "Publish this version first."}],
+            )
+        return version
+
+    def add_coding_question(self, assessment_id: uuid.UUID, payload: CodingQuestionCreate) -> Question:
+        assessment = self.get(assessment_id, with_questions=True)
+        self._require_editable(assessment_id)
+        self._require_type(assessment, QuestionType.CODING)
+        version = self._coding_version(payload.problem_version_id)
+        if not version.problem.is_enabled:
+            raise ValidationFailed("This coding problem is disabled.")
+        pinned = {q.coding_version.problem_id for q in assessment.questions if q.coding_version is not None}
+        if version.problem_id in pinned:
+            raise ValidationFailed(
+                "This problem is already in the assessment.",
+                details=[{"field": "problem_version_id", "message": "Each problem can appear once."}],
+            )
+        question = self.questions.add(
+            Question(
+                assessment_id=assessment_id,
+                type=QuestionType.CODING,
+                text=version.title,
+                marks=payload.marks or version.default_points,
+                position=self.assessments.next_question_position(assessment_id),
+                coding_problem_version_id=version.id,
+                options=[],
+            )
+        )
+        log.info(
+            "Coding question added",
+            extra={
+                "assessment_id": str(assessment_id),
+                "question_id": str(question.id),
+                "version": version.version,
+            },
+        )
+        return question
+
+    def set_coding_version(
+        self, assessment_id: uuid.UUID, question_id: uuid.UUID, version_id: uuid.UUID
+    ) -> Question:
+        question = self.get_question(assessment_id, question_id)
+        self._require_editable(assessment_id)
+        if question.type is not QuestionType.CODING or question.coding_version is None:
+            raise ValidationFailed("Only a coding question has a problem version.")
+        version = self._coding_version(version_id)
+        if version.problem_id != question.coding_version.problem_id:
+            raise ValidationFailed("Choose a version of the same problem.")
+        question.coding_problem_version_id = version.id
+        question.text = version.title
+        self.db.flush()
+        self.db.refresh(question)
+        return question
+
     def create(self, payload: AssessmentCreate, *, author: User) -> Assessment:
         assessment = self.assessments.add(
             Assessment(
                 title=payload.title,
+                assessment_type=payload.assessment_type,
                 description=payload.description or None,
                 instructions=payload.instructions or None,
                 duration_minutes=payload.duration_minutes,
@@ -56,6 +156,20 @@ class AssessmentService:
     def update(self, assessment_id: uuid.UUID, payload: AssessmentUpdate) -> Assessment:
         assessment = self.get(assessment_id, with_questions=True)
         changes = payload.model_dump(exclude_unset=True)
+        new_type = changes.get("assessment_type")
+        if new_type is not None and new_type != assessment.assessment_type:
+            self._require_editable(assessment_id)
+            blocked = [q for q in assessment.questions if not self.type_allows(new_type, q.type)]
+            if blocked:
+                kind = "coding" if blocked[0].type is QuestionType.CODING else "multiple-choice"
+                raise ValidationFailed(
+                    f"Remove the {kind} questions before changing the type to {new_type.value}.",
+                    details=[
+                        {"field": "assessment_type", "message": f"{len(blocked)} question(s) don't fit."}
+                    ],
+                )
+        elif new_type is None:
+            changes.pop("assessment_type", None)
         for field, value in changes.items():
             setattr(assessment, field, value or None if field in {"description", "instructions"} else value)
 
@@ -98,7 +212,9 @@ class AssessmentService:
         return question
 
     def add_question(self, assessment_id: uuid.UUID, payload: QuestionCreate) -> Question:
-        self.get(assessment_id)
+        assessment = self.get(assessment_id)
+        self._require_editable(assessment_id)
+        self._require_type(assessment, payload.type)
         question = self.questions.add(
             Question(
                 assessment_id=assessment_id,
@@ -124,7 +240,11 @@ class AssessmentService:
         self, assessment_id: uuid.UUID, question_id: uuid.UUID, payload: QuestionUpdate
     ) -> Question:
         question = self.get_question(assessment_id, question_id)
+        self._require_editable(assessment_id)
         changes = payload.model_dump(exclude_unset=True)
+        # The problem itself lives in its version; here only a coding question's marks change.
+        if question.type is QuestionType.CODING and set(changes) - {"marks"}:
+            raise ValidationFailed("Only the marks of a coding question can be edited here.")
 
         next_type = payload.type or question.type
         if payload.options is not None:
@@ -157,6 +277,7 @@ class AssessmentService:
 
     def delete_question(self, assessment_id: uuid.UUID, question_id: uuid.UUID) -> None:
         question = self.get_question(assessment_id, question_id)
+        self._require_editable(assessment_id)
         self.questions.delete(question)
         self._compact_positions(assessment_id)
         log.info(
@@ -198,6 +319,9 @@ class AssessmentService:
     def duplicate_question(self, assessment_id: uuid.UUID, question_id: uuid.UUID) -> Question:
         """Copies a question (text, type, marks, options, answer key) directly after the original."""
         original = self.get_question(assessment_id, question_id)
+        self._require_editable(assessment_id)
+        if original.type is QuestionType.CODING:
+            raise ValidationFailed("A coding problem can appear only once in an assessment.")
         insert_at = original.position + 1
         existing = self.questions.list_for_assessment(assessment_id)
 
@@ -237,6 +361,7 @@ class AssessmentService:
     def reorder_questions(self, assessment_id: uuid.UUID, ordered_ids: list[uuid.UUID]) -> list[Question]:
         """Applies an explicit order. The list must be exactly this assessment's questions."""
         self.get(assessment_id)
+        self._require_editable(assessment_id)
         questions = self.questions.list_for_assessment(assessment_id)
         existing_ids = {question.id for question in questions}
 

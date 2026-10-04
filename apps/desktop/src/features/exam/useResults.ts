@@ -7,6 +7,9 @@ type Loadable<T> = { status: 'loading' } | { status: 'error'; message: string } 
 
 const ME = '/api/v1/candidates/me'
 
+/** How often a result that is still being evaluated (a code submission being judged) is asked for again. */
+export const EVALUATING_POLL_MS = 4000
+
 /** Formats a percentage the server sent as an exact decimal string, e.g. `87.50` → `87.5%`. */
 export function formatPercentage(percentage: string | null): string {
   if (percentage === null) return '—'
@@ -43,6 +46,18 @@ export function useAttemptResult(attemptId: string | null) {
     void load(controller.signal)
     return () => controller.abort()
   }, [load])
+
+  // While a code submission is still being judged the result does not exist yet: ask again shortly.
+  const evaluating = state.status === 'ready' && state.data.evaluating
+  useEffect(() => {
+    if (!evaluating) return
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => void load(controller.signal), EVALUATING_POLL_MS)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [evaluating, load, state])
 
   return { state, reload: load }
 }

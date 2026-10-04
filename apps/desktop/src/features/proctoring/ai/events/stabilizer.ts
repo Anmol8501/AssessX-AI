@@ -10,6 +10,9 @@ import type { ConditionState } from './conditions'
  *     active ──unknown held ≥ unknownResolveMs──▶ cooldown            (→ "resolve: measurement_unavailable")
  *     cooldown ──cooldownMs elapsed──▶ idle
  *
+ * With `tolerantPending` (objects), a pending episode is not interrupted by frames without a sighting:
+ * the `minFrames` sightings only have to fall within `pendingWindowMs` of the first one.
+ *
  * `unknown` never starts an episode and never counts as clearing one. Pure and synchronous: the
  * caller supplies each reading with its (monotonic) time, so the behaviour is fully deterministic.
  */
@@ -58,13 +61,20 @@ export class ConditionStabilizer {
         if (state === 'present' && frame) this.phase = this.pendingOrStart(at, 1)
         return this.phase.name === 'active' ? { kind: 'start' } : NONE
 
-      case 'pending':
+      case 'pending': {
+        const window = t.pendingWindowMs ?? Number.POSITIVE_INFINITY
         if (state !== 'present') {
-          this.phase = { name: 'idle' } // interrupted (absent or unmeasurable): start over
+          // Interrupted (absent or unmeasurable): start over — unless tolerant and still in the window.
+          if (!t.tolerantPending || at - phase.since > window) this.phase = { name: 'idle' }
           return NONE
+        }
+        if (t.tolerantPending && at - phase.since > window) {
+          this.phase = this.pendingOrStart(at, frame) // the earlier sightings are too old: count afresh
+          return this.phase.name === 'active' ? { kind: 'start' } : NONE
         }
         this.phase = this.pendingOrStart(phase.since, phase.frames + frame, at)
         return this.phase.name === 'active' ? { kind: 'start' } : NONE
+      }
 
       case 'active':
         if (state === 'present') {

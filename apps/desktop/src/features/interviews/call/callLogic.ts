@@ -48,6 +48,11 @@ export function peerMedia(message: Record<string, unknown>): PeerMedia {
   return { audio: message.audio === true, video: message.video === true, screen: message.screen === true }
 }
 
+/** True when the ICE servers include a TURN relay (needed when two networks block direct video). */
+export function hasRelay(servers: RTCIceServer[]): boolean {
+  return servers.some((s) => (Array.isArray(s.urls) ? s.urls : [s.urls]).some((u) => /^turns?:/i.test(u)))
+}
+
 export const MAX_CHAT = 2000
 
 /** The text a chat box may send: trimmed, non-empty, within the server's limit — else null. */

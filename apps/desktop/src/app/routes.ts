@@ -12,6 +12,8 @@ export const routes = {
     assessments: '/admin/assessments',
     assessmentNew: '/admin/assessments/new',
     assessmentDetail: (id: string) => `/admin/assessments/${id}`,
+    codingProblems: '/admin/coding-problems',
+    codingProblem: (id: string) => `/admin/coding-problems/${id}`,
     candidates: '/admin/candidates',
     monitoring: '/admin/monitoring',
     results: '/admin/results',

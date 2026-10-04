@@ -2,10 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadIceServers } from '@/features/admin/monitoring/webrtc'
 import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
-import { callSocketUrl, chatText, mergeMessages, peerMedia, slotAt, SLOTS, type Slot } from './callLogic'
+import { callSocketUrl, chatText, hasRelay, mergeMessages, peerMedia, slotAt, SLOTS, type Slot } from './callLogic'
 import type { CallRole, ChatMessage, PeerMedia } from './types'
 
 const RECONNECT_MAX_MS = 8000
+/** How long one attempt may take to connect video before it is retried. */
+const ATTEMPT_MS = 20_000
+/** Automatic attempts before the call shows "video couldn't connect" (chat keeps working). */
+const MAX_ATTEMPTS = 3
+/** A connection that stays "disconnected" this long is treated as failed. */
+const DISCONNECTED_GRACE_MS = 6000
 
 /**
  * - connecting: opening the signaling socket
@@ -16,8 +22,18 @@ const RECONNECT_MAX_MS = 8000
  * - ended: the interviewer ended the call
  * - unavailable: the call is not open to this user (ended, or not theirs)
  * - occupied: someone else already holds this side of the call
+ * - video-failed: both are here, but video did not connect after the automatic retries (chat still works)
  */
-export type CallPhase = 'connecting' | 'waiting' | 'negotiating' | 'connected' | 'reconnecting' | 'ended' | 'unavailable' | 'occupied'
+export type CallPhase =
+  | 'connecting'
+  | 'waiting'
+  | 'negotiating'
+  | 'connected'
+  | 'video-failed'
+  | 'reconnecting'
+  | 'ended'
+  | 'unavailable'
+  | 'occupied'
 
 interface Signal {
   type: string
@@ -45,6 +61,10 @@ export interface LiveCall {
   toggleScreen(): Promise<void>
   /** False if the text is empty, too long, or the socket is not open. */
   sendChat(body: string): boolean
+  /** Whether the server's ICE list includes a TURN relay (null until known). */
+  relay: boolean | null
+  /** Starts video negotiation again (the interviewer asks the candidate for a fresh offer). */
+  retryVideo(): void
 }
 
 async function openMedia(): Promise<{ stream: MediaStream | null; error: string | null }> {
@@ -91,6 +111,9 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
   // Messages that arrived over the socket; shown merged with the record the page loaded.
   const [received, setReceived] = useState<ChatMessage[]>([])
   const messages = useMemo(() => mergeMessages(initialMessages, received), [initialMessages, received])
+
+  const [relay, setRelay] = useState<boolean | null>(null)
+  const retryRef = useRef<() => void>(() => undefined)
 
   // The live objects, shared by the effect and the controls.
   const live = useRef({
@@ -143,8 +166,59 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
     let offerId: string | null = null
     let pendingIce: RTCIceCandidateInit[] = []
     let queue: Promise<void> = Promise.resolve()
+    let attempts = 0
+    let watchdog: number | null = null
+    let graceTimer: number | null = null
+    let peerHere = false
+    let answeredUnconnected = false // interviewer: an answer was sent and video has not connected since
+
+    const clearTimers = () => {
+      if (watchdog !== null) window.clearTimeout(watchdog)
+      if (graceTimer !== null) window.clearTimeout(graceTimer)
+      watchdog = graceTimer = null
+    }
+
+    /**
+     * Video did not connect in time (or the connection failed). The candidate, who always offers, tries
+     * again; the interviewer waits for that offer. After MAX_ATTEMPTS both sides show "video couldn't
+     * connect" until someone presses Retry (or the other side rejoins).
+     */
+    const stalled = () => {
+      clearTimers()
+      if (closed || !peerHere || state.pc?.connectionState === 'connected') return
+      attempts += 1
+      if (attempts >= MAX_ATTEMPTS) {
+        setPhase('video-failed')
+        return
+      }
+      setPhase('negotiating')
+      if (role === 'candidate') void offer()
+      else arm() // the candidate's own watchdog re-offers; keep counting here
+    }
+
+    const arm = () => {
+      if (watchdog !== null) window.clearTimeout(watchdog)
+      // The interviewer waits a little longer, so the candidate's re-offer normally comes first.
+      watchdog = window.setTimeout(stalled, role === 'candidate' ? ATTEMPT_MS : ATTEMPT_MS + 5000)
+    }
+
+    /** A fresh round of attempts, from Retry or from the other side (re)joining. */
+    const restart = () => {
+      attempts = 0
+      answeredUnconnected = false
+      clearTimers()
+      if (closed || !peerHere) return
+      setPhase('negotiating')
+      if (role === 'candidate') void offer()
+      else {
+        send({ type: 'RENEGOTIATE' })
+        arm()
+      }
+    }
+    retryRef.current = restart
 
     const closePc = () => {
+      clearTimers()
       generation++
       state.pc?.close()
       state.pc = null
@@ -160,6 +234,7 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       const mine = ++generation
       const servers = await loadIceServers()
       if (closed || mine !== generation) return null
+      setRelay(hasRelay(servers))
       const pc = new RTCPeerConnection({ iceServers: servers })
       state.pc = pc
       const main = new MediaStream()
@@ -180,11 +255,21 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       }
       pc.onconnectionstatechange = () => {
         if (state.pc !== pc) return
-        if (pc.connectionState === 'connected') setPhase('connected')
-        else if (pc.connectionState === 'failed') {
-          setPhase('negotiating')
-          // The candidate offers again; the interviewer waits for that offer.
-          if (role === 'candidate') window.setTimeout(() => void offer(), 1000)
+        const s = pc.connectionState
+        if (s === 'connected') {
+          attempts = 0
+          answeredUnconnected = false
+          clearTimers()
+          setPhase('connected')
+        } else if (s === 'failed') {
+          stalled()
+        } else if (s === 'disconnected') {
+          // Often recovers by itself (a network blip); if not, treat it as failed.
+          if (graceTimer !== null) window.clearTimeout(graceTimer)
+          graceTimer = window.setTimeout(() => {
+            graceTimer = null
+            if (state.pc === pc && pc.connectionState !== 'connected') stalled()
+          }, DISCONNECTED_GRACE_MS)
         }
       }
       return pc
@@ -202,6 +287,7 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       await pc.setLocalDescription(description)
       if (state.pc !== pc) return // superseded while the offer was being made
       send({ type: 'OFFER', sdp: description.sdp ?? '', offer_id: id })
+      arm()
     }
 
     const answer = async (sdp: string, id: string | null) => {
@@ -220,6 +306,8 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       await pc.setLocalDescription(description)
       if (state.pc !== pc) return
       send({ type: 'ANSWER', sdp: description.sdp ?? '', ...(id ? { offer_id: id } : {}) })
+      answeredUnconnected = true
+      arm()
       for (const ice of pendingIce.splice(0)) await pc.addIceCandidate(ice).catch(() => undefined)
     }
 
@@ -235,25 +323,45 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       const id = typeof message.offer_id === 'string' ? message.offer_id : null
       switch (message.type) {
         case 'READY':
-          setPeerPresent(message.peer_present === true)
-          setPhase(message.peer_present === true ? 'negotiating' : 'waiting')
+          peerHere = message.peer_present === true
+          attempts = 0
+          answeredUnconnected = false
+          setPeerPresent(peerHere)
+          setPhase(peerHere ? 'negotiating' : 'waiting')
           announce()
-          if (role === 'candidate' && message.peer_present === true) await offer()
+          if (role === 'candidate' && peerHere) await offer()
+          else if (peerHere) arm()
           break
         case 'PEER_JOINED':
+          peerHere = true
+          attempts = 0
+          answeredUnconnected = false
           setPeerPresent(true)
           setPhase('negotiating')
           announce()
           if (role === 'candidate') await offer()
+          else arm()
+          break
+        case 'RENEGOTIATE':
+          // The interviewer pressed Retry: a fresh round of attempts.
+          if (role === 'candidate') restart()
           break
         case 'PEER_LEFT':
+          peerHere = false
           closePc()
           setPeerPresent(false)
           setPeer(null)
           setPhase('waiting')
           break
         case 'OFFER':
-          if (role === 'interviewer' && typeof message.sdp === 'string') await answer(message.sdp, id)
+          if (role === 'interviewer' && typeof message.sdp === 'string') {
+            // A new offer while the last answer never connected is the candidate's next attempt.
+            if (answeredUnconnected) {
+              attempts += 1
+              if (attempts >= MAX_ATTEMPTS) setPhase('video-failed')
+            }
+            await answer(message.sdp, id)
+          }
           break
         case 'ANSWER':
           if (role === 'candidate' && typeof message.sdp === 'string' && state.pc && id === offerId) {
@@ -305,6 +413,7 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       ws.onclose = () => {
         if (state.socket === ws) state.socket = null
         if (closed) return
+        peerHere = false
         closePc()
         setPeerPresent(false)
         setPhase('reconnecting')
@@ -327,6 +436,7 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
 
     return () => {
       closed = true
+      retryRef.current = () => undefined
       if (retryTimer !== null) window.clearTimeout(retryTimer)
       closePc()
       state.socket?.close()
@@ -389,6 +499,8 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
     announce()
   }, [announce])
 
+  const retryVideo = useCallback(() => retryRef.current(), [])
+
   const sendChat = useCallback(
     (body: string) => {
       const text = chatText(body)
@@ -410,6 +522,8 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
     video,
     sharing: localScreen !== null,
     messages,
+    relay,
+    retryVideo,
     toggleAudio,
     toggleVideo,
     toggleScreen,

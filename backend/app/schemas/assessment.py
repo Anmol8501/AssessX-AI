@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from app.models.assessment import AssessmentStatus, QuestionNavigation
+from app.models.assessment import AssessmentStatus, AssessmentType, QuestionNavigation
 from app.schemas.question import QuestionOut
 
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
@@ -29,6 +29,12 @@ class AssessmentSettings(BaseModel):
     proctoring_required: bool = False
     availability_start: datetime | None = None
     availability_end: datetime | None = None
+    #: Coding assessments: candidates may run their code on their own input (otherwise samples only).
+    coding_allow_custom_input: bool = False
+    #: Coding assessments: copy and paste are allowed inside the code editor (restricted elsewhere).
+    coding_allow_paste: bool = False
+    #: Coding assessments: submissions allowed per coding question per attempt.
+    coding_max_submissions: int = Field(default=20, ge=1, le=1000)
 
     @model_validator(mode="after")
     def _availability_order(self) -> "AssessmentSettings":
@@ -43,6 +49,8 @@ class AssessmentSettings(BaseModel):
 
 class AssessmentCreate(BaseModel):
     title: Title
+    #: MCQ only (default — what every assessment was before coding), coding only, or mixed.
+    assessment_type: AssessmentType = AssessmentType.MCQ
     description: LongText | None = None
     instructions: LongText | None = None
     duration_minutes: int = Field(gt=0, le=MAX_DURATION_MINUTES, description="Exam duration in minutes")
@@ -61,6 +69,8 @@ class AssessmentUpdate(BaseModel):
     share this shape so the builder's sections can save independently."""
 
     title: Title | None = None
+    #: Refused while existing questions would break the new type's rule, or once attempts exist.
+    assessment_type: AssessmentType | None = None
     description: LongText | None = None
     instructions: LongText | None = None
     duration_minutes: int | None = Field(default=None, gt=0, le=MAX_DURATION_MINUTES)
@@ -75,6 +85,9 @@ class AssessmentUpdate(BaseModel):
     proctoring_required: bool | None = None
     availability_start: datetime | None = None
     availability_end: datetime | None = None
+    coding_allow_custom_input: bool | None = None
+    coding_allow_paste: bool | None = None
+    coding_max_submissions: int | None = Field(default=None, ge=1, le=1000)
 
 
 class ReadinessIssue(BaseModel):
@@ -96,6 +109,7 @@ class AssessmentSummary(BaseModel):
 
     id: uuid.UUID
     title: str
+    assessment_type: AssessmentType
     description: str | None
     status: AssessmentStatus
     duration_minutes: int

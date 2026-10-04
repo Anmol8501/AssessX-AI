@@ -27,6 +27,7 @@ export function tileStatus(session: MonitoringSession, connection: ConnectionSta
   if (session.attemptStatus !== 'IN_PROGRESS' || session.proctoringStatus === 'ENDED') {
     return { label: 'Finished', tone: 'neutral' }
   }
+  if (session.onHold) return { label: 'Exam locked', tone: 'danger' }
   if (connection === 'disconnected') return { label: 'Disconnected', tone: 'danger' }
   if (connection === 'reconnecting') return { label: 'Reconnecting', tone: 'warn' }
   if (!session.candidateConnected) return { label: 'Candidate offline', tone: 'danger' }

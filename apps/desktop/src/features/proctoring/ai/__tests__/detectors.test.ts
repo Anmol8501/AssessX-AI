@@ -247,8 +247,8 @@ describe('gaze', () => {
   })
 })
 
-describe('phone detection', () => {
-  it('reports the most confident phone candidate as raw model confidence', async () => {
+describe('object detection', () => {
+  it('reports the most confident candidate of each class as raw model confidence', async () => {
     const detector = await ready(new PhoneDetector())
     const [observation] = detector.process(
       frame(),
@@ -264,22 +264,35 @@ describe('phone detection', () => {
     expect(observation?.observationType).toBe('OBJECT_DETECTION')
     expect(observation?.confidence).toBe(0.64)
     expect(observation?.boundingBox).toEqual(box(0.5, 0.5))
-    expect(observation?.metadata).toEqual({ objectClass: 'cell_phone', objectModel: 'efficientdet_lite0' })
+    expect(observation?.metadata).toMatchObject({ objectClass: 'cell_phone', objectModel: 'efficientdet_lite0', region: 'full' })
   })
 
-  it('makes no detected/not-detected decision (no threshold is documented)', async () => {
+  it('makes no detected/not-detected decision; a class with no candidate reports 0', async () => {
     const detector = await ready(new PhoneDetector())
-    const [observation] = detector.process(frame(), raw(payload({ objects: [] })))
-    expect(observation?.confidence).toBeNull()
-    expect(observation?.boundingBox).toBeUndefined()
-    expect(observation?.metadata).not.toHaveProperty('detected')
-    expect(observation?.metadata).not.toHaveProperty('count')
+    const observations = detector.process(frame(), raw(payload({ objects: [] })))
+    expect(observations).toHaveLength(4)
+    for (const observation of observations) {
+      expect(observation.confidence).toBe(0)
+      expect(observation.boundingBox).toBeUndefined()
+      expect(observation.metadata).not.toHaveProperty('detected')
+      expect(observation.metadata).not.toHaveProperty('count')
+    }
   })
 
-  it('ignores other categories and emits nothing when the model did not run', async () => {
+  it('reads each class from its own label, ignores unreported classes, and emits nothing when the model did not run', async () => {
     const detector = await ready(new PhoneDetector())
-    const [observation] = detector.process(frame(), raw(payload({ objects: [{ category: 'book', score: 0.9, box: box(0.1, 0.1) }] })))
-    expect(observation?.confidence).toBeNull()
+    const observations = detector.process(
+      frame(),
+      raw(
+        payload({
+          objects: [
+            { category: 'book', score: 0.9, box: box(0.1, 0.1) },
+            { category: 'keyboard', score: 0.95, box: box(0.2, 0.2) },
+          ],
+        }),
+      ),
+    )
+    expect(Object.fromEntries(observations.map((o) => [o.metadata.objectClass, o.confidence]))).toEqual({ cell_phone: 0, book: 0.9, laptop: 0, remote: 0 })
     expect(detector.process(frame(), raw(payload({ tasks: { objectDetector: 'UNAVAILABLE' }, objects: null })))).toEqual([])
     expect(detector.state).toBe('ERROR')
   })

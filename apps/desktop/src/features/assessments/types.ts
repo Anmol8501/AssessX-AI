@@ -5,6 +5,21 @@ import type { AttemptStatus } from '@/features/exam/types'
 
 export type AssessmentStatus = 'DRAFT' | 'READY' | 'PUBLISHED'
 
+/** Which kinds of question an assessment may contain. Chosen by the admin, enforced by the server. */
+export type AssessmentType = 'MCQ' | 'CODING' | 'MIXED'
+
+export const ASSESSMENT_TYPES: { value: AssessmentType; label: string; description: string }[] = [
+  { value: 'MCQ', label: 'MCQ only', description: 'Traditional multiple-choice assessment.' },
+  { value: 'CODING', label: 'Coding only', description: 'Programming and coding assessment.' },
+  { value: 'MIXED', label: 'Mixed', description: 'Assessment containing both MCQ and coding questions.' },
+]
+
+export const ASSESSMENT_TYPE_LABEL: Record<AssessmentType, string> = { MCQ: 'MCQ only', CODING: 'Coding only', MIXED: 'Mixed' }
+
+/** Whether this assessment type accepts coding problems / multiple-choice questions. */
+export const allowsCoding = (type: AssessmentType) => type === 'CODING' || type === 'MIXED'
+export const allowsObjective = (type: AssessmentType) => type === 'MCQ' || type === 'MIXED'
+
 export const STATUS_LABEL: Record<AssessmentStatus, string> = {
   DRAFT: 'Draft',
   READY: 'Ready',
@@ -29,6 +44,12 @@ export interface AssessmentSettings {
   proctoring_required: boolean
   availability_start: string | null
   availability_end: string | null
+  /** Coding assessments: candidates may run their code on their own input (otherwise samples only). */
+  coding_allow_custom_input: boolean
+  /** Coding assessments: submissions allowed per coding question per attempt. */
+  coding_max_submissions: number
+  /** Coding assessments: copy, cut and paste work inside the code editor (still blocked everywhere else). */
+  coding_allow_paste: boolean
 }
 
 export interface ReadinessIssue {
@@ -42,12 +63,27 @@ export interface ReadinessReport {
   issues: ReadinessIssue[]
 }
 
-export type QuestionType = 'MCQ' | 'MULTIPLE_SELECT' | 'TRUE_FALSE'
+export type QuestionType = 'MCQ' | 'MULTIPLE_SELECT' | 'TRUE_FALSE' | 'CODING'
 
 export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
   MCQ: 'Multiple choice',
   MULTIPLE_SELECT: 'Multiple select',
   TRUE_FALSE: 'True / False',
+  CODING: 'Coding problem',
+}
+
+/** The problem version a CODING question pins (admin view). */
+export interface CodingVersionRef {
+  id: string
+  problem_id: string
+  version: number
+  title: string
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  tags: string[]
+  languages: string[]
+  time_limit_ms: number
+  memory_limit_mb: number
+  partial_scoring: boolean
 }
 
 /** Types that accept exactly one correct answer. Mirrors `SINGLE_ANSWER_TYPES` on the server. */
@@ -74,6 +110,8 @@ export interface Question {
   position: number
   explanation: string | null
   options: QuestionOption[]
+  /** CODING questions only: the pinned problem version. */
+  coding_version?: CodingVersionRef | null
   created_at: string
   updated_at: string
 }
@@ -81,6 +119,7 @@ export interface Question {
 export interface AssessmentSummary {
   id: string
   title: string
+  assessment_type: AssessmentType
   description: string | null
   status: AssessmentStatus
   duration_minutes: number
@@ -105,6 +144,7 @@ export interface AssessmentDetail extends AssessmentSummary {
 
 export interface AssessmentInput {
   title: string
+  assessment_type?: AssessmentType
   description: string | null
   instructions: string | null
   duration_minutes: number

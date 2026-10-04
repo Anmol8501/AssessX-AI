@@ -27,7 +27,7 @@ class ResultService:
         self.repo = ResultRepository(db)
         self.evaluation = EvaluationService(db)
 
-    def for_attempt(self, attempt: AssessmentAttempt) -> AttemptResult:
+    def for_attempt(self, attempt: AssessmentAttempt) -> AttemptResult | None:
         """The attempt's result, evaluating it if it has not been evaluated yet.
 
         The lazy path matters for attempts that finished before Phase 3C existed, and for any

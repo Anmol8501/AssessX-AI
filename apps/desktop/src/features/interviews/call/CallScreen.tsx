@@ -17,6 +17,7 @@ const PHASE: Record<CallPhase, string> = {
   waiting: 'Waiting for the other person to join',
   negotiating: 'Connecting video…',
   connected: 'Connected',
+  'video-failed': 'Video couldn’t connect — chat still works',
   reconnecting: 'Connection lost — reconnecting…',
   ended: 'The call has ended',
   unavailable: 'This call is not available',
@@ -218,6 +219,7 @@ export function CallScreen({
               {call.mediaError}
             </p>
           )}
+          {call.phase === 'video-failed' && <VideoFailed relay={call.relay} onRetry={call.retryVideo} />}
           <div className="flex min-h-0 flex-1 gap-3">
             {peerSharing && <VideoTile stream={call.remoteScreen} muted label={`${peerName}’s screen`} fit="contain" className="min-w-0 flex-[3]" />}
             <VideoTile
@@ -258,6 +260,27 @@ export function CallScreen({
           {panel}
         </aside>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Both people are in the call but video did not connect after the automatic retries. Almost always the
+ * two networks cannot reach each other directly (mobile data, carrier NAT, campus or hostel Wi-Fi that
+ * isolates devices) and no relay (TURN) is configured on the server.
+ */
+function VideoFailed({ relay, onRetry }: { relay: boolean | null; onRetry(): void }) {
+  return (
+    <div className="rounded-md bg-amber-500/15 px-3 py-2.5 text-[12.5px] text-amber-100" role="alert" data-testid="video-failed">
+      <p className="font-semibold text-amber-200">Video couldn’t connect. Chat still works.</p>
+      <p className="mt-0.5">
+        {relay
+          ? 'The connection failed even through the relay server. Check both internet connections, then retry.'
+          : 'Your two networks don’t allow a direct video connection, and this server has no relay (TURN) set up. Try both on a home Wi-Fi or a different network, or ask the administrator to enable TURN.'}
+      </p>
+      <Button size="sm" variant="secondary" className="mt-2" onClick={onRetry}>
+        Retry video
+      </Button>
     </div>
   )
 }

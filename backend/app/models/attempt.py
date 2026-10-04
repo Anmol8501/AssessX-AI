@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    String,
     UniqueConstraint,
     Uuid,
     text,
@@ -41,6 +42,16 @@ class AttemptStatus(enum.StrEnum):
     IN_PROGRESS = "IN_PROGRESS"
     SUBMITTED = "SUBMITTED"
     TIME_EXPIRED = "TIME_EXPIRED"
+
+
+class HoldReason(enum.StrEnum):
+    """Why an open attempt is on hold (frozen): the candidate cannot answer until an administrator
+    releases it. The clock keeps running while it is held."""
+
+    #: The candidate left the exam window more often than the rules allow (counted by the server).
+    TAB_SWITCH_LIMIT = "TAB_SWITCH_LIMIT"
+    #: An administrator put the attempt on hold from live monitoring.
+    ADMIN = "ADMIN"
 
 
 #: Statuses that mean the candidate may still answer.
@@ -75,6 +86,12 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="uq_attempt_assessment_candidate_number",
         ),
         CheckConstraint("attempt_number > 0", name="ck_attempts_number_positive"),
+        CheckConstraint("tab_switch_count >= 0", name="ck_attempts_tab_switch_count"),
+        CheckConstraint(
+            "hold_reason IS NULL OR hold_reason IN ('TAB_SWITCH_LIMIT', 'ADMIN')",
+            name="ck_attempts_hold_reason",
+        ),
+        CheckConstraint("(held_at IS NULL) = (hold_reason IS NULL)", name="ck_attempts_hold_consistent"),
         # At most one open attempt per candidate per assessment, enforced by the database rather
         # than by a read-then-write in the service: two concurrent "Start Exam" clicks race, and
         # only one of them can win here. A partial index (rather than a plain unique constraint)
@@ -113,9 +130,28 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     #: When the attempt became immutable, however it ended. For an expiry this is `expires_at` —
     #: the moment the exam actually ended, not the later moment the server noticed.
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Times the candidate left the exam window for longer than the grace period, counted by the
+    #: server from the app's FOCUS_REGAINED reports. Reaching the limit puts the attempt on hold.
+    tab_switch_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    #: Set while the attempt is on hold (frozen): no answers or submission until released.
+    held_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hold_reason: Mapped[HoldReason | None] = mapped_column(
+        Enum(HoldReason, name="hold_reason", native_enum=False, length=20, validate_strings=True),
+        nullable=True,
+    )
+    #: The administrator who put it on hold; None for the automatic tab-switch hold.
+    held_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    #: The administrator's private note on why (never shown to the candidate).
+    hold_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    #: The administrator who ended the exam on the candidate's behalf, if one did.
+    ended_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     assessment: Mapped["Assessment"] = relationship(lazy="joined")
-    candidate: Mapped["User"] = relationship(lazy="joined")
+    candidate: Mapped["User"] = relationship(lazy="joined", foreign_keys=[candidate_id])
     assignment: Mapped["AssessmentAssignment"] = relationship()
     answers: Mapped[list["AttemptAnswer"]] = relationship(
         back_populates="attempt",
@@ -145,6 +181,11 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     @property
     def is_finalized(self) -> bool:
         return self.status in TERMINAL_ATTEMPT_STATUSES
+
+    @property
+    def is_on_hold(self) -> bool:
+        """Open but frozen: the candidate cannot answer or submit until an administrator releases it."""
+        return self.is_active and self.held_at is not None
 
     def has_expired_at(self, now: datetime) -> bool:
         """Whether the deadline has passed. `>=` so the final instant does not grant a free tick."""

@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     cloudflare_turn_key_id: str | None = None
     cloudflare_turn_api_token: str | None = None
     turn_credential_ttl_seconds: int = Field(default=14400, ge=300, le=172800)
+    # Coding assessments. Off until a code runner is set up (stage C2): until then an assessment that
+    # contains coding questions can be built but not published, so candidates never meet a coding
+    # question that cannot run.
+    coding_execution_enabled: bool = False
+    # The code runner's shared secret (stage C2). Unset: the runner routes are disabled (404). Set it on the
+    # API and on the runner host only — never in the desktop app.
+    runner_token: SecretStr | None = None
+    # How long a claimed job may run before another runner may take it over, and how many claims a job
+    # gets before it is failed as a system error.
+    runner_lease_seconds: int = Field(default=180, ge=30, le=3600)
+    runner_max_claims: int = Field(default=3, ge=1, le=10)
     # Phase 7B — AI answer evaluation. Server-side only: the key is never sent to any client, logged or
     # returned. `none` (default) records evaluations as unavailable and interviews continue without
     # them; `stub` is a labelled, deterministic test double allowed only in development/test.
@@ -99,6 +110,17 @@ class Settings(BaseSettings):
             problems.append("LLM_PROVIDER=stub is a test double and is not allowed in production")
         if self.llm_provider == "anthropic" and not self.llm_api_key:
             problems.append("LLM_PROVIDER=anthropic needs LLM_API_KEY")
+        if self.runner_token and len(self.runner_token.get_secret_value()) < PRODUCTION_SECRET_MIN_LENGTH:
+            problems.append(
+                f"RUNNER_TOKEN must be a random value of at least {PRODUCTION_SECRET_MIN_LENGTH} characters"
+            )
+        if self.runner_token and self.runner_token.get_secret_value() == self.secret_key:
+            problems.append("RUNNER_TOKEN must not reuse SECRET_KEY")
+        if self.coding_execution_enabled and not self.runner_token:
+            problems.append(
+                "CODING_EXECUTION_ENABLED needs RUNNER_TOKEN: "
+                "without a runner, coding submissions are never judged"
+            )
         if problems:
             raise ValueError("; ".join(problems))
         return self

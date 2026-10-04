@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
 /**
- * Guided real-webcam validation session (Phase 5B). Not part of the automated suite.
+ * Guided real-webcam sessions (Phase 5B detectors; object calibration). Not part of the automated suite.
  *
  *   npx playwright test --config benchmarks/webcam/playwright.config.ts
  *
@@ -11,7 +11,7 @@ import { defineConfig } from '@playwright/test'
  */
 export default defineConfig({
   testDir: '.',
-  testMatch: ['session.spec.ts', 'events-session.spec.ts'],
+  testMatch: ['session.spec.ts', 'events-session.spec.ts', 'objects-calibration.spec.ts'],
   timeout: 15 * 60_000,
   workers: 1,
   reporter: 'list',

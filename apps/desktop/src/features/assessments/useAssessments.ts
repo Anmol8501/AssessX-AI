@@ -172,6 +172,14 @@ export function useAssessmentActions() {
         }),
       [api],
     ),
+    addCodingQuestion: useCallback(
+      (assessmentId: string, problemVersionId: string) =>
+        api<Question>(`/api/v1/assessments/${assessmentId}/coding-questions`, {
+          method: 'POST',
+          body: { problem_version_id: problemVersionId },
+        }),
+      [api],
+    ),
     deleteQuestion: useCallback(
       (assessmentId: string, questionId: string) =>
         api<void>(`/api/v1/assessments/${assessmentId}/questions/${questionId}`, { method: 'DELETE' }),

@@ -21,18 +21,20 @@ application by the Windows installer (`bundle.resources` in `src-tauri/tauri.con
 
 SHA-256 digests of the three model files are pinned in `scripts/fetch-ai-assets.mjs`.
 
-### Opt-in YOLOX-Tiny object model and ONNX Runtime Web (added for Phase 5B validation)
+### YOLOX object models and ONNX Runtime Web (default object detector since 2026-10-02)
 
-YOLOX-Tiny is **off by default**. The YOLOX model file and ONNX Runtime's WebAssembly runtime are
-included in an installer **only** when that build sets `VITE_OBJECT_DETECTOR_MODEL=yolox_tiny`.
-ONNX Runtime Web's JavaScript (66 KB) is compiled into the AI worker of **every** build (inert unless
-YOLOX is selected), so its notices ship with every installer. The verbatim upstream texts are
+Since the product owner's decision of 2026-10-02, YOLOX is the **default** object detector: YOLOX-S
+where WebGPU works, YOLOX-Tiny otherwise. Both model files and ONNX Runtime's WebAssembly runtime are
+included in every installer built with the default `VITE_OBJECT_DETECTOR_MODEL` (`yolox`); a build
+with `efficientdet_lite0` leaves them out. ONNX Runtime Web's JavaScript is compiled into the AI worker
+of every build, so its notices ship with every installer. The verbatim upstream texts are
 installed next to the application in `third-party/`.
 
 | Component | Version | Licence | Source | Status |
 |---|---|---|---|---|
 | YOLOX source code (preprocessing/decoding reimplemented from its reference code) | release `0.1.1rc0`, commit `e1052df71842031413f6030723c3607b839c80ce` | Apache-2.0 | github.com/Megvii-BaseDetection/YOLOX | **Verified** — `LICENSE` at that commit (Apache-2.0, "Copyright 2021 Megvii, Base Detection"), reproduced as `third-party/YOLOX-LICENSE.txt`. The repository has **no NOTICE file**. |
 | YOLOX-Tiny model (`yolox_tiny.onnx`, 20,219,662 B, SHA-256 `427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7`) | release `0.1.1rc0` asset | **Not separately stated** | …/releases/download/0.1.1rc0/yolox_tiny.onnx | **Unconfirmed** — published as a release asset of the Apache-2.0 repository; neither the release nor the README states separate terms for the weights. Not assumed to inherit the code licence; needs confirmation. Trained on COCO (image licences vary). |
+| YOLOX-S model (`yolox_s.onnx`, 35,858,002 B, SHA-256 `c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063`) | release `0.1.1rc0` asset | **Not separately stated** | …/releases/download/0.1.1rc0/yolox_s.onnx | **Unconfirmed** — same status as YOLOX-Tiny: a release asset of the Apache-2.0 repository with no separate terms stated. Trained on COCO (image licences vary). |
 | ONNX Runtime Web (`onnxruntime-web`) | 1.30.0 (exact) | MIT | npm / github.com/microsoft/onnxruntime | **Verified** — `LICENSE` at tag v1.30.0, reproduced as `third-party/onnxruntime-LICENSE.txt`. The npm package ships no licence or notices file. |
 | ONNX Runtime third-party components | v1.30.0 | Various (e.g. Eigen MPL-2.0, protobuf, Abseil, FlatBuffers, emsdk) | upstream `ThirdPartyNotices.txt` | Reproduced verbatim as `third-party/onnxruntime-ThirdPartyNotices.txt` (6,369 lines; covers all ONNX Runtime builds — which apply to the WebAssembly runtime is **unverified**). |
 | `onnxruntime-web` npm dependencies | as locked | flatbuffers Apache-2.0 · guid-typescript ISC · long Apache-2.0 · onnxruntime-common MIT · platform MIT · protobufjs BSD-3-Clause | npm | Declared dependencies. Whether Microsoft's prebuilt `ort.webgpu.min.mjs` inlines any of them is **unverified**. |

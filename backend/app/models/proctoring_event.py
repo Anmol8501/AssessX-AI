@@ -64,7 +64,7 @@ class ProctoringEventType(enum.StrEnum):
     # AI observations (Phase 5C) — factual, temporally stabilised conditions reported by the
     # candidate's on-device AI, each recorded as an episode: a `started` row and a `resolved` row
     # (same `episode_id`; the server computes the duration). They say what a detector observed,
-    # never why. There is deliberately no PHONE_DETECTED: phone detection is not validated.
+    # never why.
     FACE_NOT_DETECTED = "FACE_NOT_DETECTED"
     MULTIPLE_FACES_DETECTED = "MULTIPLE_FACES_DETECTED"
     HEAD_ORIENTATION_CHANGED = "HEAD_ORIENTATION_CHANGED"
@@ -72,9 +72,23 @@ class ProctoringEventType(enum.StrEnum):
     CAMERA_TOO_DARK = "CAMERA_TOO_DARK"
     FACE_TOO_FAR = "FACE_TOO_FAR"
     FACE_TOO_CLOSE = "FACE_TOO_CLOSE"
+    # Objects in view (2026-10-02, product-owner decision): the on-device object detector saw the
+    # object in several frames. PROVISIONAL thresholds — a fact for review, never a verdict.
+    PHONE_DETECTED = "PHONE_DETECTED"
+    BOOK_DETECTED = "BOOK_DETECTED"
+    LAPTOP_DETECTED = "LAPTOP_DETECTED"
+    HANDHELD_DEVICE_DETECTED = "HANDHELD_DEVICE_DETECTED"
     #: AI health (Phase 5C) — whether AssessX's AI monitoring is working. A system condition, never
     #: an observation about the candidate.
     AI_STATUS = "AI_STATUS"
+    # Coding activity (coding assessments, stage C4) — facts about what the candidate did in a coding
+    # problem, never a conclusion. Runs, submissions and language changes are recorded by the server;
+    # opening a problem and (where the assessment allows it) pasting into the editor by the app.
+    CODING_QUESTION_OPENED = "CODING_QUESTION_OPENED"
+    CODE_PASTED = "CODE_PASTED"
+    CODE_RUN_REQUESTED = "CODE_RUN_REQUESTED"
+    CODE_SUBMITTED = "CODE_SUBMITTED"
+    CODE_LANGUAGE_CHANGED = "CODE_LANGUAGE_CHANGED"
 
 
 class ProctoringEventCategory(enum.StrEnum):
@@ -90,6 +104,8 @@ class ProctoringEventCategory(enum.StrEnum):
     AI_OBSERVATION = "AI_OBSERVATION"
     #: Whether the on-device AI is working (Phase 5C) — kept apart from observations.
     AI_HEALTH = "AI_HEALTH"
+    #: Coding activity (stage C4).
+    CODING = "CODING"
 
 
 class ProctoringEventSource(enum.StrEnum):
@@ -131,7 +147,7 @@ class ProctoringEvent(UUIDPrimaryKeyMixin, Base):
         ),
         CheckConstraint(
             "category IN ('SESSION', 'DEVICE', 'WINDOW', 'INPUT', 'DISPLAY', 'SYSTEM', "
-            "'AI_OBSERVATION', 'AI_HEALTH')",
+            "'AI_OBSERVATION', 'AI_HEALTH', 'CODING')",
             name="ck_proctoring_events_category",
         ),
     )

@@ -115,7 +115,20 @@ class MonitoringService:
             ai=derive_ai_state(self.repo.ai_events(session.id)),
             candidate_connected=candidate_connected,
             candidate_presence_changed_at=presence_changed_at,
+            **self._control(attempt),
         )
+
+    @staticmethod
+    def _control(attempt: AssessmentAttempt) -> dict:
+        from app.services.attempt_control import TAB_SWITCH_LIMIT
+
+        return {
+            "tab_switches": attempt.tab_switch_count or 0,
+            "tab_switch_limit": TAB_SWITCH_LIMIT,
+            "on_hold": attempt.is_on_hold,
+            "hold_reason": attempt.hold_reason.value if attempt.is_on_hold and attempt.hold_reason else None,
+            "held_at": attempt.held_at if attempt.is_on_hold else None,
+        }
 
     def _fullscreen(self, session: ProctoringSession, events: list[ProctoringEvent] | None) -> bool | None:
         # Reuse events already loaded for the detail view; otherwise ask for a couple.
@@ -142,6 +155,13 @@ class MonitoringService:
 
 _E = ProctoringEventType
 _QUALITY = frozenset({_E.CAMERA_TOO_DARK, _E.FACE_TOO_FAR, _E.FACE_TOO_CLOSE})
+#: Object episode type → the object class it reports (2026-10-02).
+_OBJECTS = {
+    _E.PHONE_DETECTED: "cell_phone",
+    _E.BOOK_DETECTED: "book",
+    _E.LAPTOP_DETECTED: "laptop",
+    _E.HANDHELD_DEVICE_DETECTED: "remote",
+}
 _MEASURING = frozenset({"RUNNING", "DEGRADED"})
 
 
@@ -184,6 +204,10 @@ def derive_ai_state(events: list[ProctoringEvent]) -> AIMonitoringState:
         camera = "unknown"
     else:
         camera = "issue" if any(t in open_types for t in _QUALITY) else "good"
+    seen = sorted(cls for t, cls in _OBJECTS.items() if t in open_types)
+    objects = (
+        "unknown" if not measuring("object_detection") and not seen else ("detected" if seen else "none")
+    )
 
     return AIMonitoringState(
         status=status,
@@ -194,6 +218,8 @@ def derive_ai_state(events: list[ProctoringEvent]) -> AIMonitoringState:
         head_orientation=head,
         gaze=gaze,
         camera_quality=camera,
+        objects=objects,
+        objects_seen=seen,
         active=[
             AIActiveObservation(event_type=e.event_type, started_at=e.recorded_at, metadata=e.details)
             for e in active

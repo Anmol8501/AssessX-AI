@@ -1,4 +1,4 @@
-import type { ObjectModelId } from '../objectDetection/models'
+import type { ObjectModelId, RunningObjectModel } from '../objectDetection/models'
 
 /**
  * Phase 5B: the message protocol between the page and the MediaPipe inference worker, and the shape
@@ -64,6 +64,8 @@ export interface DetectedObject {
   category: string
   score: number | null
   box: NormalizedBox
+  /** Where it was found: the whole frame, or a zoomed tile (small-object coverage). Diagnostic only. */
+  region?: 'full' | 'tile'
 }
 
 export interface FrameStatistics {
@@ -78,7 +80,7 @@ export interface MediaPipePayload {
   kind: 'mediapipe'
   tasks: Record<TaskName, TaskStatus>
   /** Which object model produced `objects` (their scores are not comparable across models). */
-  objectModel: ObjectModelId
+  objectModel: RunningObjectModel
   faces: DetectedFace[] | null
   landmarkedFaces: LandmarkedFace[] | null
   objects: DetectedObject[] | null
@@ -91,11 +93,10 @@ export function isMediaPipePayload(value: unknown): value is MediaPipePayload {
   return typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === 'mediapipe'
 }
 
-/** YOLOX-Tiny backend settings (used only when `objectModel` is `yolox_tiny`). */
+/** YOLOX backend settings (used for the `yolox`, `yolox_s` and `yolox_tiny` modes). */
 export interface YoloxLoadConfig {
-  modelUrl: string
-  /** Expected SHA-256 of the model file; a mismatch fails the load (integrity check). */
-  sha256: string
+  /** Where each YOLOX model is served from, and its expected SHA-256 (a mismatch fails the load). */
+  models: Record<'yolox_s' | 'yolox_tiny', { url: string; sha256: string }>
   /** Where ONNX Runtime Web's WebAssembly files are served from. */
   wasmPaths: string
   /** Try WebGPU first (validated by a warm-up inference), falling back to WebAssembly. */
@@ -106,7 +107,7 @@ export interface YoloxLoadConfig {
 
 /** How the object detector actually came up — reported, never assumed. */
 export interface ObjectBackendReport {
-  model: ObjectModelId
+  model: RunningObjectModel
   /** `webgpu` / `wasm` for YOLOX; `CPU` / `GPU` (MediaPipe delegate) for EfficientDet. */
   accelerator: string
   /** Model fetch + integrity check + session creation (YOLOX), or task creation (EfficientDet). */
@@ -130,7 +131,7 @@ export interface WorkerLoadConfig {
   objectCategories: string[]
   /** How many faces the landmarker measures (pose/gaze). The face *count* comes from the detector. */
   landmarkerMaxFaces: number
-  /** Which object model to load (EfficientDet-Lite0 by default; YOLOX-Tiny opt-in). */
+  /** Which object model mode to load (`yolox` by default: YOLOX-S on WebGPU, else YOLOX-Tiny). */
   objectModel: ObjectModelId
   yolox: YoloxLoadConfig
 }

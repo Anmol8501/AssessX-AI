@@ -94,8 +94,10 @@ export function classifyMediaError(kind: DeviceKind, error: unknown): DeviceChec
 }
 
 export function constraintsFor(kind: DeviceKind): MediaStreamConstraints {
-  // A modest preview resolution: the stream is only ever shown to the candidate.
+  // 1280×720 where the camera offers it (was 640×360): the on-device object detector needs the
+  // detail to see a small or distant phone. The live view to the administrator is still sent at
+  // about 640 wide (see useMediaPublisher), and nothing is recorded.
   return kind === 'camera'
-    ? { video: { width: { ideal: 640 }, height: { ideal: 360 } }, audio: false }
+    ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }
     : { audio: true, video: false }
 }

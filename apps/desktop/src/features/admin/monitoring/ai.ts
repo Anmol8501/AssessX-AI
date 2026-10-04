@@ -18,6 +18,10 @@ export const AI_OBSERVATION_LABELS: Record<string, string> = {
   CAMERA_TOO_DARK: 'Camera image too dark',
   FACE_TOO_FAR: 'Face far from camera',
   FACE_TOO_CLOSE: 'Face very close to camera',
+  PHONE_DETECTED: 'Mobile phone in view',
+  BOOK_DETECTED: 'Book in view',
+  LAPTOP_DETECTED: 'Another laptop or tablet in view',
+  HANDHELD_DEVICE_DETECTED: 'Handheld device in view',
 }
 
 const STATUS: Record<string, { label: string; tone: StatusTone }> = {
@@ -86,8 +90,24 @@ export function aiIndicators(ai: AIMonitoringState): AIIndicator[] {
     ai.cameraQuality === 'unknown'
       ? unknown('Camera image')
       : { label: 'Camera image', value: ai.cameraQuality === 'good' ? 'OK' : 'Issue', ok: ai.cameraQuality === 'good' }
+  const objects =
+    ai.objects === 'unknown'
+      ? unknown('Objects')
+      : {
+          label: 'Objects',
+          value: ai.objects === 'none' ? 'None seen' : ai.objectsSeen.map((c) => OBJECT_NAMES[c] ?? c).join(', ') || 'Seen',
+          ok: ai.objects === 'none',
+        }
   // No gaze indicator: gaze is not used as an event signal (GAZE_AWAY is disabled).
-  return [face, count, head, camera]
+  return [face, count, head, camera, objects]
+}
+
+/** Object classes as the admin view names them. */
+export const OBJECT_NAMES: Record<string, string> = {
+  cell_phone: 'Phone',
+  book: 'Book',
+  laptop: 'Laptop/tablet',
+  remote: 'Handheld device',
 }
 
 /** "Head orientation changed (left)" — the observation plus its one factual detail. */
@@ -96,6 +116,8 @@ export function activeObservationLabel(observation: AIActiveObservation): string
   const meta = observation.metadata
   if (typeof meta.direction === 'string') return `${base} (${meta.direction})`
   if (typeof meta.face_count === 'number') return `${base} (${meta.face_count})`
+  // Objects: the model's confidence when the episode started — a measurement, not a probability of misuse.
+  if (typeof meta.confidence === 'number' && typeof meta.object_class === 'string') return `${base} (confidence ${Math.round(meta.confidence * 100)}%)`
   return base
 }
 

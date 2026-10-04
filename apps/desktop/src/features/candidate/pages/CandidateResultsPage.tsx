@@ -9,6 +9,7 @@ import {
   PageHeader,
   StatusBadge,
 } from '@/components/ui'
+import { sectionText } from '@/features/exam/resultText'
 import { formatPercentage, useMyResults } from '@/features/exam/useResults'
 import type { ResultSummary } from '@/features/exam/types'
 
@@ -67,9 +68,15 @@ function ResultRow({ result }: { result: ResultSummary }) {
             Attempt {result.attempt_number}
             {result.attempt_status === 'TIME_EXPIRED' && ' · time expired'}
             {' · '}
-            {result.correct_count} correct, {result.incorrect_count} incorrect, {result.unanswered_count}{' '}
-            unanswered
+            {result.correct_count} correct, {result.partial_count ? `${result.partial_count} partly correct, ` : ''}
+            {result.incorrect_count} incorrect, {result.unanswered_count} unanswered
           </p>
+          {result.coding_maximum !== null && (
+            <p className="text-ink-subtle mt-0.5 text-[12.5px] tabular-nums">
+              {result.mcq_maximum !== null && `Multiple choice ${sectionText(result.mcq_score, result.mcq_maximum)} · `}
+              Coding {sectionText(result.coding_score, result.coding_maximum)}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-5">

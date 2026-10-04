@@ -31,6 +31,10 @@ def test_new_assessment_has_sensible_default_settings(client, helpers, users):
         "proctoring_required": False,
         "availability_start": None,
         "availability_end": None,
+        # Coding policies: security-conscious defaults (samples only, 20 submissions per problem).
+        "coding_allow_custom_input": False,
+        "coding_allow_paste": False,
+        "coding_max_submissions": 20,
     }
 
 

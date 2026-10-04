@@ -26,6 +26,8 @@ class CallMessage(enum.StrEnum):
     ANSWER = "ANSWER"  # interviewer → candidate
     ICE = "ICE"  # either way
     MEDIA_STATE = "MEDIA_STATE"  # either way: {audio, video, screen} on/off
+    #: interviewer → candidate: video did not connect, send a fresh offer (the candidate always offers)
+    RENEGOTIATE = "RENEGOTIATE"
     CHAT = "CHAT"  # client → server {body}; server → both {message}
     CALL_ENDED = "CALL_ENDED"
     ERROR = "ERROR"

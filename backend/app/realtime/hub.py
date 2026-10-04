@@ -153,6 +153,16 @@ class MonitoringHub:
         except RuntimeError:
             log.debug("Monitoring broadcast skipped: event loop not running")
 
+    def send_to_candidate_threadsafe(self, attempt_id: UUID, message: dict[str, Any]) -> None:
+        """Send to one candidate's app from synchronous code. No-op when it is not connected."""
+        loop = self._loop
+        if loop is None or attempt_id not in self._candidates:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(self.send_to_candidate(attempt_id, message), loop)
+        except RuntimeError:
+            log.debug("Candidate push skipped: event loop not running")
+
 
 #: The process-wide hub. Imported by the WebSocket routes and the proctoring service.
 hub = MonitoringHub()

@@ -9,6 +9,7 @@ carry the answer key — no `is_correct`, no correct option, no explanation — 
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -24,6 +25,13 @@ class QuestionResult(BaseModel):
     marks: int
     marks_awarded: int
     outcome: AnswerOutcome
+    #: Coding questions only: from the best submission — tests passed of all tests (never which),
+    #: its verdict and language.
+    kind: Literal["OBJECTIVE", "CODING"] = "OBJECTIVE"
+    tests_passed: int | None = None
+    tests_total: int | None = None
+    verdict: str | None = None
+    language: str | None = None
 
 
 class ResultSummary(BaseModel):
@@ -43,6 +51,13 @@ class ResultSummary(BaseModel):
     unanswered_count: int
     evaluated_at: datetime
     submitted_at: datetime | None
+    #: Coding assessments: questions with partial marks, and the MCQ / coding section totals (None
+    #: when the attempt has no question of that kind).
+    partial_count: int | None = 0
+    mcq_score: int | None = None
+    mcq_maximum: int | None = None
+    coding_score: int | None = None
+    coding_maximum: int | None = None
 
 
 class CandidateResult(BaseModel):
@@ -72,6 +87,15 @@ class CandidateResult(BaseModel):
     unanswered_count: int | None
     evaluated_at: datetime | None
     questions: list[QuestionResult]
+    #: The exam has ended but a code submission is still being judged; the result follows shortly.
+    evaluating: bool = False
+    #: Coding assessments: questions with partial marks, and the MCQ / coding section totals (None
+    #: when the attempt has no question of that kind).
+    partial_count: int | None = 0
+    mcq_score: int | None = None
+    mcq_maximum: int | None = None
+    coding_score: int | None = None
+    coding_maximum: int | None = None
 
 
 class AdminResult(BaseModel):
@@ -99,6 +123,13 @@ class AdminResult(BaseModel):
     unanswered_count: int
     submitted_at: datetime | None
     evaluated_at: datetime
+    #: Coding assessments: questions with partial marks, and the MCQ / coding section totals (None
+    #: when the attempt has no question of that kind).
+    partial_count: int | None = 0
+    mcq_score: int | None = None
+    mcq_maximum: int | None = None
+    coding_score: int | None = None
+    coding_maximum: int | None = None
 
 
 class AssessmentResults(BaseModel):

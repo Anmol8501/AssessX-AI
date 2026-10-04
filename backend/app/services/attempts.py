@@ -26,7 +26,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import AttemptLocked, Conflict, NotFound, ValidationFailed
+from app.core.errors import AttemptLocked, AttemptOnHold, Conflict, NotFound, ValidationFailed
 from app.models.assessment import Assessment, AssessmentStatus
 from app.models.assignment import AssessmentAssignment
 from app.models.attempt import AssessmentAttempt, AttemptAnswer, AttemptStatus
@@ -308,6 +308,8 @@ class AttemptService:
             return attempt  # idempotent: the same submission, arriving twice
         if attempt.status is AttemptStatus.TIME_EXPIRED:
             raise AttemptLocked("Time ran out before this exam was submitted.")
+        if attempt.is_on_hold:
+            raise AttemptOnHold()
 
         now = utcnow()
         attempt.status = AttemptStatus.SUBMITTED
@@ -342,6 +344,8 @@ class AttemptService:
                 if attempt.status is AttemptStatus.TIME_EXPIRED
                 else "This exam has been submitted and can no longer be changed."
             )
+        if attempt.is_on_hold:
+            raise AttemptOnHold()
         return attempt
 
     def _question_of(self, attempt: AssessmentAttempt, question_id: uuid.UUID) -> Question:

@@ -42,7 +42,11 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
   const [proctoring, setProctoring] = useState(settings.proctoring_required)
   const [start, setStart] = useState(toLocalInput(settings.availability_start))
   const [end, setEnd] = useState(toLocalInput(settings.availability_end))
-  const [errors, setErrors] = useState<{ max_attempts?: string; availability_end?: string }>({})
+  const [customInput, setCustomInput] = useState(settings.coding_allow_custom_input)
+  const [allowPaste, setAllowPaste] = useState(settings.coding_allow_paste)
+  const [maxSubmissions, setMaxSubmissions] = useState(String(settings.coding_max_submissions))
+  const coding = assessment.assessment_type !== 'MCQ'
+  const [errors, setErrors] = useState<{ max_attempts?: string; availability_end?: string; coding_max_submissions?: string }>({})
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -50,6 +54,10 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
     const next: typeof errors = {}
     if (!Number.isInteger(attemptsValue) || attemptsValue < 1) next.max_attempts = 'Allow at least one attempt.'
     if (start && end && new Date(end) <= new Date(start)) next.availability_end = 'The end must be after the start.'
+    const submissionsValue = Number(maxSubmissions)
+    if (coding && (!Number.isInteger(submissionsValue) || submissionsValue < 1 || submissionsValue > 1000)) {
+      next.coding_max_submissions = 'Allow between 1 and 1000 submissions.'
+    }
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
@@ -62,6 +70,7 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
       proctoring_required: proctoring,
       availability_start: toIso(start),
       availability_end: toIso(end),
+      ...(coding ? { coding_allow_custom_input: customInput, coding_allow_paste: allowPaste, coding_max_submissions: submissionsValue } : {}),
     })
   }
 
@@ -139,6 +148,35 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
           </Note>
         </CardBody>
       </Card>
+
+      {coding && (
+        <Card>
+          <CardHeader title="Coding" description="Rules for the coding problems in this assessment. The server enforces them." />
+          <CardBody className="space-y-4">
+            <Checkbox
+              label="Allow candidates to run their code on their own input (otherwise only on the sample tests)"
+              checked={customInput}
+              onChange={(e) => setCustomInput(e.target.checked)}
+              disabled={saving || locked}
+            />
+            <Checkbox
+              label="Allow copy and paste inside the code editor"
+              checked={allowPaste}
+              onChange={(e) => setAllowPaste(e.target.checked)}
+              disabled={saving || locked}
+            />
+            <Note>
+              Copy, cut and paste stay blocked everywhere else in the exam. When this is on, each paste into the editor is
+              logged as a fact (its length, never its text) on a proctored attempt.
+            </Note>
+            <Field label="Submissions per problem" error={errors.coding_max_submissions} hint="Each submission runs against every test, hidden ones included.">
+              {({ id, describedBy, invalid }) => (
+                <Input id={id} type="number" min={1} max={1000} value={maxSubmissions} onChange={(e) => setMaxSubmissions(e.target.value)} aria-describedby={describedBy} invalid={invalid} disabled={saving || locked} />
+              )}
+            </Field>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader title="Availability" description="Optional window during which the exam may be taken." />

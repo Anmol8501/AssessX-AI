@@ -3,6 +3,7 @@ import { routes } from '@/app/routes'
 import { CheckIcon, ClockIcon, InfoIcon } from '@/components/icons'
 import { Button, Card, CardBody, ErrorState, LoadingState, StateView, StatusBadge } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { codingDetail, outcomeTone } from './resultText'
 import { OUTCOME_LABEL, type AttemptDetail, type CandidateResult, type QuestionResult } from './types'
 import { formatPercentage, useAttemptResult } from './useResults'
 
@@ -65,7 +66,13 @@ export function ExamFinished({ attempt }: { attempt: AttemptDetail }) {
           </p>
         </div>
 
-        {result.released ? <ReleasedResult result={result} /> : <WithheldResult expired={expired} />}
+        {result.evaluating ? (
+          <EvaluatingResult />
+        ) : result.released ? (
+          <ReleasedResult result={result} />
+        ) : (
+          <WithheldResult expired={expired} />
+        )}
 
         <CardBody className="border-line flex justify-center border-t">{back}</CardBody>
       </Card>
@@ -88,8 +95,11 @@ function ReleasedResult({ result }: { result: CandidateResult }) {
       </div>
 
       <CardBody className="space-y-5">
-        <dl className="grid grid-cols-3 gap-4 text-center">
+        {result.coding_maximum !== null && <Sections result={result} />}
+
+        <dl className={cn('grid gap-4 text-center', result.partial_count ? 'grid-cols-4' : 'grid-cols-3')}>
           <Count label="Correct" value={result.correct_count} className="text-ok" />
+          {result.partial_count ? <Count label="Partly correct" value={result.partial_count} className="text-warn" /> : null}
           <Count label="Incorrect" value={result.incorrect_count} className="text-danger" />
           <Count label="Unanswered" value={result.unanswered_count} className="text-ink-muted" />
         </dl>
@@ -103,6 +113,41 @@ function ReleasedResult({ result }: { result: CandidateResult }) {
         )}
       </CardBody>
     </>
+  )
+}
+
+/** The exam has ended but a code submission is still being judged. `useAttemptResult` asks again shortly. */
+function EvaluatingResult() {
+  return (
+    <CardBody>
+      <StateView
+        icon={<ClockIcon />}
+        title="Your code is being evaluated"
+        description="Your answers are saved. A submission you made is still being checked against the tests; your result appears here as soon as it is done. You can leave this screen — nothing is lost."
+      />
+    </CardBody>
+  )
+}
+
+/** Multiple-choice and coding totals, shown when the exam has coding questions. */
+function Sections({ result }: { result: CandidateResult }) {
+  return (
+    <dl className="border-line grid grid-cols-2 gap-4 rounded-md border px-4 py-3 text-center" aria-label="Score by section">
+      {result.mcq_maximum !== null && (
+        <div>
+          <dt className="text-ink-subtle text-[12px]">Multiple choice</dt>
+          <dd className="text-ink mt-0.5 text-[16px] font-semibold tabular-nums">
+            {result.mcq_score} / {result.mcq_maximum}
+          </dd>
+        </div>
+      )}
+      <div className={result.mcq_maximum === null ? 'col-span-2' : undefined}>
+        <dt className="text-ink-subtle text-[12px]">Coding</dt>
+        <dd className="text-ink mt-0.5 text-[16px] font-semibold tabular-nums">
+          {result.coding_score} / {result.coding_maximum}
+        </dd>
+      </div>
+    </dl>
   )
 }
 
@@ -127,16 +172,20 @@ function Breakdown({ questions }: { questions: QuestionResult[] }) {
       <ul className="border-line mt-2 divide-y rounded-md border">
         {questions.map((question) => (
           <li key={question.position} className="flex items-center justify-between gap-4 px-4 py-2.5">
-            <span className="text-ink text-[13.5px]">Question {question.position + 1}</span>
+            <span className="min-w-0">
+              <span className="text-ink block text-[13.5px]">
+                Question {question.position + 1}
+                {question.kind === 'CODING' && <span className="text-ink-subtle"> · coding</span>}
+              </span>
+              {codingDetail(question) && (
+                <span className="text-ink-subtle block text-[12px]">{codingDetail(question)}</span>
+              )}
+            </span>
             <span className="flex items-center gap-3">
               <span className="text-ink-subtle text-[12.5px] tabular-nums">
                 {question.marks_awarded} / {question.marks}
               </span>
-              <StatusBadge
-                tone={
-                  question.outcome === 'CORRECT' ? 'ok' : question.outcome === 'INCORRECT' ? 'danger' : 'neutral'
-                }
-              >
+              <StatusBadge tone={outcomeTone(question.outcome)}>
                 {OUTCOME_LABEL[question.outcome]}
               </StatusBadge>
             </span>

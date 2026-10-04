@@ -46,6 +46,11 @@ def validate_answer_key(question_type: QuestionType, options: list[QuestionOptio
         raise ValueError("Select at least one correct answer.")
 
 
+def _not_coding(question_type: QuestionType | None) -> None:
+    if question_type is QuestionType.CODING:
+        raise ValueError("Coding questions are added from the coding-problem library, not here.")
+
+
 class QuestionCreate(BaseModel):
     type: QuestionType
     text: QuestionText
@@ -55,6 +60,7 @@ class QuestionCreate(BaseModel):
 
     @model_validator(mode="after")
     def _check_answer_key(self) -> "QuestionCreate":
+        _not_coding(self.type)
         validate_answer_key(self.type, self.options)
         return self
 
@@ -71,6 +77,7 @@ class QuestionUpdate(BaseModel):
 
     @model_validator(mode="after")
     def _check_answer_key(self) -> "QuestionUpdate":
+        _not_coding(self.type)
         if self.options is not None and self.type is not None:
             validate_answer_key(self.type, self.options)
         return self
@@ -88,6 +95,23 @@ class QuestionOptionOut(BaseModel):
     position: int
 
 
+class CodingVersionRef(BaseModel):
+    """The coding problem version a CODING question pins (admin view)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    problem_id: uuid.UUID
+    version: int
+    title: str
+    difficulty: str
+    tags: list[str]
+    languages: list[str]
+    time_limit_ms: int
+    memory_limit_mb: int
+    partial_scoring: bool
+
+
 class QuestionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -99,5 +123,7 @@ class QuestionOut(BaseModel):
     position: int
     explanation: str | None
     options: list[QuestionOptionOut]
+    #: For CODING questions only: the pinned problem version.
+    coding_version: CodingVersionRef | None = None
     created_at: datetime
     updated_at: datetime

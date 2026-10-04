@@ -26,6 +26,19 @@ class AssessmentStatus(enum.StrEnum):
     PUBLISHED = "PUBLISHED"
 
 
+class AssessmentType(enum.StrEnum):
+    """Which kinds of question an assessment may contain. Chosen by the administrator and enforced by
+    the server whenever a question is added or the type is changed."""
+
+    #: The objective types only (MCQ, multiple-select, true/false). Every assessment that existed before
+    #: coding assessments is this type and behaves exactly as before.
+    MCQ = "MCQ"
+    #: Coding problems only.
+    CODING = "CODING"
+    #: Both, in the order the administrator sets.
+    MIXED = "MIXED"
+
+
 class QuestionNavigation(enum.StrEnum):
     """How a candidate will be allowed to move through questions.
 
@@ -56,6 +69,10 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("passing_marks >= 0", name="ck_assessments_passing_marks_non_negative"),
         CheckConstraint("passing_marks <= total_marks", name="ck_assessments_passing_within_total"),
         CheckConstraint("max_attempts > 0", name="ck_assessments_max_attempts_positive"),
+        CheckConstraint("assessment_type IN ('MCQ', 'CODING', 'MIXED')", name="ck_assessments_type"),
+        CheckConstraint(
+            "coding_max_submissions BETWEEN 1 AND 1000", name="ck_assessments_coding_max_submissions"
+        ),
         CheckConstraint(
             "availability_start IS NULL OR availability_end IS NULL OR availability_end > availability_start",
             name="ck_assessments_availability_order",
@@ -63,6 +80,13 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     title: Mapped[str] = mapped_column(String(200), nullable=False)
+    #: MCQ only, coding only, or mixed. Decides which question types the server accepts.
+    assessment_type: Mapped[AssessmentType] = mapped_column(
+        Enum(AssessmentType, name="assessment_type", native_enum=False, length=10, validate_strings=True),
+        nullable=False,
+        default=AssessmentType.MCQ,
+        server_default=AssessmentType.MCQ.value,
+    )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -111,6 +135,21 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     availability_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     availability_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # --- coding policies (coding assessments, stage C2). Security-conscious defaults; the server enforces
+    # them on every run and submission. ---
+    #: Candidates may run their code against their own input (otherwise only the sample tests).
+    coding_allow_custom_input: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    #: Copy and paste are allowed inside the code editor (stage C4). Off by default; they stay
+    #: restricted everywhere else in a proctored exam either way.
+    coding_allow_paste: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    #: Submissions allowed per coding question per attempt.
+    coding_max_submissions: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=20, server_default="20"
+    )
     #: When the assessment was published; null while it is a draft or merely ready.
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

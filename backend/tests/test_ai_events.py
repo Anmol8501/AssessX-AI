@@ -391,8 +391,8 @@ def test_ai_status_does_not_use_the_episode_lifecycle(client, db, active):
 # -- what does not exist -----------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("event_type", ["PHONE_DETECTED", "CHEATING_DETECTED", "SUSPICIOUS_BEHAVIOUR"])
-def test_there_is_no_phone_or_verdict_event(client, db, active, event_type):
+@pytest.mark.parametrize("event_type", ["CHEATING_DETECTED", "SUSPICIOUS_BEHAVIOUR", "PHONE_USE_CONFIRMED"])
+def test_there_is_no_verdict_event(client, db, active, event_type):
     post_event(
         client,
         active["headers"],
@@ -401,7 +401,71 @@ def test_there_is_no_phone_or_verdict_event(client, db, active, event_type):
         expect=422,
     )
     assert ai_rows(db, active) == []
-    assert "PHONE_DETECTED" not in ProctoringEventType.__members__
+
+
+# -- objects in view (2026-10-02) ------------------------------------------------------------------
+
+OBJECT_TYPES = {
+    "PHONE_DETECTED": "cell_phone",
+    "BOOK_DETECTED": "book",
+    "LAPTOP_DETECTED": "laptop",
+    "HANDHELD_DEVICE_DETECTED": "remote",
+}
+
+
+@pytest.mark.parametrize(("event_type", "object_class"), OBJECT_TYPES.items())
+def test_an_object_in_view_is_an_episode_with_its_measurement(client, db, active, event_type, object_class):
+    eid = new_id()
+    started = episode(
+        client,
+        active,
+        event_type,
+        "started",
+        eid,
+        detector="object_detection",
+        object_class=object_class,
+        confidence=0.72,
+        object_model="yolox_s",
+        box_area_ratio=0.012,
+    )
+    assert started["category"] == "AI_OBSERVATION"
+    episode(client, active, event_type, "resolved", eid, resolution="condition_cleared")
+    rows = [r for r in ai_rows(db, active) if r.event_type.value == event_type]
+    assert [r.details["phase"] for r in rows] == ["started", "resolved"]
+    assert rows[0].details["object_class"] == object_class and rows[0].details["object_model"] == "yolox_s"
+    assert rows[1].details["duration_ms"] >= 0  # computed by the server
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"object_class": "smartwatch"},
+        {"object_model": "yolov8"},
+        {"confidence": 1.5},
+        {"box_area_ratio": -0.1},
+        {"image": "data:image/jpeg;base64,AAAA"},
+        {"crop": "AAAA"},
+        {"verdict": "phone use"},
+    ],
+)
+def test_an_object_event_accepts_only_its_measurement(client, db, active, bad):
+    episode(
+        client,
+        active,
+        "PHONE_DETECTED",
+        "started",
+        new_id(),
+        expect=422,
+        **{"object_class": "cell_phone", **bad},
+    )
+    assert ai_rows(db, active) == []
+
+
+def test_object_events_are_not_risk_signals():
+    from app.services.risk import policy
+
+    for event_type in OBJECT_TYPES:
+        assert E(event_type) in policy.EXCLUDED
 
 
 @pytest.mark.parametrize(
@@ -523,6 +587,21 @@ def test_no_ai_events_means_everything_unknown():
     )
     assert state.gaze == "not_used"
     assert state.active == []
+
+
+def test_the_admin_state_shows_which_objects_are_in_view():
+    assert derive_ai_state([]).objects == "unknown"
+    assert derive_ai_state([RUNNING]).objects == "none"
+    state = derive_ai_state(
+        [RUNNING, _start(E.PHONE_DETECTED, "p", object_class="cell_phone"), _start(E.BOOK_DETECTED, "b")]
+    )
+    assert state.objects == "detected" and state.objects_seen == ["book", "cell_phone"]
+    assert (
+        derive_ai_state([RUNNING, _start(E.PHONE_DETECTED, "p"), _end(E.PHONE_DETECTED, "p", 5)]).objects
+        == "none"
+    )
+    impaired = _row(E.AI_STATUS, {"ai_status": "DEGRADED", "impaired": ["object_detection"]}, -50)
+    assert derive_ai_state([impaired]).objects == "unknown"
 
 
 def test_a_running_ai_with_no_open_episodes_reports_the_normal_state():

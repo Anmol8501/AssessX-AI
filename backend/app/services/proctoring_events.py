@@ -50,6 +50,7 @@ from app.models.proctoring_event import (
     ProctoringEventSource,
     ProctoringEventType,
 )
+from app.services.coding.languages import LANGUAGES
 
 log = logging.getLogger("assessx.proctoring.events")
 
@@ -104,7 +105,16 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.CAMERA_TOO_DARK: C.AI_OBSERVATION,
     E.FACE_TOO_FAR: C.AI_OBSERVATION,
     E.FACE_TOO_CLOSE: C.AI_OBSERVATION,
+    E.PHONE_DETECTED: C.AI_OBSERVATION,
+    E.BOOK_DETECTED: C.AI_OBSERVATION,
+    E.LAPTOP_DETECTED: C.AI_OBSERVATION,
+    E.HANDHELD_DEVICE_DETECTED: C.AI_OBSERVATION,
     E.AI_STATUS: C.AI_HEALTH,
+    E.CODING_QUESTION_OPENED: C.CODING,
+    E.CODE_PASTED: C.CODING,
+    E.CODE_RUN_REQUESTED: C.CODING,
+    E.CODE_SUBMITTED: C.CODING,
+    E.CODE_LANGUAGE_CHANGED: C.CODING,
 }
 
 #: AI observation types recorded as episodes (started → resolved). See the module docstring.
@@ -130,6 +140,10 @@ SERVER_ONLY = frozenset(
         E.CAMERA_RECONNECTED,
         E.MIC_DISCONNECTED,
         E.MIC_RECONNECTED,
+        # The server records these itself, from the requests it receives.
+        E.CODE_RUN_REQUESTED,
+        E.CODE_SUBMITTED,
+        E.CODE_LANGUAGE_CHANGED,
     }
 )
 
@@ -219,6 +233,11 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
         "other",
     ),
     "app_count": _int_between(0, 200),
+    "question_number": _int_between(1, 1000),
+    "length": _int_between(0, 1_000_000),
+    "language": lambda v: isinstance(v, str) and v in LANGUAGES,
+    "previous_language": lambda v: isinstance(v, str) and v in LANGUAGES,
+    "custom_input": lambda v: isinstance(v, bool),
     # AI observations (Phase 5C) — factual measurements only; no score, risk or verdict field exists
     "phase": _one_of("started", "resolved"),
     "episode_id": lambda v: isinstance(v, str) and bool(_EPISODE_ID.match(v)),
@@ -234,6 +253,10 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
     "gaze_vertical": _number_between(-1, 1),
     "mean_luminance": _number_between(0, 1),
     "face_area_ratio": _number_between(0, 1),
+    # objects in view (2026-10-02) — the class, the model's confidence, which model, the box's size
+    "object_class": _one_of("cell_phone", "book", "laptop", "remote"),
+    "object_model": _one_of("yolox_s", "yolox_tiny", "efficientdet_lite0"),
+    "box_area_ratio": _number_between(0, 1),
     # AI health (Phase 5C)
     "ai_status": _one_of("INITIALIZING", "RUNNING", "DEGRADED", "ERROR", "STOPPED"),
     "ai_reason": _one_of(
@@ -257,6 +280,8 @@ _INPUT_FIELDS = frozenset({"shortcut", "blocked", "channel"})
 #: Every AI episode row: its phase and episode, which detector, and (on resolution) why it ended and
 #: how long it lasted. `duration_ms` is always computed by the server.
 _EPISODE_FIELDS = frozenset({"phase", "episode_id", "detector", "resolution", "duration_ms"})
+#: An object episode's measurement when it started. Never an image, a crop or a description.
+_OBJECT_FIELDS = frozenset({"object_class", "confidence", "object_model", "box_area_ratio"})
 
 #: Which fields each event type accepts. A type absent here accepts none.
 _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
@@ -296,7 +321,16 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.CAMERA_TOO_DARK: _EPISODE_FIELDS | {"mean_luminance"},
     E.FACE_TOO_FAR: _EPISODE_FIELDS | {"face_area_ratio"},
     E.FACE_TOO_CLOSE: _EPISODE_FIELDS | {"face_area_ratio"},
+    E.PHONE_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
+    E.BOOK_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
+    E.LAPTOP_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
+    E.HANDHELD_DEVICE_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
     E.AI_STATUS: frozenset({"ai_status", "ai_reason", "impaired", "accelerator"}),
+    E.CODING_QUESTION_OPENED: frozenset({"question_number"}),
+    E.CODE_PASTED: frozenset({"question_number", "length"}),
+    E.CODE_RUN_REQUESTED: frozenset({"question_number", "language", "custom_input"}),
+    E.CODE_SUBMITTED: frozenset({"question_number", "language"}),
+    E.CODE_LANGUAGE_CHANGED: frozenset({"question_number", "language", "previous_language"}),
 }
 
 

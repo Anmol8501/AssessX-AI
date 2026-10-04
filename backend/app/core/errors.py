@@ -75,6 +75,20 @@ class Conflict(AppError):
     message = "That conflicts with existing data."
 
 
+class AssessmentInUse(Conflict):
+    """The assessment's questions are locked because candidates have already attempted it."""
+
+    code = "assessment_in_use"
+    message = "Candidates have already attempted this assessment, so its questions can no longer change."
+
+
+class AttemptOnHold(Conflict):
+    """The attempt is open but on hold: no answers or submission until an administrator releases it."""
+
+    code = "attempt_on_hold"
+    message = "Your exam is on hold. Please wait for the administrator."
+
+
 class AttemptLocked(Conflict):
     """The exam attempt has been submitted or has run out of time, so it can no longer change.
 
@@ -169,6 +183,34 @@ class StaleInterviewQuestion(Conflict):
 
     code = "stale_question"
     message = "That question is no longer the current one. The interview has been reloaded."
+
+
+class ExecutionInProgress(Conflict):
+    """A run or submission for this question is still queued or running."""
+
+    code = "execution_in_progress"
+    message = "Your previous run or submission is still being processed. Wait for it to finish."
+
+
+class SubmissionLimitReached(Conflict):
+    code = "submission_limit"
+    message = "You have used all the submissions allowed for this problem."
+
+
+class ExecutionRateLimited(AppError):
+    """Too many runs or submissions in a short time (per attempt)."""
+
+    status_code = 429
+    code = "execution_rate_limited"
+    message = "Too many runs in a short time. Wait a moment and try again."
+
+
+class RunnerBusy(AppError):
+    """The execution queue is full; nothing was queued."""
+
+    status_code = 503
+    code = "runner_busy"
+    message = "Code execution is busy right now. Try again in a moment."
 
 
 class EventLimitReached(AppError):

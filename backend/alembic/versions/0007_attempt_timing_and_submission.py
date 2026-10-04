@@ -27,12 +27,8 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.add_column("assessment_attempts", sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True))
-    op.add_column(
-        "assessment_attempts", sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True)
-    )
-    op.add_column(
-        "assessment_attempts", sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True)
-    )
+    op.add_column("assessment_attempts", sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column("assessment_attempts", sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True))
 
     # Backfill: the deadline each existing attempt already had by definition.
     op.execute(
