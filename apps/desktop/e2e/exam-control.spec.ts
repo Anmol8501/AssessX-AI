@@ -134,3 +134,41 @@ test('an administrator locks, unlocks and ends an exam from live monitoring', as
   await admin.context().close()
   await candidate.context().close()
 })
+
+test('a proctor sends a message that stays on the candidate’s screen until acknowledged', async ({ browser, request }) => {
+  test.setTimeout(150_000)
+  const title = unique('Message Exam')
+  const { id } = await seedExam(request, title, true)
+  const candidate = await newPage(browser, true)
+  await signIn(candidate, request, DEV_CANDIDATE)
+  await openDetails(candidate, title)
+  await candidate.getByRole('button', { name: 'Start Exam' }).click()
+  await candidate.getByRole('button', { name: 'Start Exam' }).click()
+  await expect(counter(candidate)).toHaveText('Question 1 of 2')
+  expect((await examDetail(request, id)).active_attempt_id).toBeTruthy()
+
+  const admin = await newPage(browser, false)
+  await signIn(admin, request, DEV_ADMIN)
+  await admin.getByRole('link', { name: 'Monitoring' }).click()
+  await expect(admin.getByText(title).first()).toBeVisible({ timeout: 15_000 })
+  await admin.getByText(title).first().click()
+  const panel = admin.getByLabel('Message the candidate')
+  await panel.getByRole('button', { name: 'Please put your phone away.' }).click()
+  await panel.getByRole('button', { name: 'Send message' }).click()
+  await expect(panel.getByRole('list', { name: 'Messages sent' })).toContainText('Not seen yet', { timeout: 15_000 })
+
+  const shown = candidate.getByTestId('proctor-message')
+  await expect(shown).toBeVisible({ timeout: 15_000 })
+  await expect(shown).toContainText('Message from the exam supervisor')
+  await expect(shown).toContainText('Please put your phone away.')
+  await shown.getByRole('button', { name: 'I understand' }).click()
+  await expect(shown).toBeHidden()
+  await expect(panel.getByRole('list', { name: 'Messages sent' })).toContainText('Seen at', { timeout: 20_000 })
+
+  // Acknowledged: it does not come back with the next control update (the backend suite checks the API).
+  await candidate.waitForTimeout(3000)
+  await expect(candidate.getByTestId('proctor-message')).toHaveCount(0)
+
+  await admin.context().close()
+  await candidate.context().close()
+})

@@ -144,6 +144,9 @@ export interface ScriptedScene {
   objects?: { category: string; score: number }[]
   /** Which object model the scene pretends produced them (default YOLOX-S). */
   objectModel?: 'yolox_s' | 'yolox_tiny' | 'efficientdet_lite0'
+  /** Shoulders in view (0–2; default 2) and whether the face is cut off by the frame edge. */
+  shouldersVisible?: number
+  faceCutOff?: boolean
   /** Make the face landmarker fail (head pose and gaze become unmeasurable). */
   landmarkerFails?: boolean
   /** Make inference throw from now on (the runtime enters ERROR). */
@@ -185,7 +188,7 @@ export class ScriptedMediaPipeRuntime implements AIRuntime {
     const area = scene.faceAreaRatio ?? 0.12
     const side = Math.sqrt(area)
     const faces = Array.from({ length: count }, (_, index) => ({
-      box: { x: 0.1 + index * 0.05, y: 0.2, width: side, height: side },
+      box: scene.faceCutOff && index === 0 ? { x: 0, y: 0.2, width: side, height: side } : { x: 0.1 + index * 0.05, y: 0.2, width: side, height: side },
       score: scene.faceScore ?? 0.9,
     }))
     const landmarkerStatus = count === 0 ? 'SKIPPED' : scene.landmarkerFails ? 'FAILED' : 'OK'
@@ -203,7 +206,7 @@ export class ScriptedMediaPipeRuntime implements AIRuntime {
     }
     const payload = {
       kind: 'mediapipe',
-      tasks: { faceDetector: 'OK', faceLandmarker: landmarkerStatus, objectDetector: 'OK' },
+      tasks: { faceDetector: 'OK', faceLandmarker: landmarkerStatus, objectDetector: 'OK', poseLandmarker: count === 0 ? 'SKIPPED' : 'OK' },
       objectModel: scene.objectModel ?? 'yolox_s',
       faces,
       landmarkedFaces:
@@ -216,8 +219,15 @@ export class ScriptedMediaPipeRuntime implements AIRuntime {
         box: { x: 0.55 + index * 0.05, y: 0.6, width: 0.08, height: 0.12 },
         region: 'full',
       })),
+      shoulders:
+        count === 0
+          ? null
+          : ([0, 1].map((i) => ({ x: 0.35 + i * 0.3, y: 0.78, visibility: i < (scene.shouldersVisible ?? 2) ? 0.95 : 0.1 })) as [
+              { x: number; y: number; visibility: number },
+              { x: number; y: number; visibility: number },
+            ]),
       statistics: { meanLuminance: scene.meanLuminance ?? 0.45, luminanceStdDev: 0.2 },
-      timingsMs: { statistics: 0, faceDetector: 0, faceLandmarker: 0, objectDetector: 0, total: 0 },
+      timingsMs: { statistics: 0, faceDetector: 0, faceLandmarker: 0, objectDetector: 0, poseLandmarker: 0, total: 0 },
     }
     return { frameId: frame.frameId, monotonicTs: frame.monotonicTs, payload }
   }

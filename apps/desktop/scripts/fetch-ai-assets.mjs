@@ -44,6 +44,12 @@ const MODELS = [
     sha256: '64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff',
   },
   {
+    // Framing (2026-10-05): head-to-chest in view — the shoulders' positions only.
+    file: 'pose_landmarker_lite.task',
+    url: `${MODEL_BASE}/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
+    sha256: '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a',
+  },
+  {
     file: 'efficientdet_lite0.tflite',
     url: `${MODEL_BASE}/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite`,
     sha256: '4b59100025bea1235a84c1038879a6cccc9f6c49f5e41144e91e74d99e780993',

@@ -10,18 +10,27 @@
 //! * `environment_snapshot` — window state, display count and whether this is a remote session.
 //!
 //! Two events go to the exam page while engaged: `lockdown://shortcut` (a system shortcut was
-//! swallowed — its name only) and `lockdown://window` (focus / fullscreen / minimized changed).
+//! swallowed — its name only) and `lockdown://window` (focus / fullscreen / minimized changed). When
+//! focus leaves, the snapshot says where it went (`leftTo`) and the window comes straight back to the
+//! front (`focus.rs`).
+//!
+//! Separately, `exam_close_guard` marks an exam as in progress (any exam, proctored or not): while it is,
+//! closing the window (its ✕, Alt+F4, the taskbar's "Close window") is refused and the page is told
+//! (`exam://close-blocked`) so it can ask the candidate to submit first. Ending the process from Task
+//! Manager cannot be prevented by an application; the exam then simply continues on the server.
 //!
 //! Every capability is verified after it is requested and reported as `ACTIVE` or `UNAVAILABLE`;
 //! nothing is reported on because it was merely asked for. The page reloading or navigating
 //! releases everything (`release_on_page_load`), so a crashed or reloaded exam page can never leave
 //! Windows locked.
 
+pub mod focus;
 pub mod shortcuts;
 
 #[cfg(windows)]
 mod keyboard_hook;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use serde::Serialize;
@@ -63,6 +72,8 @@ pub struct EnvironmentSnapshot {
     pub focused: bool,
     pub display_count: usize,
     pub remote_session: bool,
+    /// When not focused: where focus went — `app`, `desktop` or `system` (see `focus.rs`); else null.
+    pub left_to: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -76,6 +87,10 @@ struct ShortcutPayload {
 #[derive(Default)]
 pub struct Lockdown {
     engaged: Mutex<bool>,
+    /// An exam is in progress: closing the window is refused until it is submitted.
+    exam_active: AtomicBool,
+    /// A reclaim is already running (focus can be lost several times in quick succession).
+    reclaiming: AtomicBool,
     #[cfg(windows)]
     hook: Mutex<Option<keyboard_hook::KeyboardHook>>,
 }
@@ -87,13 +102,31 @@ impl Lockdown {
 }
 
 fn snapshot<R: Runtime>(window: &Window<R>) -> EnvironmentSnapshot {
+    let focused = window.is_focused().unwrap_or(false);
     EnvironmentSnapshot {
         fullscreen: window.is_fullscreen().unwrap_or(false),
         minimized: window.is_minimized().unwrap_or(false),
-        focused: window.is_focused().unwrap_or(false),
+        focused,
         display_count: window.available_monitors().map(|m| m.len()).unwrap_or(0),
         remote_session: system::is_remote_session(),
+        left_to: if focused { None } else { left_to() },
     }
+}
+
+#[cfg(windows)]
+fn left_to() -> Option<&'static str> {
+    focus::native::current_target().map(|t| t.as_str())
+}
+
+#[cfg(not(windows))]
+fn left_to() -> Option<&'static str> {
+    None
+}
+
+/// Marks an exam as in progress (`active`) or finished. While active, the window cannot be closed.
+#[tauri::command]
+pub fn exam_close_guard(active: bool, state: tauri::State<'_, Lockdown>) {
+    state.exam_active.store(active, Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -197,20 +230,64 @@ pub fn release<R: Runtime>(window: Window<R>, state: &Lockdown) {
     }
 }
 
-/// Window changes the exam page needs to see while the lockdown is engaged.
+/// Window changes the exam page needs to see while the lockdown is engaged, the close guard, and the
+/// return to the exam window after it lost focus.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &tauri::WindowEvent) {
     let Some(state) = window.try_state::<Lockdown>() else { return };
+    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        if state.exam_active.load(Ordering::SeqCst) || state.is_engaged() {
+            api.prevent_close();
+            let _ = window.emit("exam://close-blocked", ());
+        }
+        return;
+    }
     if !state.is_engaged() {
         return;
     }
     if matches!(event, tauri::WindowEvent::Focused(_) | tauri::WindowEvent::Resized(_)) {
-        let _ = window.emit("lockdown://window", snapshot(window));
+        let current = snapshot(window);
+        let lost = !current.focused;
+        let _ = window.emit("lockdown://window", current);
+        if lost {
+            reclaim_focus(window);
+        }
     }
 }
 
-/// Any page load drops the lockdown: the exam page re-engages it if an exam is really running.
+/// Brings the exam window back to the front after it lost focus: a few bounded attempts, stopping as
+/// soon as it is in front again or the lockdown is released. One reclaim at a time.
+#[cfg(windows)]
+fn reclaim_focus<R: Runtime>(window: &Window<R>) {
+    let Some(state) = window.try_state::<Lockdown>() else { return };
+    if state.reclaiming.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let hwnd = window.hwnd().map(|h| h.0 as isize).unwrap_or(0);
+    let handle = window.app_handle().clone();
+    std::thread::spawn(move || {
+        for attempt in 0..8 {
+            // Let the shell finish its own animation (Task View, a desktop switch) before stepping in.
+            std::thread::sleep(std::time::Duration::from_millis(if attempt == 0 { 120 } else { 200 }));
+            let engaged = handle.try_state::<Lockdown>().map(|s| s.is_engaged()).unwrap_or(false);
+            if !engaged || hwnd == 0 || focus::native::is_foreground(hwnd) {
+                break;
+            }
+            focus::native::reclaim(hwnd);
+        }
+        if let Some(state) = handle.try_state::<Lockdown>() {
+            state.reclaiming.store(false, Ordering::SeqCst);
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn reclaim_focus<R: Runtime>(_window: &Window<R>) {}
+
+/// Any page load drops the lockdown and the close guard: the exam page re-engages both if an exam is
+/// really running.
 pub fn release_on_page_load<R: Runtime>(window: &Window<R>) {
     if let Some(state) = window.try_state::<Lockdown>() {
+        state.exam_active.store(false, Ordering::SeqCst);
         release(window.clone(), &state);
     }
 }

@@ -14,9 +14,10 @@ those are Phase 3C (`docs/PHASE-3-PLAN.md`).
 
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.api.deps import CandidateUser, DbSession
+from app.api.paging import PageDep
 from app.models.attempt import AssessmentAttempt, AttemptAnswer
 from app.models.base import utcnow
 from app.schemas.assignment import MyAssessment
@@ -168,6 +169,18 @@ def attempt_session(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) -
     return _session(AttemptService(db).get_attempt(user, attempt_id))
 
 
+@router.post("/attempts/{attempt_id}/messages/{message_id}/acknowledge", response_model=AttemptControl)
+def acknowledge_message(
+    attempt_id: uuid.UUID, message_id: uuid.UUID, user: CandidateUser, db: DbSession
+) -> AttemptControl:
+    """The candidate read a proctor's message ("I understand"). Only their own attempt's messages; a
+    message of anyone else's attempt is not found. Allowed after the exam ends too (harmless)."""
+    from app.services.attempt_control import AttemptControlService
+
+    attempt = AttemptService(db).get_attempt(user, attempt_id)
+    return AttemptControl.of(AttemptControlService(db).acknowledge_message(attempt, message_id))
+
+
 @router.post("/attempts/{attempt_id}/submit", response_model=AttemptDetail)
 def submit_attempt(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) -> AttemptDetail:
     """Finalizes the attempt. The candidate's answers stop being editable from here.
@@ -263,7 +276,7 @@ def attempt_result(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) ->
 
 
 @router.get("/results", response_model=list[ResultSummary])
-def my_results(user: CandidateUser, db: DbSession) -> list[ResultSummary]:
+def my_results(user: CandidateUser, db: DbSession, page: PageDep, response: Response) -> list[ResultSummary]:
     """The signed-in candidate's results, newest first.
 
     Only assessments configured to show results appear here; the rest are evaluated and stored,
@@ -291,8 +304,9 @@ def my_results(user: CandidateUser, db: DbSession) -> list[ResultSummary]:
             coding_score=result.coding_score,
             coding_maximum=result.coding_maximum,
         )
-        for result in ResultService(db).list_for_candidate(user)
-        if result.assessment.show_results
+        for result in page.finish(
+            ResultService(db).list_for_candidate(user, page, released_only=True), response
+        )
     ]
 
 

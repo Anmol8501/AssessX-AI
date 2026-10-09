@@ -13,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Response, status
 from sqlalchemy import select
 
 from app.api.deps import AppSettings, CandidateUser, DbSession
+from app.api.paging import PageDep
 from app.models.interview import Interview, InterviewSession
 from app.models.interview_call import CallStatus, InterviewCall
 from app.schemas.interview import (
@@ -122,9 +123,9 @@ def _open_calls(db, user, interview_ids: list[uuid.UUID]) -> dict[uuid.UUID, uui
 
 
 @router.get("/interviews", response_model=list[MyInterview])
-def my_interviews(user: CandidateUser, db: DbSession) -> list[MyInterview]:
+def my_interviews(user: CandidateUser, db: DbSession, page: PageDep, response: Response) -> list[MyInterview]:
     """The candidate's assigned, published interviews."""
-    rows = InterviewSessionService(db).my_interviews(user)
+    rows = page.finish(InterviewSessionService(db).my_interviews(user, page), response)
     calls = _open_calls(db, user, [i.id for i, _ in rows])
     return [MyInterview(**_summary(i, s, calls.get(i.id))) for i, s in rows]
 

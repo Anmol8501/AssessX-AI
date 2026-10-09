@@ -67,7 +67,15 @@ def interview_report(
     interview_id: uuid.UUID, session_id: uuid.UUID, admin: AdminUser, db: DbSession
 ) -> InterviewReportOut:
     """The full report: completion, the AI-generated summary and topic analysis, every question with its
-    answer and AI evaluation, the adaptive timeline, and the human review with its history."""
+    answer and AI evaluation, the adaptive timeline, and the human review with its history.
+    Bounded per administrator per hour (CX-12)."""
+    from app.core.config import get_settings
+    from app.services.rate_limit import enforce_hourly
+
+    settings = get_settings()
+    enforce_hourly(
+        db, settings, "report_view", admin.id, settings.report_downloads_per_hour, "download_rate_limited"
+    )
     report = _report(db, interview_id, session_id)
     access.info(
         "Interview report read",

@@ -9,7 +9,7 @@
  * returned). Models are loaded once per worker and reused for every frame. Nothing is stored,
  * written or sent anywhere else.
  */
-import { FaceDetector, FaceLandmarker, ObjectDetector } from '@mediapipe/tasks-vision'
+import { FaceDetector, FaceLandmarker, ObjectDetector, PoseLandmarker } from '@mediapipe/tasks-vision'
 import type { RunningObjectModel } from '../objectDetection/models'
 import { regionsFor } from '../objectDetection/tiling'
 import type { YoloxBackend } from '../objectDetection/yoloxBackend'
@@ -24,6 +24,7 @@ import {
   type MediaPipePayload,
   type NormalizedBox,
   type ObjectBackendReport,
+  type PosePoint,
   type TaskName,
   type TaskStatus,
   type WorkerLoadConfig,
@@ -42,6 +43,8 @@ const STATISTICS_WIDTH = 64
 
 let faceDetector: FaceDetector | null = null
 let faceLandmarker: FaceLandmarker | null = null
+/** Framing: whether the head and upper body (to the chest) are in view — shoulders only. */
+let poseLandmarker: PoseLandmarker | null = null
 let objectDetector: ObjectDetector | null = null
 /** The YOLOX object model (default); exactly one of this or `objectDetector` is used. */
 let yolox: YoloxBackend | null = null
@@ -98,6 +101,7 @@ async function load(config: WorkerLoadConfig): Promise<WorkerResponse> {
     faceDetector: 'UNAVAILABLE',
     faceLandmarker: 'UNAVAILABLE',
     objectDetector: 'UNAVAILABLE',
+    poseLandmarker: 'UNAVAILABLE',
   }
   const accelerators: Accelerator[] = []
   const errors: string[] = []
@@ -137,6 +141,25 @@ async function load(config: WorkerLoadConfig): Promise<WorkerResponse> {
     tasks.faceLandmarker = 'READY'
   } catch (error) {
     errors.push(`faceLandmarker: ${errorText(error)}`)
+  }
+
+  try {
+    const created = await createTask(
+      (delegate) =>
+        PoseLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: config.models.poseLandmarker, delegate },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          outputSegmentationMasks: false,
+        }),
+      config.preferGpu,
+      config.wasmLoaderPath,
+    )
+    poseLandmarker = created.task
+    accelerators.push(created.accelerator)
+    tasks.poseLandmarker = 'READY'
+  } catch (error) {
+    errors.push(`poseLandmarker: ${errorText(error)}`)
   }
 
   // Object detection: YOLOX (ONNX Runtime; default — YOLOX-S on WebGPU, else YOLOX-Tiny) or, for
@@ -239,8 +262,9 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
     faceDetector: faceDetector ? 'OK' : 'UNAVAILABLE',
     faceLandmarker: faceLandmarker ? 'OK' : 'UNAVAILABLE',
     objectDetector: objectDetector || yolox ? 'OK' : 'UNAVAILABLE',
+    poseLandmarker: poseLandmarker ? 'OK' : 'UNAVAILABLE',
   }
-  const timingsMs = { statistics: 0, faceDetector: 0, faceLandmarker: 0, objectDetector: 0, total: 0 }
+  const timingsMs = { statistics: 0, faceDetector: 0, faceLandmarker: 0, objectDetector: 0, poseLandmarker: 0, total: 0 }
   const started = performance.now()
 
   let mark = performance.now()
@@ -297,6 +321,29 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
     }
   }
 
+  // Framing: the shoulders of the first person, when there is a face to frame.
+  let shoulders: [PosePoint, PosePoint] | null = null
+  if (poseLandmarker) {
+    if (tasks.faceDetector === 'OK' && faces !== null && faces.length === 0) {
+      tasks.poseLandmarker = 'SKIPPED' // nobody to frame; "no face" is already reported
+    } else {
+      mark = performance.now()
+      try {
+        const result = poseLandmarker.detectForVideo(bitmap, timestamp)
+        const pose = result.landmarks[0]
+        const point = (index: number): PosePoint => {
+          const p = pose?.[index]
+          return { x: p?.x ?? -1, y: p?.y ?? -1, visibility: p?.visibility ?? 0 }
+        }
+        // MediaPipe pose indices 11 and 12: left and right shoulder. No pose = both invisible.
+        shoulders = [point(11), point(12)]
+      } catch {
+        tasks.poseLandmarker = 'FAILED'
+      }
+      timingsMs.poseLandmarker = performance.now() - mark
+    }
+  }
+
   let objects: DetectedObject[] | null = null
   const regions = regionsFor(objectFrameIndex++, yolox ? yolox.provider : 'mediapipe')
   if ((objectDetector || yolox) && regions.length === 0) {
@@ -328,17 +375,19 @@ async function infer(bitmap: ImageBitmap, timestampMs: number): Promise<MediaPip
   }
 
   timingsMs.total = performance.now() - started
-  return { kind: 'mediapipe', tasks, objectModel, faces, landmarkedFaces, objects, statistics: frameStats, timingsMs }
+  return { kind: 'mediapipe', tasks, objectModel, faces, landmarkedFaces, objects, shoulders, statistics: frameStats, timingsMs }
 }
 
 function dispose() {
   faceDetector?.close()
   faceLandmarker?.close()
+  poseLandmarker?.close()
   objectDetector?.close()
   void yolox?.release()
   yolox = null
   faceDetector = null
   faceLandmarker = null
+  poseLandmarker = null
   objectDetector = null
   statisticsCanvas = null
 }

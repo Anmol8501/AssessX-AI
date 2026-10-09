@@ -22,6 +22,9 @@ export interface AIStatusReport {
     | 'stopped'
   impaired: string[]
   accelerator?: 'CPU' | 'GPU'
+  /** Which runtime produces the readings, and whether it is the production one (Phase 8B, BX-06). */
+  runtime_kind?: 'mediapipe' | 'mock'
+  production_capable?: boolean
 }
 
 export function aiStatusOf(view: AIPipelineView): AIStatusReport {
@@ -31,11 +34,13 @@ export function aiStatusOf(view: AIPipelineView): AIStatusReport {
     .map((detector) => DETECTOR_NAMES[detector.id])
     .filter((name): name is string => name !== undefined)
   const accelerator = telemetry.runtime?.accelerator ?? undefined
+  const runtime = telemetry.runtime
   const report = (ai_status: AIStatusReport['ai_status'], ai_reason: AIStatusReport['ai_reason']): AIStatusReport => ({
     ai_status,
     ai_reason,
     impaired: ai_status === 'DEGRADED' || ai_status === 'ERROR' ? impaired : [],
     ...(accelerator ? { accelerator } : {}),
+    ...(runtime ? { runtime_kind: runtime.kind === 'mediapipe' ? 'mediapipe' : 'mock', production_capable: runtime.productionCapable } : {}),
   })
 
   switch (health.state) {

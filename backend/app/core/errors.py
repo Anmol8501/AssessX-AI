@@ -221,6 +221,92 @@ class EventLimitReached(AppError):
     message = "No further proctoring events can be recorded for this session."
 
 
+class TooManyAttempts(AppError):
+    """Sign-in (or a reset code) attempted too often (Phase 8A). The same answer whether or not the
+    account exists, so it cannot be used to discover accounts."""
+
+    status_code = 429
+    code = "too_many_attempts"
+    message = "Too many attempts. Please wait a few minutes and try again."
+
+    def __init__(self, retry_after_seconds: int) -> None:
+        minutes = max(1, -(-retry_after_seconds // 60))
+        super().__init__(
+            f"Too many attempts. Please wait {minutes} minute{'s' if minutes != 1 else ''} and try again."
+        )
+        self.headers = {"Retry-After": str(max(1, retry_after_seconds))}
+
+
+class ServerBusy(AppError):
+    status_code = 503
+    code = "server_busy"
+    message = "The server is busy. Please try again in a moment."
+
+
+class AttemptInUseElsewhere(Conflict):
+    """An exam in progress is open in another sign-in session (Phase 8A, AX-07)."""
+
+    code = "attempt_in_use_elsewhere"
+    message = (
+        "This exam is open on another device or sign-in. Close it there, or wait two minutes and try again."
+    )
+
+
+class RateLimited(AppError):
+    """An authenticated action repeated faster than allowed (downloads, evidence views)."""
+
+    status_code = 429
+    code = "rate_limited"
+    message = "Too many requests. Please wait a while and try again."
+
+
+class EvidenceNotReady(Conflict):
+    """The clip has no video to show (still being captured, or the capture failed)."""
+
+    code = "evidence_not_ready"
+    message = "This evidence clip has no video available."
+
+
+class EvidenceUnavailable(AppError):
+    """The clip's video was deleted (retention or an administrator). Its metadata remains."""
+
+    status_code = 410
+    code = "evidence_unavailable"
+    message = "This evidence clip's video has been deleted."
+
+
+class EvidenceIntegrityFailed(Conflict):
+    """The stored video no longer matches the hash taken when it was stored."""
+
+    code = "evidence_integrity_failed"
+    message = "This evidence clip failed its integrity check and cannot be shown."
+
+
+class EvidenceUploadClosed(Conflict):
+    """The clip is not waiting for an upload (already stored, failed, or past its deadline)."""
+
+    code = "evidence_upload_closed"
+    message = "This evidence clip is not accepting an upload."
+
+
+class EvidenceTooLarge(AppError):
+    status_code = 413
+    code = "evidence_too_large"
+    message = "The evidence clip is larger than allowed."
+
+
+class EvidenceUnsupported(AppError):
+    status_code = 415
+    code = "evidence_unsupported_media"
+    message = "Evidence clips must be WebM video."
+
+
+class EvidenceStorageUnavailable(AppError):
+    status_code = 503
+    code = "evidence_storage_unavailable"
+    message = "Evidence storage is unavailable. Please try again shortly."
+
+
 class DatabaseUnavailable(AppError):
     status_code = 503
     code = "database_unavailable"
@@ -231,6 +317,15 @@ class ChallengeInvalid(AppError):
     status_code = 400
     code = "challenge_invalid"
     message = "The security check did not match. Please try the new code."
+
+
+class CurrentPasswordIncorrect(AppError):
+    """A signed-in user mistyped their current password while changing it. Deliberately not 401: the
+    session is fine, and clients treat 401 as "signed out"."""
+
+    status_code = 400
+    code = "current_password_incorrect"
+    message = "The current password is not correct."
 
 
 def _payload(code: str, message: str, details: Any = None) -> dict[str, Any]:

@@ -268,6 +268,7 @@ describe('runtime selection', () => {
       'mediapipe.gaze',
       'object-detection',
       'frame-quality',
+      'framing',
     ])
     expect(detectors.some((d) => d instanceof MockDetector)).toBe(false)
   })

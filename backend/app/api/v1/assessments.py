@@ -1,10 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.api.deps import AdminUser, DbSession
+from app.api.paging import PageDep
 from app.models.assessment import Assessment
 from app.models.assignment import AssessmentAssignment
+from app.models.audit_log import AuditAction
+from app.models.user import User
+from app.repositories.audit import AuditRepository
 from app.schemas.assessment import (
     AssessmentCreate,
     AssessmentDetail,
@@ -24,6 +28,19 @@ from app.services.results import ResultService
 # Admin-only for the whole router: authoring is never available to a candidate. Candidate-facing
 # assessment views arrive in Phase 2C with their own shape (no answer keys).
 router = APIRouter(prefix="/assessments", tags=["assessments"])
+
+
+def _audit(
+    db: DbSession, admin: User, action: AuditAction, assessment_id: uuid.UUID, **details: object
+) -> None:
+    """Phase 8A (AX-08): who changed which exam, and what kind of change — field names and flags
+    only, never question text or the answer key."""
+    AuditRepository(db).record(
+        actor_id=admin.id,
+        action=action,
+        assessment_id=assessment_id,
+        details={k: v for k, v in details.items()},
+    )
 
 
 def _summary(assessment: Assessment) -> AssessmentSummary:
@@ -69,13 +86,19 @@ def _detail(assessment: Assessment) -> AssessmentDetail:
 
 
 @router.get("", response_model=list[AssessmentSummary])
-def list_assessments(_: AdminUser, db: DbSession) -> list[AssessmentSummary]:
-    return [_summary(assessment) for assessment in AssessmentService(db).list_assessments()]
+def list_assessments(
+    _: AdminUser, db: DbSession, page: PageDep, response: Response
+) -> list[AssessmentSummary]:
+    """Newest first, one page (`limit`/`offset`; `X-Next-Offset` when there is more)."""
+    rows = page.finish(AssessmentService(db).list_assessments(page), response)
+    return [_summary(assessment) for assessment in rows]
 
 
 @router.post("", response_model=AssessmentDetail, status_code=status.HTTP_201_CREATED)
 def create_assessment(payload: AssessmentCreate, admin: AdminUser, db: DbSession) -> AssessmentDetail:
-    return _detail(AssessmentService(db).create(payload, author=admin))
+    assessment = AssessmentService(db).create(payload, author=admin)
+    _audit(db, admin, AuditAction.ASSESSMENT_CREATED, assessment.id)
+    return _detail(assessment)
 
 
 @router.get("/{assessment_id}", response_model=AssessmentDetail)
@@ -85,35 +108,44 @@ def get_assessment(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> Ass
 
 @router.patch("/{assessment_id}", response_model=AssessmentDetail)
 def update_assessment(
-    assessment_id: uuid.UUID, payload: AssessmentUpdate, _: AdminUser, db: DbSession
+    assessment_id: uuid.UUID, payload: AssessmentUpdate, admin: AdminUser, db: DbSession
 ) -> AssessmentDetail:
-    return _detail(AssessmentService(db).update(assessment_id, payload))
+    updated = AssessmentService(db).update(assessment_id, payload)
+    _audit(db, admin, AuditAction.ASSESSMENT_UPDATED, assessment_id, fields=sorted(payload.model_fields_set))
+    return _detail(updated)
 
 
 @router.delete("/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_assessment(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> None:
+def delete_assessment(assessment_id: uuid.UUID, admin: AdminUser, db: DbSession) -> None:
     AssessmentService(db).delete(assessment_id)
+    _audit(db, admin, AuditAction.ASSESSMENT_DELETED, assessment_id)
 
 
 @router.post("/{assessment_id}/ready", response_model=AssessmentDetail)
-def mark_ready(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> AssessmentDetail:
+def mark_ready(assessment_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AssessmentDetail:
     """DRAFT -> READY. Rejected with the outstanding issues while the assessment is incomplete."""
-    return _detail(AssessmentService(db).mark_ready(assessment_id))
+    ready = AssessmentService(db).mark_ready(assessment_id)
+    _audit(db, admin, AuditAction.ASSESSMENT_MARKED_READY, assessment_id)
+    return _detail(ready)
 
 
 @router.post("/{assessment_id}/publish", response_model=AssessmentDetail)
-def publish(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> AssessmentDetail:
+def publish(assessment_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AssessmentDetail:
     """READY -> PUBLISHED. Readiness is re-checked here, so a stale UI cannot publish a broken exam."""
     service = AssessmentService(db)
     assessment = service.mark_ready(assessment_id)  # revalidates and is a no-op when already READY
-    return _detail(AssignmentService(db).publish(assessment))
+    published = AssignmentService(db).publish(assessment)
+    _audit(db, admin, AuditAction.ASSESSMENT_PUBLISHED, assessment_id)
+    return _detail(published)
 
 
 @router.post("/{assessment_id}/unpublish", response_model=AssessmentDetail)
-def unpublish(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> AssessmentDetail:
+def unpublish(assessment_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AssessmentDetail:
     """PUBLISHED -> DRAFT, refused while candidates are assigned."""
     assessment = AssessmentService(db).get(assessment_id, with_questions=True)
-    return _detail(AssignmentService(db).unpublish(assessment))
+    unpublished = AssignmentService(db).unpublish(assessment)
+    _audit(db, admin, AuditAction.ASSESSMENT_UNPUBLISHED, assessment_id)
+    return _detail(unpublished)
 
 
 @router.get("/{assessment_id}/assignments", response_model=list[AssignmentOut])
@@ -131,15 +163,24 @@ def assign_candidates(
     """Assigns a published assessment. Candidates already holding it are reported, not duplicated."""
     assessment = AssessmentService(db).get(assessment_id)
     created, already = AssignmentService(db).assign(assessment, payload.candidate_ids, assigned_by=admin)
+    if created:
+        _audit(
+            db,
+            admin,
+            AuditAction.CANDIDATE_ASSIGNED,
+            assessment_id,
+            candidate_ids=[str(a.candidate_id) for a in created],
+        )
     return AssignmentResult(assigned=[_assignment(a) for a in created], already_assigned=already)
 
 
 @router.delete("/{assessment_id}/assignments/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
 def unassign_candidate(
-    assessment_id: uuid.UUID, candidate_id: uuid.UUID, _: AdminUser, db: DbSession
+    assessment_id: uuid.UUID, candidate_id: uuid.UUID, admin: AdminUser, db: DbSession
 ) -> None:
     AssessmentService(db).get(assessment_id)
     AssignmentService(db).unassign(assessment_id, candidate_id)
+    _audit(db, admin, AuditAction.CANDIDATE_UNASSIGNED, assessment_id, candidate_id=str(candidate_id))
 
 
 @router.get("/{assessment_id}/results", response_model=AssessmentResults)
@@ -191,9 +232,11 @@ def assessment_results(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) ->
 
 
 @router.post("/{assessment_id}/draft", response_model=AssessmentDetail)
-def revert_to_draft(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> AssessmentDetail:
+def revert_to_draft(assessment_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AssessmentDetail:
     """READY -> DRAFT so the assessment can be edited again."""
-    return _detail(AssessmentService(db).revert_to_draft(assessment_id))
+    reverted = AssessmentService(db).revert_to_draft(assessment_id)
+    _audit(db, admin, AuditAction.ASSESSMENT_REVERTED_TO_DRAFT, assessment_id)
+    return _detail(reverted)
 
 
 # -- questions -------------------------------------------------------------------------------
@@ -206,9 +249,11 @@ def list_questions(assessment_id: uuid.UUID, _: AdminUser, db: DbSession) -> lis
 
 @router.post("/{assessment_id}/questions", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
 def create_question(
-    assessment_id: uuid.UUID, payload: QuestionCreate, _: AdminUser, db: DbSession
+    assessment_id: uuid.UUID, payload: QuestionCreate, admin: AdminUser, db: DbSession
 ) -> QuestionOut:
-    return QuestionOut.model_validate(AssessmentService(db).add_question(assessment_id, payload))
+    question = AssessmentService(db).add_question(assessment_id, payload)
+    _audit(db, admin, AuditAction.QUESTION_CREATED, assessment_id, question_id=str(question.id))
+    return QuestionOut.model_validate(question)
 
 
 @router.get("/{assessment_id}/coding-analytics", response_model=CodingAnalytics)
@@ -278,14 +323,29 @@ def update_question(
     assessment_id: uuid.UUID,
     question_id: uuid.UUID,
     payload: QuestionUpdate,
-    _: AdminUser,
+    admin: AdminUser,
     db: DbSession,
 ) -> QuestionOut:
-    return QuestionOut.model_validate(
-        AssessmentService(db).update_question(assessment_id, question_id, payload)
+    service = AssessmentService(db)
+    before = {o.id: o.is_correct for o in service.get_question(assessment_id, question_id).options}
+    question = service.update_question(assessment_id, question_id, payload)
+    after = {o.id: o.is_correct for o in question.options}
+    _audit(
+        db,
+        admin,
+        AuditAction.QUESTION_UPDATED,
+        assessment_id,
+        question_id=str(question_id),
+        fields=sorted(payload.model_fields_set),
+        # Whether the correct answer changed — never which option is correct.
+        answer_key_changed=before != after,
     )
+    return QuestionOut.model_validate(question)
 
 
 @router.delete("/{assessment_id}/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_question(assessment_id: uuid.UUID, question_id: uuid.UUID, _: AdminUser, db: DbSession) -> None:
+def delete_question(
+    assessment_id: uuid.UUID, question_id: uuid.UUID, admin: AdminUser, db: DbSession
+) -> None:
     AssessmentService(db).delete_question(assessment_id, question_id)
+    _audit(db, admin, AuditAction.QUESTION_DELETED, assessment_id, question_id=str(question_id))

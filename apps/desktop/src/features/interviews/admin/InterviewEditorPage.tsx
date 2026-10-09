@@ -4,7 +4,7 @@ import { routes } from '@/app/routes'
 import { ArrowLeftIcon, InfoIcon } from '@/components/icons'
 import { Button, ButtonLink, Card, CardBody, CardHeader, Checkbox, ConfirmDialog, EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '@/components/ui'
 import type { CandidateSummary } from '@/features/assessments/types'
-import { useApi } from '@/features/session'
+import { fetchAllPages } from '@/features/session'
 import { completionLabel, interviewStatusLabel, sessionStatusLabel } from '../labels'
 import { formatElapsed } from '../call/callLogic'
 import type { CallSummary } from '../call/types'
@@ -171,7 +171,6 @@ export function InterviewEditorPage() {
 }
 
 function AssignmentsPanel({ interview }: { interview: InterviewDetail }) {
-  const api = useApi()
   const navigate = useNavigate()
   const actions = useInterviewActions()
   const live = interview.format === 'LIVE'
@@ -183,13 +182,13 @@ function AssignmentsPanel({ interview }: { interview: InterviewDetail }) {
 
   const load = useCallback(
     () =>
-      Promise.all([actions.assignments(interview.id), api<CandidateSummary[]>('/api/v1/candidates')])
+      Promise.all([actions.assignments(interview.id), fetchAllPages<CandidateSummary>('/api/v1/candidates')])
         .then(([assigned, people]) => {
           setRows(assigned)
           setCandidates(people)
         })
         .catch((err: unknown) => setError(describeError(err, 'Could not load assignments.'))),
-    [actions, api, interview.id],
+    [actions, interview.id],
   )
   useEffect(() => {
     void load()

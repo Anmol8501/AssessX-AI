@@ -22,11 +22,23 @@ function apiCspGuard(): Plugin {
     apply: 'build',
     configResolved(config) {
       const raw = loadEnv(config.mode, config.root, 'VITE_').VITE_API_BASE_URL?.trim()
-      if (!raw) return // the app falls back to the local development API
+      // Phase 8B (BX-11): a production build must name its API, over HTTPS. Without this it used to fall
+      // back silently to http://127.0.0.1:8000 and ship an installer that talks to nothing (or to
+      // whatever listens on the candidate's own machine). A deliberate local build (benchmarks) can opt
+      // out with ASSESSX_ALLOW_INSECURE_API=1.
+      const insecureAllowed = process.env.ASSESSX_ALLOW_INSECURE_API === '1'
+      if (config.mode === 'production' && !insecureAllowed) {
+        if (!raw) throw new Error('VITE_API_BASE_URL must be set for a production build (see .env.production.example).')
+        if (!raw.startsWith('https://')) throw new Error(`VITE_API_BASE_URL must use https:// in a production build (got ${raw}).`)
+      }
+      if (!raw) return // a development or opted-in build uses the local development API
       const api = new URL(raw)
       const wsScheme = api.protocol === 'https:' ? 'wss:' : 'ws:'
       const required = [`${api.protocol}//${api.host}`, `${wsScheme}//${api.host}`]
-      const tauri = JSON.parse(readFileSync(new URL('./src-tauri/tauri.conf.json', import.meta.url), 'utf8')) as {
+      // A release is checked against the release policy; a development build against the development
+      // policy (src-tauri/tauri.dev.conf.json), which alone allows the local API.
+      const confFile = config.mode === 'production' ? './src-tauri/tauri.conf.json' : './src-tauri/tauri.dev.conf.json'
+      const tauri = JSON.parse(readFileSync(new URL(confFile, import.meta.url), 'utf8')) as {
         app?: { security?: { csp?: string } }
       }
       const connectSrc = (tauri.app?.security?.csp ?? '')

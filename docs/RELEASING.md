@@ -45,14 +45,18 @@ The version the app is running is shown at the bottom of the sidebar (e.g. `v0.1
    It produces, in `src-tauri/target/release/bundle/nsis/`:
    * `AssessX_<version>_x64-setup.exe`: the installer;
    * `AssessX_<version>_x64-setup.exe.sig`: its signature;
-   * `latest.json`: what installed apps read, holding the version, notes, signature and download URL.
+   * `latest.json`: what installed apps read, holding the version, notes, signature and download URL;
+   * `SHA256SUMS.txt`: the SHA-256 of the installer and `latest.json`, for people who download by hand.
 3. **Create the GitHub Release** at https://github.com/Anmol8501/AssessX-AI/releases/new:
    tag `v<version>` (exactly; `latest.json` points to that tag), target `main`, upload the
-   `.exe` **and** `latest.json`, and publish it as the **latest** release (not a pre-release).
+   `.exe`, `latest.json` **and** `SHA256SUMS.txt`, and publish it as the **latest** release (not a pre-release).
 4. **Update the website's download link** (`apps/web/.env.production` → `VITE_ASSESSX_DOWNLOAD_URL`)
    to the new installer's URL, so new users download the current version.
 
 Installed apps pick the update up the next time they open.
+
+Security procedures for the release key (backup, rollover) and the repository settings that protect
+`main` and the release tags: `docs/security/REPOSITORY-AND-RELEASE-SECURITY.md`.
 
 A plain `npm run tauri:build` still works without the key. It builds an unsigned installer for local
 testing, which is fine to install by hand but cannot be delivered as an in-app update.

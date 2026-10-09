@@ -1,0 +1,158 @@
+# Continuous integration (Phase 8B, BX-08).
+#
+# Runs on every pull request and on pushes to main. It only builds and tests: there is no deploy, no
+# release, and no repository secret is used. Pull requests from forks run with a read-only token and
+# no secrets. Every third-party action is pinned to a full commit SHA (the tag is in the comment).
+# To update one, resolve the new tag with `git ls-remote https://github.com/<owner>/<action> refs/tags/<tag>`
+# and replace both.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          # A throwaway database that lives only for this job: not a secret.
+          POSTGRES_USER: assessx
+          POSTGRES_PASSWORD: ci-only-throwaway
+          POSTGRES_DB: assessx_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U assessx" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://assessx:ci-only-throwaway@localhost:5432/assessx_test
+      TEST_DATABASE_URL: postgresql+psycopg://assessx:ci-only-throwaway@localhost:5432/assessx_test
+      SECRET_KEY: ci-only-not-a-secret-0123456789abcdefghijklmnop
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+      - name: Install the locked runtime dependencies (hash-checked)
+        run: pip install --require-hashes -r requirements.lock
+      - name: Install the test tools
+        run: grep -v '^-r' requirements-dev.txt > /tmp/dev-tools.txt && pip install -r /tmp/dev-tools.txt
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Tests
+        run: pytest -q
+      - name: Known vulnerabilities in the locked dependencies
+        run: pip-audit -r requirements.lock --require-hashes --disable-pip --no-deps --progress-spinner off
+
+  desktop:
+    name: desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+      - name: Type check
+        run: npx tsc -b
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Production build + bundle check (no test hooks, local API or secrets)
+        env:
+          # The public API address the release builds use (not a secret).
+          VITE_API_BASE_URL: https://assessx-backend-0nw6.onrender.com
+        run: npm run build
+      - name: Known vulnerabilities (high and above)
+        run: npm audit --audit-level=high
+
+  desktop-rust:
+    name: desktop-rust
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Placeholder frontend (the Tauri context embeds ../dist at compile time)
+        shell: bash
+        run: mkdir -p ../dist && echo '<!doctype html><title>ci</title>' > ../dist/index.html
+      - name: Tests (includes the kiosk script-injection tests)
+        run: cargo test --locked
+      - name: Known vulnerabilities (RustSec)
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - name: Known vulnerabilities (high and above)
+        run: npm audit --audit-level=high
+
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan the history for committed secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"

@@ -16,7 +16,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assessx}   # development only — never reuse in production
       POSTGRES_DB: ${POSTGRES_DB:-assessx}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      # Loopback only (Phase 8B, BX-16): the development database, with its default password, is not
+      # reachable from the rest of the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - assessx-postgres-data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
@@ -42,7 +44,7 @@ services:
       CORS_ORIGINS: http://localhost:1420,http://tauri.localhost,https://tauri.localhost
       LOG_FORMAT: console
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
 
 volumes:
   assessx-postgres-data:

@@ -49,3 +49,33 @@ logs/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Phase 8B: never commit signing keys, certificates with private keys, or database backups.
+*.key
+*.pem
+*.p12
+*.pfx
+*.dump
+*.dump.gpg
+*.dump.gpg.sha256
+assessx-backups/
+
+# Evidence clips stored locally in development (camera video): never commit.
+backend/var/
+*.webm
+*.mp4
+*.mkv
+
+# Phase 8 final: SSH keys, credential stores and local secret files.
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.keystore
+*.jks
+.env.*
+!.env.example
+!.env.*.example
+# Tracked on purpose: public, non-secret build settings only.
+!apps/desktop/.env.development
+!apps/web/.env.production
+secrets/

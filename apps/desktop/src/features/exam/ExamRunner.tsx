@@ -8,6 +8,7 @@ import { questionLabels } from '@/features/coding/candidate/codingLogic'
 import type { CodingProgress, CodingStatus } from '@/features/coding/types'
 import { isAnswered } from '@/features/exam/answered'
 import { QuestionNavigator } from '@/features/exam/QuestionNavigator'
+import { useCloseGuard } from '@/features/exam/useCloseGuard'
 import { useApi } from '@/features/session'
 import { QuestionView } from '@/features/exam/QuestionView'
 import { useAnswers, useSubmitExam } from '@/features/exam/useExam'
@@ -33,6 +34,8 @@ interface ExamRunnerProps {
 export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRunnerProps) {
   const [index, setIndex] = useState(0)
   const [confirmingSubmit, setConfirmingSubmit] = useState(false)
+  // AssessX cannot be closed while this exam is open: a refused close asks the candidate to submit first.
+  const closeGuard = useCloseGuard()
 
   const clock = useExamClock(attempt)
   const { submit, busy: submitting, error: submitError } = useSubmitExam()
@@ -112,8 +115,8 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
       </header>
 
       {question.type === 'CODING' ? (
-        <div className="flex min-h-0 w-full flex-1 flex-col gap-3 px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
+        <div className="flex min-h-0 w-full flex-1 flex-col gap-3 p-3">
+          <div className="bg-card border-line flex min-h-12 shrink-0 items-center justify-between gap-6 rounded-lg border px-4 py-2">
             <QuestionNavigator
               questions={questions}
               answers={answers}
@@ -143,47 +146,49 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
           </div>
         </div>
       ) : (
-      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 gap-6 px-8 py-7">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 gap-4 px-6 py-5">
         <main className="flex min-w-0 flex-1 flex-col">
-          <Card className="flex min-h-0 flex-1 flex-col px-7 py-6">
-            <QuestionView
-              question={question}
-              index={index}
-              total={questions.length}
-              answer={answer}
-              saveState={saveState}
-              onSelect={(selected) => setSelection(question.id, selected)}
-              onRetry={() => retry(question.id)}
-            />
+          <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <QuestionView
+                question={question}
+                index={index}
+                total={questions.length}
+                answer={answer}
+                saveState={saveState}
+                onSelect={(selected) => setSelection(question.id, selected)}
+                onRetry={() => retry(question.id)}
+              />
+            </div>
+
+            {submitError && (
+              <p className="text-danger border-line border-t px-8 py-2.5 text-[13px]" role="alert">
+                {submitError}
+              </p>
+            )}
+
+            <div className="border-line flex shrink-0 items-center justify-between border-t px-8 py-4">
+              <Button
+                variant="secondary"
+                onClick={() => setIndex((i) => i - 1)}
+                disabled={index === 0 || !canJump}
+                leadingIcon={<ArrowLeftIcon />}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={() => setIndex((i) => i + 1)}
+                disabled={index === questions.length - 1}
+                trailingIcon={<ArrowRightIcon />}
+              >
+                Next
+              </Button>
+            </div>
           </Card>
-
-          {submitError && (
-            <p className="text-danger mt-3 text-[13px]" role="alert">
-              {submitError}
-            </p>
-          )}
-
-          <div className="mt-4 flex items-center justify-between">
-            <Button
-              variant="secondary"
-              onClick={() => setIndex((i) => i - 1)}
-              disabled={index === 0 || !canJump}
-              leadingIcon={<ArrowLeftIcon />}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() => setIndex((i) => i + 1)}
-              disabled={index === questions.length - 1}
-              trailingIcon={<ArrowRightIcon />}
-            >
-              Next
-            </Button>
-          </div>
         </main>
 
-        <aside className="w-60 shrink-0">
-          <Card className="px-5 py-5">
+        <aside className="flex w-64 shrink-0 flex-col">
+          <Card className="flex-1 overflow-y-auto px-5 py-5">
             <QuestionNavigator
               questions={questions}
               answers={answers}
@@ -197,6 +202,19 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
         </aside>
       </div>
       )}
+
+      <ConfirmDialog
+        open={closeGuard.blocked && !confirmingSubmit}
+        title="Submit your exam before closing"
+        description="AssessX can't be closed while your exam is in progress. Submit the exam first; your answers are saved."
+        confirmLabel="Submit Exam"
+        cancelLabel="Continue Exam"
+        onConfirm={() => {
+          closeGuard.dismiss()
+          setConfirmingSubmit(true)
+        }}
+        onCancel={closeGuard.dismiss}
+      />
 
       <ConfirmDialog
         open={confirmingSubmit}

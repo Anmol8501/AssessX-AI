@@ -8,6 +8,8 @@ import { ExamRules } from './environment/ExamControl'
 import { DEVICE_LABEL, type LocalDeviceStatus } from './devices'
 import { useAudioLevel } from './useAudioLevel'
 import type { MediaDevice } from './useMediaDevice'
+import type { RecordingPolicy } from '@/features/assessments/types'
+import { recordingNotice } from './evidence/notice'
 
 export type SessionCheck =
   | { status: 'ready'; detail: string }
@@ -16,6 +18,8 @@ export type SessionCheck =
 
 interface ProctoringCheckProps {
   examTitle: string
+  /** The server's evidence-clip policy, so the candidate is told exactly what is recorded (FR-017). */
+  recording?: RecordingPolicy
   camera: MediaDevice
   microphone: MediaDevice
   session: SessionCheck
@@ -30,11 +34,12 @@ interface ProctoringCheckProps {
  * The proctoring readiness check (Phase 4A), shown before a proctored exam is entered.
  *
  * It checks exactly two things on this device — that the camera and the microphone can be opened
- * — and says so. It does not look for a face, listen for voices or judge the room; nothing here
- * is analysed, recorded or uploaded. The exam cannot be entered until both devices are ready,
- * and the server refuses to activate the session otherwise.
+ * — and says so. It does not look for a face, listen for voices or judge the room; nothing on this
+ * screen is analysed, recorded or uploaded. It also tells the candidate, from the server's policy,
+ * whether short evidence clips may be recorded during the exam (FR-017). The exam cannot be entered
+ * until both devices are ready, and the server refuses to activate the session otherwise.
  */
-export function ProctoringCheck({ examTitle, camera, microphone, session, resuming, busy, onContinue, onBack }: ProctoringCheckProps) {
+export function ProctoringCheck({ examTitle, recording, camera, microphone, session, resuming, busy, onContinue, onBack }: ProctoringCheckProps) {
   const level = useAudioLevel(microphone.stream)
   const devicesReady = camera.status === 'READY' && microphone.status === 'READY'
   const canContinue = devicesReady && session.status !== 'working' && !busy
@@ -79,9 +84,7 @@ export function ProctoringCheck({ examTitle, camera, microphone, session, resumi
 
           <p className="text-ink-subtle mt-4 flex items-start gap-2 text-[12.5px]">
             <InfoIcon className="mt-0.5 shrink-0 text-[14px]" />
-            Nothing from your camera or microphone is recorded or uploaded. An exam supervisor may view your camera live
-            during the exam, and AssessX records events such as leaving the exam window — never video or audio. Both
-            stay on while you take the exam and are switched off when it ends.
+            {recordingNotice(recording)}
           </p>
 
           <div className="mt-6 flex items-center justify-between gap-3">

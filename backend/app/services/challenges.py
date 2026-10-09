@@ -5,7 +5,6 @@ import random
 import secrets
 import uuid
 from datetime import timedelta
-from html import escape
 
 from sqlalchemy.orm import Session
 
@@ -26,8 +25,73 @@ def answer_hash(answer: str) -> str:
     return hashlib.sha256(answer.strip().upper().encode()).hexdigest()
 
 
+#: A small stroke font on a 4 × 6 grid (x right, y down): each glyph is a list of polylines. Drawn as
+#: SVG paths — the characters never appear as text in the markup (Phase 8A, AX-01), so reading the code
+#: needs image recognition rather than an HTML parser.
+_GLYPHS: dict[str, list[list[tuple[float, float]]]] = {
+    "A": [[(0, 6), (2, 0), (4, 6)], [(1, 3.6), (3, 3.6)]],
+    "B": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 4), (3, 3), (0, 3)], [(0, 0), (3, 0), (4, 1), (4, 2), (3, 3)]],
+    "C": [[(4, 1), (3, 0), (1, 0), (0, 1), (0, 5), (1, 6), (3, 6), (4, 5)]],
+    "D": [[(0, 0), (0, 6), (2.5, 6), (4, 4.5), (4, 1.5), (2.5, 0), (0, 0)]],
+    "E": [[(4, 0), (0, 0), (0, 6), (4, 6)], [(0, 3), (3, 3)]],
+    "F": [[(4, 0), (0, 0), (0, 6)], [(0, 3), (3, 3)]],
+    "G": [[(4, 1), (3, 0), (1, 0), (0, 1), (0, 5), (1, 6), (3, 6), (4, 5), (4, 3.5), (2.5, 3.5)]],
+    "H": [[(0, 0), (0, 6)], [(4, 0), (4, 6)], [(0, 3), (4, 3)]],
+    "J": [[(1, 0), (4, 0)], [(3, 0), (3, 5), (2, 6), (1, 6), (0, 5)]],
+    "K": [[(0, 0), (0, 6)], [(4, 0), (0, 3.5)], [(1.4, 2.6), (4, 6)]],
+    "L": [[(0, 0), (0, 6), (4, 6)]],
+    "M": [[(0, 6), (0, 0), (2, 3.2), (4, 0), (4, 6)]],
+    "N": [[(0, 6), (0, 0), (4, 6), (4, 0)]],
+    "P": [[(0, 6), (0, 0), (3, 0), (4, 1), (4, 2.5), (3, 3.5), (0, 3.5)]],
+    "Q": [[(1, 0), (3, 0), (4, 1), (4, 5), (3, 6), (1, 6), (0, 5), (0, 1), (1, 0)], [(2.5, 4.5), (4.2, 6.4)]],
+    "R": [[(0, 6), (0, 0), (3, 0), (4, 1), (4, 2.5), (3, 3.5), (0, 3.5)], [(2, 3.5), (4, 6)]],
+    "S": [[(4, 1), (3, 0), (1, 0), (0, 1), (0, 2), (1, 3), (3, 3), (4, 4), (4, 5), (3, 6), (1, 6), (0, 5)]],
+    "T": [[(0, 0), (4, 0)], [(2, 0), (2, 6)]],
+    "U": [[(0, 0), (0, 5), (1, 6), (3, 6), (4, 5), (4, 0)]],
+    "V": [[(0, 0), (2, 6), (4, 0)]],
+    "W": [[(0, 0), (1, 6), (2, 2.5), (3, 6), (4, 0)]],
+    "X": [[(0, 0), (4, 6)], [(4, 0), (0, 6)]],
+    "Y": [[(0, 0), (2, 3), (4, 0)], [(2, 3), (2, 6)]],
+    "Z": [[(0, 0), (4, 0), (0, 6), (4, 6)]],
+    "2": [[(0, 1), (1, 0), (3, 0), (4, 1), (4, 2), (0, 6), (4, 6)]],
+    "3": [
+        [(0, 1), (1, 0), (3, 0), (4, 1), (4, 2), (3, 3), (1.5, 3)],
+        [(3, 3), (4, 4), (4, 5), (3, 6), (1, 6), (0, 5)],
+    ],
+    "4": [[(3, 6), (3, 0), (0, 4), (4, 4)]],
+    "5": [[(4, 0), (0, 0), (0, 3), (3, 3), (4, 4), (4, 5), (3, 6), (1, 6), (0, 5)]],
+    "6": [[(3.5, 0), (1, 0), (0, 1.5), (0, 5), (1, 6), (3, 6), (4, 5), (4, 4), (3, 3), (0, 3)]],
+    "7": [[(0, 0), (4, 0), (1.5, 6)]],
+    "8": [
+        [(1, 3), (0, 2), (0, 1), (1, 0), (3, 0), (4, 1), (4, 2), (3, 3), (1, 3)],
+        [(1, 3), (0, 4), (0, 5), (1, 6), (3, 6), (4, 5), (4, 4), (3, 3)],
+    ],
+    "9": [[(4, 3), (1, 3), (0, 2), (0, 1), (1, 0), (3, 0), (4, 1), (4, 4.5), (3, 6), (0.5, 6)]],
+}
+assert set(_GLYPHS) == set(ALPHABET), "every challenge character needs a glyph"
+
+
+def _glyph_path(char: str, cx: float, cy: float, scale: float, angle: float) -> str:
+    """One character as an SVG path: each point jittered, the glyph rotated about its centre."""
+    import math
+
+    cos, sin = math.cos(angle), math.sin(angle)
+    parts = []
+    for stroke in _GLYPHS[char]:
+        points = []
+        for gx, gy in stroke:
+            x = (gx - 2 + _rng.uniform(-0.18, 0.18)) * scale
+            y = (gy - 3 + _rng.uniform(-0.18, 0.18)) * scale
+            points.append(f"{cx + x * cos - y * sin:.1f} {cy + x * sin + y * cos:.1f}")
+        parts.append("M" + " L".join(points))
+    return " ".join(parts)
+
+
 def render_svg(text: str) -> str:
-    """Draws the code as SVG: grid background, noise curves, per-glyph rotation and jitter."""
+    """Draws the code as SVG: grid background, noise curves, and each character as a jittered, rotated
+    stroke path — never as `<text>`, so the answer cannot be read from the markup."""
+    import math
+
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" '
         f'viewBox="0 0 {WIDTH} {HEIGHT}">',
@@ -46,15 +110,13 @@ def render_svg(text: str) -> str:
     cell = WIDTH / (len(text) + 1)
     for i, char in enumerate(text):
         x = cell * (i + 1)
-        y = HEIGHT / 2 + _rng.uniform(-4, 4)
-        rot = _rng.uniform(-15, 15)
-        size = 22 + _rng.randint(0, 4)
+        y = HEIGHT / 2 + _rng.uniform(-3, 3)
+        angle = math.radians(_rng.uniform(-14, 14))
+        scale = 3.4 + _rng.uniform(0, 0.5)
         color = "#1d4ed8" if i % 2 else "#111827"
         parts.append(
-            f'<text x="{x:.1f}" y="{y:.1f}" font-family="Inter Variable, Segoe UI, system-ui, sans-serif" '
-            f'font-weight="600" font-size="{size}" fill="{color}" text-anchor="middle" '
-            f'dominant-baseline="middle" '
-            f'transform="rotate({rot:.1f} {x:.1f} {y:.1f})">{escape(char)}</text>'
+            f'<path d="{_glyph_path(char, x, y, scale, angle)}" fill="none" stroke="{color}" '
+            'stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>'
         )
     parts.append("</svg>")
     return "".join(parts)

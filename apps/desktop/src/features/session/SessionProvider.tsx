@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { SessionContext, type SessionContextValue } from './SessionContext'
+import { clearExamLocalData } from '@/lib/localData'
 import { tokenStorage } from './tokenStorage'
 import type { AuthClient, Credentials, SessionState } from './types'
 
@@ -21,9 +22,11 @@ export function SessionProvider({ client, children }: SessionProviderProps) {
     let cancelled = false
     client
       .restore()
-      .then((user) => {
+      .then((signed) => {
         if (cancelled) return
-        setState(user ? { status: 'authenticated', user } : { status: 'anonymous' })
+        if (!signed) setState({ status: 'anonymous' })
+        else if (signed.mfa === 'none') setState({ status: 'authenticated', user: signed.user })
+        else setState({ status: 'second-factor', user: signed.user, mfa: signed.mfa })
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'anonymous' })
@@ -37,26 +40,38 @@ export function SessionProvider({ client, children }: SessionProviderProps) {
 
   const signIn = useCallback(
     async (credentials: Credentials) => {
-      const user = await client.signIn(credentials)
-      setState({ status: 'authenticated', user })
-      return user
+      const signed = await client.signIn(credentials)
+      setState(
+        signed.mfa === 'none'
+          ? { status: 'authenticated', user: signed.user }
+          : { status: 'second-factor', user: signed.user, mfa: signed.mfa },
+      )
+      return signed
     },
     [client],
   )
 
   const signOut = useCallback(async () => {
     await client.signOut()
+    // A deliberate sign-out: nothing of this user's exams stays on the machine (Phase 8B, BX-12).
+    clearExamLocalData()
     setState({ status: 'anonymous', reason: 'signed-out' })
   }, [client])
 
   const expire = useCallback(() => {
     tokenStorage.clear()
-    setState((current) => (current.status === 'authenticated' ? { status: 'anonymous', reason: 'expired' } : current))
+    setState((current) =>
+      current.status === 'authenticated' || current.status === 'second-factor' ? { status: 'anonymous', reason: 'expired' } : current,
+    )
+  }, [])
+
+  const completeSecondFactor = useCallback(() => {
+    setState((current) => (current.status === 'second-factor' ? { status: 'authenticated', user: current.user } : current))
   }, [])
 
   const value = useMemo<SessionContextValue>(
-    () => ({ state, challenge, signIn, signOut, expire }),
-    [state, challenge, signIn, signOut, expire],
+    () => ({ state, challenge, signIn, signOut, expire, completeSecondFactor }),
+    [state, challenge, signIn, signOut, expire, completeSecondFactor],
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

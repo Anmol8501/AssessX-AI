@@ -1,0 +1,12 @@
+# gitleaks allow-list (Phase 8B, BX-08). Each entry is one reviewed finding, never a pattern.
+# All 8 are test fixtures in backend/tests: demo-account passwords for throwaway test users, and
+# a dummy sk-ant-test-... key used with a fake transport. Reviewed 2026-10-06. Add an entry only
+# after confirming the value is not a real credential; a real leak must be rotated, not ignored.
+d7bb50477de4c689c8af950477ce1fe04ae37ced:backend/tests/test_coding_drafts.py:generic-api-key:63
+d7bb50477de4c689c8af950477ce1fe04ae37ced:backend/tests/test_code_execution.py:generic-api-key:336
+86b5362d5f872a2a7e23a6044cadfbdb584ee043:backend/tests/test_interview_calls.py:generic-api-key:141
+86b5362d5f872a2a7e23a6044cadfbdb584ee043:backend/tests/test_interview_calls.py:generic-api-key:286
+86b5362d5f872a2a7e23a6044cadfbdb584ee043:backend/tests/test_interview_evaluation.py:generic-api-key:262
+bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_monitoring.py:generic-api-key:200
+bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_proctoring.py:generic-api-key:79
+c977827f4a584bb13520be13cd72184fa6901973:backend/tests/test_attempts.py:generic-api-key:278

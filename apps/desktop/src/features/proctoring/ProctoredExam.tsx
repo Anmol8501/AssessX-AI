@@ -10,7 +10,7 @@ import { toServerState } from './devices'
 import { DeviceReadiness } from './environment/DeviceReadiness'
 import { CODING_OPENED_EVENT } from '@/features/coding/candidate/CodingWorkspace'
 import { EnvironmentNotices } from './environment/EnvironmentNotices'
-import { AIWarnings, HoldOverlay, TabSwitchWarningDialog } from './environment/ExamControl'
+import { AIWarnings, HoldOverlay, ProctorMessageDialog, TabSwitchWarningDialog } from './environment/ExamControl'
 import { useAIWarnings } from './environment/useAIWarnings'
 import { useAttemptControl } from './environment/useAttemptControl'
 import { useDeviceReadiness, type ReadinessEvent } from './environment/useDeviceReadiness'
@@ -21,6 +21,8 @@ import { ProctoringCheck, type SessionCheck } from './ProctoringCheck'
 import { ProctoringStatus } from './ProctoringStatus'
 import { useMediaDevice, type MediaDevice } from './useMediaDevice'
 import { useProctoringApi, type DeviceReport } from './useProctoringApi'
+import { supportedMimeType } from './evidence/rollingRecorder'
+import { useEvidenceClips } from './evidence/useEvidenceClips'
 
 interface ProctoredExamProps {
   exam: ExamDetail
@@ -91,7 +93,9 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
         setEntered(true)
         return
       }
-      const session = await activate(current.id, report)
+      // The server asks for evidence clips only from an app that says it can record them.
+      const recording = current.proctoring?.recording ?? exam.recording
+      const session = await activate(current.id, { ...report, evidence_recorder: Boolean(recording?.enabled && supportedMimeType()) })
       lastReported.current = reportKey
       onAttempt({ ...current, proctoring: session })
       setEntered(true)
@@ -148,6 +152,7 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
     return (
       <ProctoringCheck
         examTitle={exam.title}
+        recording={attempt?.proctoring?.recording ?? exam.recording}
         camera={camera}
         microphone={microphone}
         session={session}
@@ -200,7 +205,10 @@ function EnforcedExam({
   onStale(): void
   children: ReactNode
 }) {
-  const report = useEventReporter(attempt.id)
+  // Evidence clips (FR-017): a rolling buffer on the exam's camera; a clip only for a qualifying event
+  // the server accepted. Video only, bounded, and stopped with the exam.
+  const evidenceHooks = useEvidenceClips(attempt.id, camera.stream, attempt.proctoring?.recording)
+  const report = useEventReporter(attempt.id, evidenceHooks)
   const { notices, fullscreenRequired, returnToFullscreen } = useEnvironmentEnforcement(report, undefined, {
     editorClipboard: attempt.coding_allow_paste,
   })
@@ -214,7 +222,8 @@ function EnforcedExam({
   const aiWarnings = useAIWarnings(report)
   const ai = useAIPipeline(attempt.id, camera, aiWarnings.report)
   // Exam rules: the server counts tab switches and may put the exam on hold (locked).
-  const { control, warning, dismissWarning } = useAttemptControl(attempt.id, attempt.control)
+  const { control, warning, dismissWarning, acknowledge } = useAttemptControl(attempt.id, attempt.control)
+  const message = control.messages?.[0] ?? null
 
   // Coding activity: opening a problem is a fact on the timeline (runs and submissions are recorded by
   // the server itself).
@@ -255,6 +264,7 @@ function EnforcedExam({
       {!control.on_hold && <AIWarnings conditions={aiWarnings.conditions} />}
       {warning && !control.on_hold && !fullscreenRequired && <TabSwitchWarningDialog warning={warning} onClose={dismissWarning} />}
       {control.on_hold && <HoldOverlay control={control} />}
+      {message && !control.on_hold && <ProctorMessageDialog message={message} onAcknowledge={() => void acknowledge(message)} />}
     </>
   )
 }

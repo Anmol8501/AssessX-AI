@@ -10,6 +10,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  LoadMore,
   PageHeader,
   StatusBadge,
 } from '@/components/ui'
@@ -19,7 +20,7 @@ import { describeError, useAssessmentActions, useAssessmentList } from '../useAs
 /** Admin assessment list. Publishing and assignment are Phase 2B/2C. */
 export function AssessmentsPage() {
   const navigate = useNavigate()
-  const { state, reload } = useAssessmentList()
+  const { state, reload, hasMore, loadMore, loadingMore } = useAssessmentList()
   const { deleteAssessment } = useAssessmentActions()
   const [pendingDelete, setPendingDelete] = useState<AssessmentSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -113,6 +114,7 @@ export function AssessmentsPage() {
                 </Card>
               </li>
             ))}
+            <LoadMore hasMore={hasMore} loading={loadingMore} onClick={() => void loadMore()} />
           </ul>
         ))}
 

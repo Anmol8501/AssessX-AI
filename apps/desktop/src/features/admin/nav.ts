@@ -1,6 +1,6 @@
 import { routes } from '@/app/routes'
 import type { NavItem } from '@/components/shell/AppShell'
-import { AssessmentsIcon, CandidatesIcon, CodeIcon, DashboardIcon, MonitoringIcon, ResultsIcon, ReviewIcon, SettingsIcon, InterviewIcon } from '@/components/icons'
+import { AssessmentsIcon, CandidatesIcon, CodeIcon, DashboardIcon, MonitoringIcon, ResultsIcon, ReviewIcon, SettingsIcon, InterviewIcon, ShieldIcon } from '@/components/icons'
 
 export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Dashboard', to: routes.admin.dashboard, icon: DashboardIcon, end: true },
@@ -11,5 +11,6 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Results', to: routes.admin.results, icon: ResultsIcon },
   { label: 'Reviews', to: routes.admin.reviews, icon: ReviewIcon },
   { label: 'Interviews', to: routes.admin.interviews, icon: InterviewIcon },
+  { label: 'Security', to: routes.admin.security, icon: ShieldIcon },
   { label: 'Settings', to: routes.admin.settings, icon: SettingsIcon },
 ]

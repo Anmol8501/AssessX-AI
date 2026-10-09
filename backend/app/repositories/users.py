@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.paging import Page
 from app.models.user import User, UserRole
 
 
@@ -19,10 +20,12 @@ class UserRepository:
     def get_by_roll_number(self, roll_number: str) -> User | None:
         return self.db.scalar(select(User).where(func.lower(User.roll_number) == roll_number.lower()))
 
-    def list(self, *, role: UserRole | None = None) -> list[User]:
-        query = select(User).order_by(User.created_at)
+    def list(self, *, role: UserRole | None = None, page: "Page | None" = None) -> list[User]:
+        query = select(User).order_by(User.created_at, User.id)
         if role is not None:
             query = query.where(User.role == role)
+        if page is not None:
+            query = page.apply(query)
         return list(self.db.scalars(query))
 
     def add(self, user: User) -> User:

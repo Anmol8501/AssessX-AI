@@ -42,6 +42,15 @@ from app.services.proctoring import ProctoringService
 log = logging.getLogger("assessx.attempts")
 
 
+def session_id_of(user: User) -> uuid.UUID | None:
+    """The sign-in session behind this request (set by `get_current_user`); None outside a request."""
+    return getattr(user, "_assessx_session_id", None)
+
+
+#: How often the owning session's "last seen" is written back (avoids a write on every request).
+_SEEN_INTERVAL = timedelta(seconds=15)
+
+
 class AttemptService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -66,6 +75,7 @@ class AttemptService:
             # An attempt whose time ran out while the app was closed is finished here, not resumed.
             self.settle(existing)
             if existing.is_active:
+                self.claim(existing, candidate)
                 return existing, False
 
         self._check_startable(assessment)
@@ -84,6 +94,9 @@ class AttemptService:
             status=AttemptStatus.IN_PROGRESS,
             started_at=started_at,
             expires_at=started_at + timedelta(minutes=assessment.duration_minutes),
+            # The sign-in that started the exam owns it (Phase 8A, AX-07).
+            auth_session_id=session_id_of(candidate),
+            bound_seen_at=started_at if session_id_of(candidate) else None,
         )
         try:
             # A savepoint, so that losing the race leaves the surrounding transaction usable.
@@ -205,7 +218,9 @@ class AttemptService:
         attempt = self.attempts.get_for_candidate(attempt_id, candidate.id)
         if attempt is None:
             raise NotFound("Attempt not found.")
-        return self.settle(attempt)
+        self.settle(attempt)
+        self.claim(attempt, candidate)
+        return attempt
 
     def get_attempt_for_update(self, candidate: User, attempt_id: uuid.UUID) -> AssessmentAttempt:
         """The candidate's own attempt, locked `FOR UPDATE` and with the clock applied.
@@ -216,7 +231,89 @@ class AttemptService:
         attempt = self.attempts.get_for_candidate_locked(attempt_id, candidate.id)
         if attempt is None:
             raise NotFound("Attempt not found.")
-        return self.settle(attempt)
+        self.settle(attempt)
+        self.claim(attempt, candidate)
+        return attempt
+
+    # -- one exam, one sign-in (Phase 8A, AX-07) --------------------------------------------------------
+
+    def claim(self, attempt: AssessmentAttempt, candidate: User) -> None:
+        """An exam in progress is used by one sign-in session at a time.
+
+        * No owner yet, or the same session: this session owns it; "last seen" is refreshed.
+        * Owned by another session that is still valid and was seen within `EXAM_TAKEOVER_AFTER_SECONDS`:
+          refused (`attempt_in_use_elsewhere`) — the exam is open somewhere else right now. Audited at
+          most once a minute per attempt.
+        * Owned by a session that has ended, expired, or gone silent for that long (a crashed laptop, a
+          lost network): this session takes it over. Audited.
+
+        Only an attempt in progress is guarded; a finished one can be read (its result) from anywhere.
+        Requests without a session (internal calls) are not affected.
+        """
+        session_id = session_id_of(candidate)
+        if session_id is None or attempt.status is not AttemptStatus.IN_PROGRESS:
+            return
+        now = utcnow()
+        if attempt.auth_session_id in (None, session_id):
+            attempt.auth_session_id = session_id
+            if attempt.bound_seen_at is None or now - attempt.bound_seen_at >= _SEEN_INTERVAL:
+                attempt.bound_seen_at = now
+            return
+        from sqlalchemy import select
+
+        from app.core.config import get_settings
+        from app.core.errors import AttemptInUseElsewhere
+        from app.models.audit_log import AuditAction, AuditLog
+        from app.models.auth_session import AuthSession
+        from app.repositories.audit import AuditRepository
+
+        owner = self.db.get(AuthSession, attempt.auth_session_id)
+        window = timedelta(seconds=get_settings().exam_takeover_after_seconds)
+        owner_active = (
+            owner is not None
+            and owner.is_valid(now)
+            and attempt.bound_seen_at is not None
+            and now - attempt.bound_seen_at < window
+        )
+        audit = AuditRepository(self.db)
+        if owner_active:
+            recently = self.db.scalar(
+                select(AuditLog.id)
+                .where(
+                    AuditLog.attempt_id == attempt.id,
+                    AuditLog.action == AuditAction.ATTEMPT_ACCESS_BLOCKED,
+                    AuditLog.occurred_at > now - timedelta(minutes=1),
+                )
+                .limit(1)
+            )
+            if recently is None:
+                audit.record(
+                    actor_id=candidate.id,
+                    action=AuditAction.ATTEMPT_ACCESS_BLOCKED,
+                    attempt_id=attempt.id,
+                    assessment_id=attempt.assessment_id,
+                    details={"reason": "open_in_another_session"},
+                )
+                log.warning("Attempt opened from a second session", extra={"attempt_id": str(attempt.id)})
+            raise AttemptInUseElsewhere()
+        attempt.auth_session_id = session_id
+        attempt.bound_seen_at = now
+        audit.record(
+            actor_id=candidate.id,
+            action=AuditAction.ATTEMPT_SESSION_TAKEN_OVER,
+            attempt_id=attempt.id,
+            assessment_id=attempt.assessment_id,
+            details={"previous_session": "ended" if owner is None or not owner.is_valid(now) else "silent"},
+        )
+        from app.services import security_events
+
+        security_events.record(
+            "exam_takeover",
+            actor_id=candidate.id,
+            target_type="attempt",
+            target_id=attempt.id,
+            details={"previous_session": "ended" if owner is None or not owner.is_valid(now) else "silent"},
+        )
 
     def questions_for(self, attempt: AssessmentAttempt) -> list[Question]:
         """The attempt's questions in their authored order (`position`).
@@ -233,13 +330,15 @@ class AttemptService:
     def active_attempt_ids(self, candidate: User) -> dict[uuid.UUID, uuid.UUID]:
         return self.attempts.active_attempt_ids_by_assessment(candidate.id)
 
-    def latest_attempts(self, candidate: User) -> dict[uuid.UUID, AssessmentAttempt]:
+    def latest_attempts(
+        self, candidate: User, assessment_ids: list[uuid.UUID] | None = None
+    ) -> dict[uuid.UUID, AssessmentAttempt]:
         """`{assessment_id: newest attempt}`, each settled.
 
         Opening My Exams is an interaction, so it is also a moment at which an attempt that ran
         out gets finished — the candidate cannot dodge expiry by never opening the exam screen.
         """
-        latest = self.attempts.latest_by_assessment(candidate.id)
+        latest = self.attempts.latest_by_assessment(candidate.id, assessment_ids)
         for attempt in latest.values():
             self.settle(attempt)
         return latest
@@ -303,6 +402,7 @@ class AttemptService:
             raise NotFound("Attempt not found.")
 
         self.settle(attempt)
+        self.claim(attempt, candidate)
 
         if attempt.status is AttemptStatus.SUBMITTED:
             return attempt  # idempotent: the same submission, arriving twice

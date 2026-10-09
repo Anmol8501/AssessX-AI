@@ -52,7 +52,11 @@ const browserReadiness: ReadinessBridge = {
 export function readinessBridge(): ReadinessBridge {
   // A test seam: the end-to-end suite installs a scriptable bridge on `window`, since a browser
   // cannot inspect real applications. It is never present in the packaged app.
-  const injected = (globalThis as { __assessxReadiness?: ReadinessBridge }).__assessxReadiness
+  // Development and test builds only (Phase 8B, BX-06): removed from a production build entirely.
+  const injected =
+    import.meta.env.DEV || import.meta.env.MODE === 'test'
+      ? (globalThis as { __assessxReadiness?: ReadinessBridge }).__assessxReadiness
+      : undefined
   if (injected) return injected
   return isTauri() ? tauriReadiness : browserReadiness
 }

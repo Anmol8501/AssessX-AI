@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  LoadMore,
   PageHeader,
 } from '@/components/ui'
 import type { MyAssessment } from '@/features/assessments/types'
@@ -22,7 +23,7 @@ import { useMyAssessments } from '../useMyAssessments'
  * response, so a card cannot promise a fresh start when an attempt is already under way.
  */
 export function MyExamsPage() {
-  const { state, reload } = useMyAssessments()
+  const { state, reload, hasMore, loadMore, loadingMore } = useMyAssessments()
 
   return (
     <>
@@ -53,6 +54,7 @@ export function MyExamsPage() {
             {state.data.map((exam) => (
               <ExamCard key={exam.assignment_id} exam={exam} />
             ))}
+            <LoadMore hasMore={hasMore} loading={loadingMore} onClick={() => void loadMore()} />
           </div>
         ))}
     </>

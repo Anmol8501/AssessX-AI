@@ -28,7 +28,7 @@ export interface NormalizedBox {
  */
 export type TaskStatus = 'OK' | 'SKIPPED' | 'FAILED' | 'UNAVAILABLE'
 
-export type TaskName = 'faceDetector' | 'faceLandmarker' | 'objectDetector'
+export type TaskName = 'faceDetector' | 'faceLandmarker' | 'objectDetector' | 'poseLandmarker'
 
 export type Accelerator = 'GPU' | 'CPU'
 
@@ -68,6 +68,17 @@ export interface DetectedObject {
   region?: 'full' | 'tile'
 }
 
+/**
+ * One shoulder from the pose landmarker, normalised to the frame (0..1; may fall outside when the
+ * model extrapolates beyond the edge). Only the two shoulders leave the worker — never the skeleton.
+ */
+export interface PosePoint {
+  x: number
+  y: number
+  /** The model's visibility score, 0..1. */
+  visibility: number
+}
+
 export interface FrameStatistics {
   /** Mean relative luminance of the frame, 0 (black) .. 1 (white). */
   meanLuminance: number
@@ -84,9 +95,18 @@ export interface MediaPipePayload {
   faces: DetectedFace[] | null
   landmarkedFaces: LandmarkedFace[] | null
   objects: DetectedObject[] | null
+  /** The first detected person's left and right shoulder, or null when the pose task did not run. */
+  shoulders: [PosePoint, PosePoint] | null
   statistics: FrameStatistics | null
   /** Wall time spent in each stage inside the worker, ms. Technical telemetry only. */
-  timingsMs: { statistics: number; faceDetector: number; faceLandmarker: number; objectDetector: number; total: number }
+  timingsMs: {
+    statistics: number
+    faceDetector: number
+    faceLandmarker: number
+    objectDetector: number
+    poseLandmarker: number
+    total: number
+  }
 }
 
 export function isMediaPipePayload(value: unknown): value is MediaPipePayload {

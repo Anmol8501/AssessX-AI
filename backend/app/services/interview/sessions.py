@@ -327,8 +327,12 @@ class InterviewSessionService:
 
     # -- reading -----------------------------------------------------------------------------
 
-    def my_interviews(self, candidate: User) -> list[tuple[Interview, InterviewSession | None]]:
-        return self.repo.for_candidate(candidate.id)
+    def my_interviews(
+        self,
+        candidate: User,
+        page=None,  # noqa: ANN001 — a Page
+    ) -> list[tuple[Interview, InterviewSession | None]]:
+        return self.repo.for_candidate(candidate.id, page)
 
     def detail(self, interview_id: uuid.UUID, candidate: User) -> tuple[Interview, InterviewSession | None]:
         interview = self._assigned_interview(interview_id, candidate)

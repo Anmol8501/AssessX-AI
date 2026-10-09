@@ -158,4 +158,5 @@ migration.
    episodes may change. 6C should snapshot what a reviewer saw with their decision.
 4. **The access trail is a log line, not a persistent audit table** (OQ-12).
 5. **Admin scope is single-tenant.**
-6. The media-evidence question (FR-017) remains open in `PHASE-6-PLAN.md`.
+6. Media evidence (FR-017) is now provided by **evidence clips**, which attach to these items
+   ([`EVIDENCE-CLIPS.md`](EVIDENCE-CLIPS.md)). The items themselves are unchanged.

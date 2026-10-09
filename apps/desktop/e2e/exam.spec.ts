@@ -212,6 +212,10 @@ test('the candidate UI and API never expose the answer key', async ({ page, requ
     }
   }
 
+  // The exam now belongs to the API sign-in that started it (Phase 8A, AX-07). Signing that session
+  // out frees it, so the app's own sign-in can take it over, as when a candidate closes one device.
+  expect((await request.post(`${API_BASE_URL}/api/v1/auth/logout`, { headers })).ok()).toBeTruthy()
+
   // Nor does the rendered exam screen. Reached through the UI: a hash-only `goto` does not
   // re-route the app (the same caveat publishing.spec.ts records).
   await signIn(page, request, DEV_CANDIDATE)

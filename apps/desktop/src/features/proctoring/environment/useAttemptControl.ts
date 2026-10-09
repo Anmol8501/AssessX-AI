@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AttemptControl, AttemptSession } from '@/features/exam/types'
+import type { AttemptControl, AttemptSession, ProctorMessage } from '@/features/exam/types'
 import { useApi } from '@/features/session'
 
 const ME = '/api/v1/candidates/me'
@@ -7,7 +7,9 @@ const ME = '/api/v1/candidates/me'
 const HOLD_POLL_MS = 5000
 /** After a long absence, when to re-read the count (once the event reporter has delivered the return). */
 const AFTER_RETURN_MS = 2500
-/** Matches the server's grace period: shorter absences are not tab switches. */
+/** After a short absence, when to re-read: a brief switch to another app now counts too. */
+const AFTER_SHORT_RETURN_MS = 1200
+/** Matches the server's grace period for absences it cannot classify. */
 const GRACE_MS = 2000
 
 /** Window events: the live push from the proctoring socket, and "please re-check" from the exam. */
@@ -28,6 +30,7 @@ const EMPTY: AttemptControl = {
   hold_reason: null,
   held_at: null,
   ended_by_admin: false,
+  messages: [],
 }
 
 /**
@@ -88,9 +91,11 @@ export function useAttemptControl(attemptId: string, initial: AttemptControl | n
       leftAt ??= Date.now()
     }
     const onFocus = () => {
-      if (leftAt !== null && Date.now() - leftAt > GRACE_MS) {
+      if (leftAt !== null) {
+        // Every return is re-read: a departure to another app counts however short it was.
         if (timer !== null) window.clearTimeout(timer)
-        timer = window.setTimeout(() => void refresh(), AFTER_RETURN_MS)
+        const wait = Date.now() - leftAt > GRACE_MS ? AFTER_RETURN_MS : AFTER_SHORT_RETURN_MS
+        timer = window.setTimeout(() => void refresh(), wait)
       }
       leftAt = null
     }
@@ -111,5 +116,19 @@ export function useAttemptControl(attemptId: string, initial: AttemptControl | n
   }, [control.on_hold, refresh])
 
   const dismissWarning = useCallback(() => setWarning(null), [])
-  return { control, warning, dismissWarning }
+
+  /** The candidate read a proctor's message: hide it now, tell the server (it shows the proctor "Seen"). */
+  const acknowledge = useCallback(
+    async (message: ProctorMessage) => {
+      setControl((current) => ({ ...current, messages: (current.messages ?? []).filter((m) => m.id !== message.id) }))
+      try {
+        const next = await api<AttemptControl>(`${ME}/attempts/${attemptId}/messages/${message.id}/acknowledge`, { method: 'POST' })
+        apply(next)
+      } catch {
+        // Not delivered: the next read shows it again, so the candidate can confirm once more.
+      }
+    },
+    [api, attemptId, apply],
+  )
+  return { control, warning, dismissWarning, acknowledge }
 }

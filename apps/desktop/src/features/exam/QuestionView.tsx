@@ -41,8 +41,8 @@ export function QuestionView({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-baseline justify-between gap-4">
+    <div className="flex flex-col">
+      <div className="border-line flex items-baseline justify-between gap-4 border-b px-8 py-4">
         <h2 className="text-ink text-[15px] font-semibold">
           Question {index + 1} <span className="text-ink-subtle font-normal">of {total}</span>
         </h2>
@@ -51,41 +51,43 @@ export function QuestionView({
         </p>
       </div>
 
-      <p className="text-ink mt-4 text-[17px] leading-relaxed whitespace-pre-line">{question.text}</p>
+      <div className="px-8 pt-6 pb-8">
+        <p className="text-ink text-[17px] leading-relaxed whitespace-pre-line">{question.text}</p>
 
-      <fieldset className="mt-6 space-y-2.5">
-        <legend className="sr-only">{single ? 'Select one option' : 'Select all options that apply'}</legend>
-        {question.options.map((option) => {
-          const checked = answer.includes(option.id)
-          return (
-            <label
-              key={option.id}
-              className={cn(
-                'flex cursor-pointer items-start gap-3 rounded-md border px-4 py-3 transition-colors',
-                checked
-                  ? 'border-accent bg-accent-soft'
-                  : 'border-line-strong bg-card hover:border-ink-subtle hover:bg-gray-50',
-              )}
-            >
-              <input
-                type={single ? 'radio' : 'checkbox'}
-                name={question.id}
-                className="accent-accent mt-0.5 h-4 w-4 shrink-0"
-                checked={checked}
-                onChange={() => toggle(option.id)}
-                // A radio does not fire change when it is already on, so clearing needs a click.
-                onClick={single && checked ? () => toggle(option.id) : undefined}
-              />
-              <span className="text-ink text-[14.5px] leading-snug">{option.text}</span>
-            </label>
-          )
-        })}
-      </fieldset>
+        <fieldset className="mt-6 space-y-3">
+          <legend className="sr-only">{single ? 'Select one option' : 'Select all options that apply'}</legend>
+          {question.options.map((option) => {
+            const checked = answer.includes(option.id)
+            return (
+              <label
+                key={option.id}
+                className={cn(
+                  'flex cursor-pointer items-start gap-3 rounded-md border px-4 py-3 transition-colors',
+                  checked
+                    ? 'border-accent bg-accent-soft'
+                    : 'border-line-strong bg-card hover:border-ink-subtle hover:bg-gray-50',
+                )}
+              >
+                <input
+                  type={single ? 'radio' : 'checkbox'}
+                  name={question.id}
+                  className="accent-accent mt-0.5 h-4 w-4 shrink-0"
+                  checked={checked}
+                  onChange={() => toggle(option.id)}
+                  // A radio does not fire change when it is already on, so clearing needs a click.
+                  onClick={single && checked ? () => toggle(option.id) : undefined}
+                />
+                <span className="text-ink text-[14.5px] leading-snug">{option.text}</span>
+              </label>
+            )
+          })}
+        </fieldset>
 
-      {!single && <p className="text-ink-subtle mt-3 text-[12.5px]">Select every option that applies.</p>}
+        {!single && <p className="text-ink-subtle mt-3 text-[12.5px]">Select every option that applies.</p>}
 
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-        <SaveIndicator state={saveState} onRetry={onRetry} />
+        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <SaveIndicator state={saveState} onRetry={onRetry} />
+        </div>
       </div>
     </div>
   )

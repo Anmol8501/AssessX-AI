@@ -7,7 +7,7 @@
  * candidate. Do not widen them to match the admin types.
  */
 
-import type { MyAssessment, QuestionNavigation, QuestionType } from '@/features/assessments/types'
+import type { MyAssessment, QuestionNavigation, QuestionType, RecordingPolicy } from '@/features/assessments/types'
 import type { CodingProgress } from '@/features/coding/types'
 
 /** An attempt is open, or it ended one of two ways. Both endings are final. */
@@ -58,6 +58,15 @@ export interface AttemptControl {
   hold_reason: 'TAB_SWITCH_LIMIT' | 'ADMIN' | null
   held_at: string | null
   ended_by_admin: boolean
+  /** Proctor messages the candidate has not acknowledged yet, oldest first. */
+  messages?: ProctorMessage[]
+}
+
+/** A short message from the exam supervisor, shown on the exam screen until acknowledged. */
+export interface ProctorMessage {
+  id: string
+  body: string
+  sent_at: string
 }
 
 export interface AttemptSession {
@@ -132,6 +141,8 @@ export interface ProctoringSession {
   started_at: string | null
   ended_at: string | null
   devices_reported_at: string | null
+  /** Evidence clips (FR-017): what this session may record. Absent from older servers. */
+  recording?: RecordingPolicy
 }
 
 /** The exam details screen. The server decides whether the exam can be started, and says why not. */

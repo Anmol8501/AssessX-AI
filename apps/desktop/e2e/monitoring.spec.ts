@@ -68,7 +68,7 @@ test('an admin sees an active proctored candidate, their events, and their depar
   await expect(dialog.getByText('Copy blocked').first()).toBeVisible({ timeout: 15_000 })
 
   // --- The candidate finishes → they leave the wall ----------------------------------------------
-  await admin.getByRole('button', { name: 'Close' }).click()
+  await admin.getByRole('button', { name: 'Close', exact: true }).click()
   await candidate.bringToFront()
   await candidate.getByRole('banner').getByRole('button', { name: 'Submit Exam' }).click()
   await candidate.getByRole('dialog').getByRole('button', { name: 'Submit Exam' }).click()
@@ -153,7 +153,7 @@ test('live video connects, survives live updates, and the admin sees the candida
   await candidate.context().close()
   await expect(dialog.getByText('Candidate app:').locator('..')).toContainText('Offline', { timeout: 15_000 })
   await expect(dialog.getByText('Candidate app is offline')).toBeVisible()
-  await admin.getByRole('button', { name: 'Close' }).click()
+  await admin.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(admin.getByText('Candidate offline').first()).toBeVisible()
   await adminContext.close()
 })

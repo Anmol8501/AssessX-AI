@@ -18,6 +18,7 @@ export const AI_OBSERVATION_LABELS: Record<string, string> = {
   CAMERA_TOO_DARK: 'Camera image too dark',
   FACE_TOO_FAR: 'Face far from camera',
   FACE_TOO_CLOSE: 'Face very close to camera',
+  UPPER_BODY_NOT_VISIBLE: 'Head and chest not fully in view',
   PHONE_DETECTED: 'Mobile phone in view',
   BOOK_DETECTED: 'Book in view',
   LAPTOP_DETECTED: 'Another laptop or tablet in view',

@@ -39,15 +39,15 @@ export function QuestionNavigator({
   const answered = questions.filter((q) => isAnswered(q, answers, codingStatus)).length
 
   return (
-    <nav aria-label="Questions" className="flex flex-col gap-4">
-      <div>
+    <nav aria-label="Questions" className={compact ? 'flex min-w-0 items-center gap-5' : 'flex flex-col gap-4'}>
+      <div className={compact ? 'flex shrink-0 items-baseline gap-2' : undefined}>
         <h2 className="text-ink text-[13px] font-semibold">Questions</h2>
-        <p className="text-ink-subtle mt-0.5 text-[12.5px]">
+        <p className={cn('text-ink-subtle text-[12.5px]', !compact && 'mt-0.5')}>
           {answered} of {questions.length} answered
         </p>
       </div>
 
-      <ol className={compact ? 'flex flex-wrap gap-1.5' : 'grid grid-cols-5 gap-2'}>
+      <ol className={compact ? 'flex min-w-0 gap-1.5 overflow-x-auto' : 'grid grid-cols-5 gap-2'}>
         {questions.map((question, index) => {
           const answeredHere = isAnswered(question, answers, codingStatus)
           const isCurrent = index === currentIndex
@@ -86,14 +86,14 @@ export function QuestionNavigator({
         })}
       </ol>
 
-      <dl className="text-ink-subtle space-y-1.5 text-[12px]">
+      <dl className={cn('text-ink-subtle text-[12px]', compact ? 'flex shrink-0 items-center gap-4' : 'space-y-1.5')}>
         <Legend className="border-accent bg-accent" label="Current question" />
         <Legend className="border-ok/40 bg-ok-soft" label="Answered" />
         <Legend className="border-line-strong bg-card" label="Not answered" />
       </dl>
 
       {!canJump && (
-        <p className="text-ink-subtle text-[12px]">
+        <p className={cn('text-ink-subtle text-[12px]', compact && 'min-w-0 truncate')}>
           This exam moves forward only. Once you leave a question you cannot return to it.
         </p>
       )}

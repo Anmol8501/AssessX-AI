@@ -424,9 +424,11 @@ def test_the_dev_event_view_does_not_exist_in_production(monkeypatch):
     from app.main import create_app
 
     production = Settings(**{**get_settings().model_dump(), "app_env": "production"})
+    dev_view = "/api/v1/dev/attempts/{attempt_id}/proctoring-events"
+    assert dev_view in create_app().openapi()["paths"]  # control: mounted outside production
     monkeypatch.setattr("app.main.get_settings", lambda: production)
 
-    paths = {route.path for route in create_app().routes}
+    paths = set(create_app().openapi()["paths"])
 
     assert "/api/v1/dev/attempts/{attempt_id}/proctoring-events" not in paths
     assert "/api/v1/candidates/me/attempts/{attempt_id}/proctoring/events" in paths

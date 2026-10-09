@@ -9,7 +9,7 @@ them (`ProctoringEventIn`).
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,6 +22,38 @@ class DeviceReport(BaseModel):
 
     camera: DeviceState
     microphone: DeviceState
+    #: On activation: whether this app can record evidence clips (FR-017). Ignored on later reports.
+    evidence_recorder: bool = False
+
+
+class EvidencePolicyOut(BaseModel):
+    """How the app records evidence clips, and what the candidate is told (all server settings).
+
+    Only short clips around qualifying factual events, video only (no audio), bounded in length, size
+    and quality, kept for `retention_days`. Nothing is recorded continuously.
+    """
+
+    enabled: bool
+    event_types: list[str]
+    pre_seconds: int
+    post_seconds: int
+    max_clip_seconds: int
+    max_clip_bytes: int
+    video_bits_per_second: int
+    max_width: int
+    max_height: int
+    frame_rate: int
+    retention_days: int
+
+
+def current_evidence_policy() -> EvidencePolicyOut:
+    from dataclasses import asdict
+
+    from app.services.evidence_clips.service import policy
+
+    values = asdict(policy())
+    values["event_types"] = list(values["event_types"])
+    return EvidencePolicyOut(**values)
 
 
 class ProctoringSessionOut(BaseModel):
@@ -41,6 +73,8 @@ class ProctoringSessionOut(BaseModel):
     started_at: datetime | None
     ended_at: datetime | None
     devices_reported_at: datetime | None
+    #: Evidence clips (FR-017): what the app may record, and nothing beyond it.
+    recording: EvidencePolicyOut = Field(default_factory=current_evidence_policy)
 
 
 class ProctoringEventIn(BaseModel):
@@ -73,3 +107,31 @@ class ProctoringEventOut(BaseModel):
     metadata: dict[str, Any]
     recorded_at: datetime
     client_reported_at: datetime | None
+    #: Set when the server created (or linked this event to) an evidence clip. `upload` is true only
+    #: for a new clip: the app then sends the recording it captured around this event.
+    clip_request: "EvidenceRequestOut | None" = None
+
+
+class EvidenceRequestOut(BaseModel):
+    clip_id: uuid.UUID
+    upload: bool
+
+
+class EvidenceUploadOut(BaseModel):
+    """The candidate's app learns only that its upload was accepted — not the hash or where it went."""
+
+    clip_id: uuid.UUID
+    status: Literal["READY", "FAILED"]
+
+
+class EvidenceFailureIn(BaseModel):
+    """Why the app could not provide a clip. A closed list; anything else is refused."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Literal[
+        "recorder_unavailable", "recording_failed", "capture_interrupted", "too_large", "upload_failed"
+    ]
+
+
+ProctoringEventOut.model_rebuild()

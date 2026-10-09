@@ -105,6 +105,8 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
   // Window state the transitions are measured against.
   const inFullscreen = useRef(false)
   const focusLostAt = useRef<number | null>(null)
+  /** Where focus went on the current departure (desktop app), reported with the return. */
+  const leftTo = useRef<WindowSnapshot['leftTo']>(null)
   const displayCount = useRef(0)
   const everFullscreen = useRef(false)
   /** One automatic fullscreen restore per departure — never a loop of retries. */
@@ -113,11 +115,15 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
   const pendingRelease = useRef<number | null>(null)
 
   const loseFocus = useCallback(
-    (reason: 'deactivated' | 'minimized') => {
-      if (focusLostAt.current !== null) return // one FOCUS_LOST per departure
+    (reason: 'deactivated' | 'minimized', target?: WindowSnapshot['leftTo']) => {
+      if (focusLostAt.current !== null) {
+        leftTo.current ??= target ?? null // the native snapshot may arrive after the page's blur
+        return // one FOCUS_LOST per departure
+      }
       focusLostAt.current = Date.now()
+      leftTo.current = target ?? null
       autoRestoreArmed.current = true
-      emit('FOCUS_LOST', { reason }, false)
+      emit('FOCUS_LOST', target ? { reason, left_to: target } : { reason }, false)
     },
     [emit],
   )
@@ -125,8 +131,10 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
   const regainFocus = useCallback(() => {
     if (focusLostAt.current === null) return
     const duration = Date.now() - focusLostAt.current
+    const target = leftTo.current
     focusLostAt.current = null
-    emit('FOCUS_REGAINED', { duration_ms: duration })
+    leftTo.current = null
+    emit('FOCUS_REGAINED', target ? { duration_ms: duration, left_to: target } : { duration_ms: duration })
   }, [emit])
 
   const leaveFullscreen = useCallback(
@@ -177,7 +185,7 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
         leaveFullscreen(snapshot.minimized ? 'minimized' : bridge.environment === 'browser' ? 'user' : 'resized', snapshot.minimized)
       }
       if (bridge.environment === 'desktop') {
-        if (!snapshot.focused || snapshot.minimized) loseFocus(snapshot.minimized ? 'minimized' : 'deactivated')
+        if (!snapshot.focused || snapshot.minimized) loseFocus(snapshot.minimized ? 'minimized' : 'deactivated', snapshot.leftTo)
         else {
           regainFocus() // no-op if the page's own focus event already recorded the return
           // Coming back is the one moment fullscreen is restored automatically — once per
@@ -256,6 +264,10 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
       .onShortcut(({ eventType, shortcut }) => emit(eventType, { shortcut, blocked: true, channel: 'native-hook' }))
       .then((off) => (disposed ? off() : unlisten.push(off)))
     void bridge.onWindowChange(onWindowChange).then((off) => (disposed ? off() : unlisten.push(off)))
+    // Closing AssessX was refused (the exam must be submitted first): a fact for the supervisor.
+    void bridge
+      .onCloseBlocked(() => emit('EXAM_CLOSE_ATTEMPT', { blocked: true }, false))
+      .then((off) => (disposed ? off() : unlisten.push(off)))
     return () => {
       disposed = true
       unlisten.forEach((off) => off())

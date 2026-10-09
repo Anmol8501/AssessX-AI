@@ -24,6 +24,7 @@ from sqlalchemy import select
 
 from app.core.errors import AttemptLocked, NotFound
 from app.models.attempt import AssessmentAttempt, AttemptStatus, HoldReason
+from app.models.attempt_message import AttemptMessage
 from app.models.audit_log import AuditAction
 from app.models.base import utcnow
 from app.models.user import User
@@ -32,8 +33,13 @@ from app.repositories.audit import AuditRepository
 
 log = logging.getLogger("assessx.attempts.control")
 
-#: A return to the window after being away at most this long is not a tab switch.
+#: A return to the window after being away at most this long is not a tab switch — for a departure to
+#: Windows' own surfaces (a notification, Start) or one the app could not classify. A departure to another
+#: application, Task View or another desktop (`left_to` app/desktop) counts however short it was: the
+#: desktop app pulls the exam window straight back, so such switches are always brief.
 TAB_SWITCH_GRACE_MS = 2000
+#: Departures that count as a tab switch whatever their length.
+COUNTED_TARGETS = frozenset({"app", "desktop"})
 #: The switch that reaches this count puts the attempt on hold; the ones before it are warnings.
 TAB_SWITCH_LIMIT = 3
 
@@ -45,13 +51,16 @@ class AttemptControlService:
 
     # -- the tab-switch rule (candidate side, from proctoring events) ----------------------------------
 
-    def focus_returned(self, attempt: AssessmentAttempt, away_ms: int) -> bool:
+    def focus_returned(self, attempt: AssessmentAttempt, away_ms: int, left_to: str | None = None) -> bool:
         """Counts a return to the exam window. True when it counted as a tab switch.
 
         `attempt` is already locked (`FOR UPDATE`) by the event route. Nothing is counted while the
-        attempt is on hold or finished, or for an absence within the grace period.
+        attempt is on hold or finished. An absence within the grace period counts only when focus went to
+        another application or desktop (`COUNTED_TARGETS`).
         """
-        if not attempt.is_active or attempt.is_on_hold or away_ms <= TAB_SWITCH_GRACE_MS:
+        if not attempt.is_active or attempt.is_on_hold:
+            return False
+        if left_to not in COUNTED_TARGETS and away_ms <= TAB_SWITCH_GRACE_MS:
             return False
         attempt.tab_switch_count += 1
         if attempt.tab_switch_count >= TAB_SWITCH_LIMIT:
@@ -131,6 +140,39 @@ class AttemptControlService:
             admin.id, AuditAction.ATTEMPT_ENDED_BY_ADMIN, attempt, was_on_hold=attempt.held_at is not None
         )
         notify.attempt_control(self.db, attempt)
+        return attempt
+
+    # -- proctor messages -------------------------------------------------------------------------------
+
+    def send_message(self, attempt_id: uuid.UUID, admin: User, body: str) -> AssessmentAttempt:
+        """A short message to the candidate, shown on their exam screen until they acknowledge it.
+        Only while the exam is running (on hold included). Audited by length, never by content."""
+        attempt = self.for_admin(attempt_id)
+        self._require_open(attempt)
+        message = AttemptMessage(attempt_id=attempt.id, sender_id=admin.id, body=body, sent_at=utcnow())
+        self.db.add(message)
+        self.db.flush()
+        self.db.refresh(attempt, ["messages"])
+        self._record(
+            admin.id, AuditAction.ATTEMPT_MESSAGE_SENT, attempt, message_id=str(message.id), length=len(body)
+        )
+        notify.attempt_control(self.db, attempt)
+        return attempt
+
+    def acknowledge_message(self, attempt: AssessmentAttempt, message_id: uuid.UUID) -> AssessmentAttempt:
+        """The candidate pressed "I understand". `attempt` is the candidate's own (already scoped);
+        a message of another attempt is not found. Acknowledging twice changes nothing."""
+        message = self.db.scalar(
+            select(AttemptMessage).where(
+                AttemptMessage.id == message_id, AttemptMessage.attempt_id == attempt.id
+            )
+        )
+        if message is None:
+            raise NotFound("Message not found.")
+        if message.acknowledged_at is None:
+            message.acknowledged_at = utcnow()
+            self.db.flush()
+            notify.attempt_control(self.db, attempt)  # the proctor sees it was read
         return attempt
 
     # -- internals -------------------------------------------------------------------------------------

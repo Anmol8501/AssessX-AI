@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { API_BASE_URL, apiToken, DEV_ADMIN, DEV_CANDIDATE, signIn } from './helpers'
+import { API_BASE_URL, apiToken, DEV_ADMIN, DEV_CANDIDATE, signIn, storedToken } from './helpers'
 
 /** Phase 3B: the countdown, submission, and an exam that ends itself when the time runs out. */
 
@@ -127,8 +127,9 @@ test('the countdown runs, survives a reload without restarting, and the exam can
   expect(toSeconds(afterReload)).toBeLessThanOrEqual(toSeconds(beforeReload))
   expect(toSeconds(afterReload)).toBeGreaterThan(44 * 60 - 120) // still ~45 minutes, not reset
 
-  // The deadline itself is unchanged, which is the property that actually matters.
-  const auth = { Authorization: `Bearer ${await apiToken(request, DEV_CANDIDATE)}` }
+  // The deadline itself is unchanged, which is the property that actually matters. Read through the
+  // app's own sign-in: an exam in progress answers only the session that has it open (Phase 8A, AX-07).
+  const auth = { Authorization: `Bearer ${await storedToken(page)}` }
   const detail = (await (
     await request.get(`${API_BASE_URL}/api/v1/candidates/me/assessments/${id}`, { headers: auth })
   ).json()) as { latest_attempt_id: string }

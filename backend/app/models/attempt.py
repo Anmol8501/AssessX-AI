@@ -22,6 +22,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utcnow
 if TYPE_CHECKING:
     from app.models.assessment import Assessment
     from app.models.assignment import AssessmentAssignment
+    from app.models.attempt_message import AttemptMessage
     from app.models.proctoring import ProctoringSession
     from app.models.question import Question, QuestionOption
     from app.models.result import AttemptResult
@@ -92,6 +93,8 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ck_attempts_hold_reason",
         ),
         CheckConstraint("(held_at IS NULL) = (hold_reason IS NULL)", name="ck_attempts_hold_consistent"),
+        # Paged list order (Phase 8 final, CX-04; migration 0028).
+        Index("ix_attempts_candidate_started", "candidate_id", "started_at"),
         # At most one open attempt per candidate per assessment, enforced by the database rather
         # than by a read-then-write in the service: two concurrent "Start Exam" clicks race, and
         # only one of them can win here. A partial index (rather than a plain unique constraint)
@@ -164,6 +167,16 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         uselist=False,
+    )
+    #: Phase 8A (AX-07): the sign-in session the exam is open in. Another session may use the attempt only
+    #: after this one has been silent for `EXAM_TAKEOVER_AFTER_SECONDS` (`bound_seen_at`).
+    auth_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("auth_sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    bound_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Short messages a proctor sent the candidate during the exam, oldest first (exam control).
+    messages: Mapped[list["AttemptMessage"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, order_by="AttemptMessage.sent_at"
     )
     #: Present only when the attempt was proctored at the moment it started (Phase 4A). `None`
     #: means an unproctored attempt, not a missing row.

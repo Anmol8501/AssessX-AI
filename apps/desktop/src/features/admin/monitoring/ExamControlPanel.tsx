@@ -3,6 +3,7 @@ import { LockIcon } from '@/components/icons'
 import { Button, ConfirmDialog, StatusBadge } from '@/components/ui'
 import { describeError } from '@/features/assessments/useAssessments'
 import { useApi } from '@/features/session'
+import { ProctorMessages } from './ProctorMessages'
 import type { MonitoringSession } from './types'
 
 type Action = 'hold' | 'release' | 'end'
@@ -81,6 +82,7 @@ export function ExamControlPanel({ session }: { session: MonitoringSession }) {
           </Button>
         </div>
       )}
+      <ProctorMessages attemptId={session.attemptId} running={running} />
 
       <ConfirmDialog
         open={dialog === 'hold'}

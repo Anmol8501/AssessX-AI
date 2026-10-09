@@ -30,9 +30,10 @@ class CandidateService:
         self.user_service = UserService(db)
         self.assignments = AssignmentRepository(db)
 
-    def list_with_counts(self) -> list[tuple[User, int]]:
-        counts = self.assignments.counts_by_candidate()
-        return [(candidate, counts.get(candidate.id, 0)) for candidate in self.assignments.list_candidates()]
+    def list_with_counts(self, page=None, q: str | None = None) -> list[tuple[User, int]]:  # noqa: ANN001 — a Page
+        candidates = self.assignments.list_candidates(page, q)
+        counts = self.assignments.counts_by_candidate([c.id for c in candidates])
+        return [(candidate, counts.get(candidate.id, 0)) for candidate in candidates]
 
     def create(self, payload: CandidateCreate) -> User:
         if self.users.get_by_email(payload.email):
@@ -150,6 +151,10 @@ class AssignmentService:
             extra={"assessment_id": str(assessment_id), "candidate_id": str(candidate_id)},
         )
 
-    def list_for_candidate(self, candidate_id: uuid.UUID) -> list[tuple[AssessmentAssignment, int]]:
+    def list_for_candidate(
+        self,
+        candidate_id: uuid.UUID,
+        page=None,  # noqa: ANN001 — a Page
+    ) -> list[tuple[AssessmentAssignment, int]]:
         """Only ever called with the authenticated candidate's own id."""
-        return self.repo.list_for_candidate(candidate_id)
+        return self.repo.list_for_candidate(candidate_id, page)

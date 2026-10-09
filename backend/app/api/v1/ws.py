@@ -32,6 +32,7 @@ from app.models.proctoring import ProctoringSessionStatus
 from app.models.user import User, UserRole
 from app.realtime.hub import hub
 from app.realtime.messages import MessageType, message
+from app.realtime.security import SocketGuard, admit, authenticate, slots
 from app.services.auth import AuthService
 from app.services.monitoring import MonitoringService
 
@@ -73,6 +74,12 @@ def _authenticate(token: str | None) -> User | None:
         return None
 
 
+def _legacy(token: str) -> tuple[User, None] | None:
+    """The pre-0.1.4 `?token=` credential (only while WS_ALLOW_LEGACY_TOKEN is on)."""
+    user = _authenticate(token)
+    return (user, None) if user else None
+
+
 def _clean(value: object) -> bool:
     return isinstance(value, str) and 0 < len(value) <= _SDP_MAX
 
@@ -93,22 +100,25 @@ def _offer_id(data: dict) -> dict[str, str]:
 
 @router.websocket("/ws/admin/monitoring")
 async def admin_monitoring(ws: WebSocket) -> None:
-    user = _authenticate(ws.query_params.get("token"))
-    if user is None:
+    found = authenticate(ws, "monitoring", _legacy)
+    if found is None:
         await ws.close(code=_POLICY_VIOLATION)
         return
+    user, session_id = found
     if user.role is not UserRole.ADMIN:
         await ws.accept()
         await ws.send_json(message(MessageType.ERROR, error="forbidden"))
         await ws.close(code=_POLICY_VIOLATION)
         return
 
+    if not await admit(ws, user):
+        return
     await ws.accept()
     await hub.add_admin(ws)
     await ws.send_json(message(MessageType.CONNECTION_READY, role="admin"))
+    guard = SocketGuard(ws, session_id, user.id)
     try:
-        while True:
-            data = await ws.receive_json()
+        while (data := await guard.receive()) is not None:
             await _handle_admin_message(ws, data)
     except WebSocketDisconnect:
         pass
@@ -119,6 +129,7 @@ async def admin_monitoring(ws: WebSocket) -> None:
         for attempt_id in list(_watched_attempts(ws)):
             await _stop_watch(ws, attempt_id)
         hub.remove_admin(ws)
+        slots.release(user.id)
 
 
 def _watched_attempts(ws: WebSocket) -> list[uuid.UUID]:
@@ -169,17 +180,20 @@ async def _stop_watch(ws: WebSocket, attempt_id: uuid.UUID) -> None:
 
 @router.websocket("/ws/candidates/me/proctoring")
 async def candidate_proctoring(ws: WebSocket) -> None:
-    user = _authenticate(ws.query_params.get("token"))
+    found = authenticate(ws, "proctoring", _legacy)
     attempt_id = _as_uuid(ws.query_params.get("attempt_id"))
-    if user is None or attempt_id is None:
+    if found is None or attempt_id is None:
         await ws.close(code=_POLICY_VIOLATION)
         return
+    user, session_id = found
     if user.role is not UserRole.CANDIDATE or not _owned_active_session(user.id, attempt_id):
         await ws.accept()
         await ws.send_json(message(MessageType.ERROR, error="forbidden"))
         await ws.close(code=_POLICY_VIOLATION)
         return
 
+    if not await admit(ws, user):
+        return
     await ws.accept()
     await hub.add_candidate(attempt_id, ws)
     await ws.send_json(message(MessageType.CONNECTION_READY, role="candidate", attempt_id=str(attempt_id)))
@@ -188,15 +202,16 @@ async def candidate_proctoring(ws: WebSocket) -> None:
     if hub.admins_watching(attempt_id):
         await hub.send_to_candidate(attempt_id, message(MessageType.WATCH, attempt_id=str(attempt_id)))
     await _broadcast_session(attempt_id)  # admins: the candidate app is online
+    guard = SocketGuard(ws, session_id, user.id)
     try:
-        while True:
-            data = await ws.receive_json()
+        while (data := await guard.receive()) is not None:
             await _handle_candidate_message(ws, attempt_id, data)
     except WebSocketDisconnect:
         pass
     except Exception:  # noqa: BLE001
         log.debug("Candidate proctoring socket error", exc_info=True)
     finally:
+        slots.release(user.id)
         if hub.remove_candidate(attempt_id, ws):
             await _broadcast_session(attempt_id)  # admins: the candidate app went offline
 

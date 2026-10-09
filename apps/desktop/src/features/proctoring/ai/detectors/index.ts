@@ -3,6 +3,7 @@ import { FacePresenceDetector } from './face'
 import { GazeDetector } from './gaze'
 import { HeadPoseDetector } from './headPose'
 import { ObjectPresenceDetector, PhoneDetector } from './object'
+import { FramingDetector } from './framing'
 import { FrameQualityDetector } from './quality'
 import { FaceTrackingDetector } from './tracking'
 
@@ -15,7 +16,8 @@ export function createMediaPipeDetectors(): Detector[] {
     new GazeDetector(),
     new ObjectPresenceDetector(),
     new FrameQualityDetector(),
+    new FramingDetector(),
   ]
 }
 
-export { FacePresenceDetector, FaceTrackingDetector, FrameQualityDetector, GazeDetector, HeadPoseDetector, ObjectPresenceDetector, PhoneDetector }
+export { FacePresenceDetector, FaceTrackingDetector, FramingDetector, FrameQualityDetector, GazeDetector, HeadPoseDetector, ObjectPresenceDetector, PhoneDetector }

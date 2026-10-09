@@ -78,6 +78,7 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.FULLSCREEN_RESTORED: C.WINDOW,
     E.FOCUS_LOST: C.WINDOW,
     E.FOCUS_REGAINED: C.WINDOW,
+    E.EXAM_CLOSE_ATTEMPT: C.WINDOW,
     E.COPY_ATTEMPT: C.INPUT,
     E.CUT_ATTEMPT: C.INPUT,
     E.PASTE_ATTEMPT: C.INPUT,
@@ -105,6 +106,7 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.CAMERA_TOO_DARK: C.AI_OBSERVATION,
     E.FACE_TOO_FAR: C.AI_OBSERVATION,
     E.FACE_TOO_CLOSE: C.AI_OBSERVATION,
+    E.UPPER_BODY_NOT_VISIBLE: C.AI_OBSERVATION,
     E.PHONE_DETECTED: C.AI_OBSERVATION,
     E.BOOK_DETECTED: C.AI_OBSERVATION,
     E.LAPTOP_DETECTED: C.AI_OBSERVATION,
@@ -127,7 +129,15 @@ CLIENT_RESOLUTIONS = frozenset({"condition_cleared", "measurement_unavailable", 
 #: earlier app build can still be resolved (or is closed when the session ends).
 DISABLED_EPISODE_TYPES = frozenset({E.GAZE_AWAY})
 _EPISODE_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-_AI_DETECTORS = ("face_presence", "face_tracking", "head_pose", "gaze", "object_detection", "frame_quality")
+_AI_DETECTORS = (
+    "face_presence",
+    "face_tracking",
+    "head_pose",
+    "gaze",
+    "object_detection",
+    "frame_quality",
+    "framing",
+)
 
 #: Recorded by the server only. The session lifecycle is the server's, and device changes arrive
 #: through the Phase 4A device report — which the server turns into these events itself.
@@ -209,6 +219,12 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
     "blocked": lambda v: isinstance(v, bool),
     "channel": _one_of("keyboard", "pointer", "clipboard-event", "print-event", "native-hook"),
     "duration_ms": _int_between(0, 24 * 60 * 60 * 1000),
+    # where focus went when the exam window lost it (classified by the desktop app): another app or Task
+    # View, the desktop / another virtual desktop, or Windows' own surfaces (Start, taskbar, notifications)
+    "left_to": _one_of("app", "desktop", "system"),
+    # framing: how many shoulders are in view (0-2) and whether the face is cut off by the frame edge
+    "shoulders_visible": _int_between(0, 2),
+    "face_cut_off": lambda v: isinstance(v, bool),
     "previous_state": _one_of(*_WINDOW_STATE),
     "current_state": _one_of(*_WINDOW_STATE),
     "reason": _one_of(
@@ -271,6 +287,10 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
     ),
     "impaired": _detector_list,
     "accelerator": _one_of("CPU", "GPU"),
+    # Phase 8B (BX-06): which AI runtime the app runs, and whether it is the production one. A test or
+    # mock runtime is never presented to the supervisor as measuring (see `monitoring.derive_ai_state`).
+    "runtime_kind": _one_of("mediapipe", "mock"),
+    "production_capable": lambda v: isinstance(v, bool),
     # server-only fields
     "state": _one_of(*(s.value for s in DeviceState)),
     "attempt_status": _one_of(*(s.value for s in AttemptStatus)),
@@ -293,8 +313,9 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.FULLSCREEN_ENTER: frozenset({"reason"}),
     E.FULLSCREEN_EXIT: frozenset({"previous_state", "current_state", "reason"}),
     E.FULLSCREEN_RESTORED: frozenset({"reason"}),
-    E.FOCUS_LOST: frozenset({"reason"}),
-    E.FOCUS_REGAINED: frozenset({"duration_ms"}),
+    E.FOCUS_LOST: frozenset({"reason", "left_to"}),
+    E.FOCUS_REGAINED: frozenset({"duration_ms", "left_to"}),
+    E.EXAM_CLOSE_ATTEMPT: frozenset({"blocked"}),
     E.COPY_ATTEMPT: _INPUT_FIELDS,
     E.CUT_ATTEMPT: _INPUT_FIELDS,
     E.PASTE_ATTEMPT: _INPUT_FIELDS,
@@ -321,11 +342,14 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.CAMERA_TOO_DARK: _EPISODE_FIELDS | {"mean_luminance"},
     E.FACE_TOO_FAR: _EPISODE_FIELDS | {"face_area_ratio"},
     E.FACE_TOO_CLOSE: _EPISODE_FIELDS | {"face_area_ratio"},
+    E.UPPER_BODY_NOT_VISIBLE: _EPISODE_FIELDS | {"shoulders_visible", "face_cut_off"},
     E.PHONE_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
     E.BOOK_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
     E.LAPTOP_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
     E.HANDHELD_DEVICE_DETECTED: _EPISODE_FIELDS | _OBJECT_FIELDS,
-    E.AI_STATUS: frozenset({"ai_status", "ai_reason", "impaired", "accelerator"}),
+    E.AI_STATUS: frozenset(
+        {"ai_status", "ai_reason", "impaired", "accelerator", "runtime_kind", "production_capable"}
+    ),
     E.CODING_QUESTION_OPENED: frozenset({"question_number"}),
     E.CODE_PASTED: frozenset({"question_number", "length"}),
     E.CODE_RUN_REQUESTED: frozenset({"question_number", "language", "custom_input"}),

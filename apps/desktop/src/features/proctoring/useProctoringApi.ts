@@ -7,6 +7,8 @@ const ME = '/api/v1/candidates/me'
 export interface DeviceReport {
   camera: DeviceState
   microphone: DeviceState
+  /** On activation: whether this app can record evidence clips (FR-017). */
+  evidence_recorder?: boolean
 }
 
 /**

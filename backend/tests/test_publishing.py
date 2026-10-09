@@ -195,6 +195,23 @@ def test_admin_sees_candidates_with_assignment_counts(client, helpers: Helpers, 
     assert "admin@test.local" not in rows  # administrators are not candidates
 
 
+def test_admin_finds_a_candidate_by_name_email_or_roll_number(client, helpers: Helpers, users):
+    headers = admin_headers(helpers)
+
+    def found(q: str) -> set[str]:
+        response = client.get("/api/v1/candidates", params={"q": q}, headers=headers)
+        assert response.status_code == 200
+        return {row["email"] for row in response.json()}
+
+    assert found("CANDIDATE@test") == {"candidate@test.local"}  # part of the email, any case
+    assert found("test2026002") == {"inactive@test.local"}  # part of the roll number
+    assert found("@test.local") == {"candidate@test.local", "inactive@test.local"}  # never the admin
+    assert found("%") == set() and found("_") == set()  # wildcards are literal text
+    assert found("   ") == found("")  # blank is no filter
+    too_long = client.get("/api/v1/candidates", params={"q": "x" * 101}, headers=headers)
+    assert too_long.status_code == 422
+
+
 def test_candidate_cannot_create_or_list_candidates(client, helpers: Helpers, users):
     headers = candidate_headers(helpers)
 

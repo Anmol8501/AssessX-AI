@@ -3,7 +3,18 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -77,6 +88,8 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "availability_start IS NULL OR availability_end IS NULL OR availability_end > availability_start",
             name="ck_assessments_availability_order",
         ),
+        # Paged list order (Phase 8 final, CX-04; migration 0028).
+        Index("ix_assessments_created_id", "created_at", "id"),
     )
 
     title: Mapped[str] = mapped_column(String(200), nullable=False)

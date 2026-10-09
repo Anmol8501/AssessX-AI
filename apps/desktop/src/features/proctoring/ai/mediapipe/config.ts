@@ -45,6 +45,7 @@ export const OBJECT_CATEGORIES: string[] = OBJECT_CLASSES.map((c) => c.label)
 export const MODEL_FILES: Record<TaskName, string> = {
   faceDetector: 'blaze_face_short_range.tflite',
   faceLandmarker: 'face_landmarker.task',
+  poseLandmarker: 'pose_landmarker_lite.task',
   objectDetector: 'efficientdet_lite0.tflite',
 }
 
@@ -64,6 +65,7 @@ export function assetUrls(origin: string) {
     models: {
       faceDetector: at(`/models/${MODEL_FILES.faceDetector}`),
       faceLandmarker: at(`/models/${MODEL_FILES.faceLandmarker}`),
+      poseLandmarker: at(`/models/${MODEL_FILES.poseLandmarker}`),
       objectDetector: at(`/models/${MODEL_FILES.objectDetector}`),
     } satisfies Record<TaskName, string>,
   }

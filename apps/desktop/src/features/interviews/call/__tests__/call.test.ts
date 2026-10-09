@@ -14,8 +14,8 @@ const msg = (id: string, at: string, body = id): ChatMessage => ({
 
 describe('live call signaling', () => {
   it('builds the call socket URL from the API base, with the token encoded', () => {
-    expect(callSocketUrl('https://api.example.com', 'c1', 'a b+c')).toBe('wss://api.example.com/api/v1/ws/interview-calls/c1?token=a%20b%2Bc')
-    expect(callSocketUrl('http://127.0.0.1:8000', 'c1', 't')).toBe('ws://127.0.0.1:8000/api/v1/ws/interview-calls/c1?token=t')
+    expect(callSocketUrl('https://api.example.com', 'c1', 'a b+c')).toBe('wss://api.example.com/api/v1/ws/interview-calls/c1?ticket=a%20b%2Bc')
+    expect(callSocketUrl('http://127.0.0.1:8000', 'c1', 't')).toBe('ws://127.0.0.1:8000/api/v1/ws/interview-calls/c1?ticket=t')
   })
 
   it('pre-negotiates microphone, camera and screen in a fixed order', () => {

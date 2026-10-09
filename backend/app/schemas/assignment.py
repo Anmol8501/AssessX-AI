@@ -8,6 +8,7 @@ from app.models.assessment import AssessmentStatus
 from app.models.assignment import AssignmentStatus
 from app.models.attempt import AttemptStatus
 from app.schemas.common import Email
+from app.schemas.proctoring import EvidencePolicyOut, current_evidence_policy
 
 if TYPE_CHECKING:
     from app.models.assignment import AssessmentAssignment
@@ -87,6 +88,9 @@ class MyAssessment(BaseModel):
     #: Whether a new attempt at this exam will be proctored (Phase 4A). An attempt already under
     #: way answers that for itself through `AttemptDetail.proctoring`.
     proctoring_required: bool
+    #: What a proctored attempt records as evidence clips (FR-017), shown to the candidate before they
+    #: start: short clips around certain factual events only, video only, kept for a fixed period.
+    recording: EvidencePolicyOut = Field(default_factory=current_evidence_policy)
     availability_start: datetime | None
     availability_end: datetime | None
     status: AssignmentStatus

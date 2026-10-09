@@ -3,6 +3,7 @@ import { describeError } from '@/features/assessments/useAssessments'
 import { useApi } from '@/features/session'
 import { ApiError } from '@/lib/api'
 import type { AnswerState, AttemptAnswer, AttemptDetail, ExamDetail, SaveState } from './types'
+import { TERMINAL_ATTEMPT_STATUSES } from './types'
 
 type Loadable<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; data: T }
 
@@ -102,6 +103,24 @@ export function useSubmitExam() {
 }
 
 /** The attempt and its paper. Loading this is how a refresh restores the exam. */
+/**
+ * A finished attempt never goes back to in progress (the server freezes it), so a response read
+ * before the submit committed — a reload that was already in flight — must not replace it. Without
+ * this, a slow read could land after the submit and put the candidate back on the exam's start
+ * screen.
+ */
+function keepFinished(current: Loadable<AttemptDetail>, incoming: AttemptDetail): Loadable<AttemptDetail> {
+  if (
+    current.status === 'ready' &&
+    current.data.id === incoming.id &&
+    TERMINAL_ATTEMPT_STATUSES.has(current.data.status) &&
+    !TERMINAL_ATTEMPT_STATUSES.has(incoming.status)
+  ) {
+    return current
+  }
+  return { status: 'ready', data: incoming }
+}
+
 export function useAttempt(attemptId: string | null) {
   const api = useApi()
   const [state, setState] = useState<Loadable<AttemptDetail>>({ status: 'loading' })
@@ -111,7 +130,7 @@ export function useAttempt(attemptId: string | null) {
       if (!attemptId) return Promise.resolve()
       return api<AttemptDetail>(`${ME}/attempts/${attemptId}`, { signal })
         .then((data) => {
-          if (!signal?.aborted) setState({ status: 'ready', data })
+          if (!signal?.aborted) setState((current) => keepFinished(current, data))
         })
         .catch((error: unknown) => {
           if (!signal?.aborted) {
@@ -129,7 +148,7 @@ export function useAttempt(attemptId: string | null) {
   }, [load])
 
   /** Replaces the loaded attempt with one the caller already has (e.g. the submit response). */
-  const replace = useCallback((data: AttemptDetail) => setState({ status: 'ready', data }), [])
+  const replace = useCallback((data: AttemptDetail) => setState((current) => keepFinished(current, data)), [])
 
   return { state, reload: load, replace }
 }

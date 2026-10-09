@@ -62,6 +62,14 @@ class CodingProgressRow(BaseModel):
     total: int | None
 
 
+class ProctorMessage(BaseModel):
+    """A message from the proctor, as the candidate sees it: the text and when it was sent."""
+
+    id: uuid.UUID
+    body: str
+    sent_at: datetime
+
+
 class AttemptControl(BaseModel):
     """Exam control for one attempt: the tab-switch count against the rule, and whether it is on hold.
 
@@ -78,6 +86,8 @@ class AttemptControl(BaseModel):
     held_at: datetime | None
     #: The exam was ended by an administrator (the answers saved so far were submitted).
     ended_by_admin: bool
+    #: Proctor messages the candidate has not acknowledged yet, oldest first.
+    messages: list[ProctorMessage] = []
 
     @classmethod
     def of(cls, attempt: AssessmentAttempt) -> "AttemptControl":
@@ -90,6 +100,11 @@ class AttemptControl(BaseModel):
             hold_reason=attempt.hold_reason.value if attempt.is_on_hold and attempt.hold_reason else None,
             held_at=attempt.held_at if attempt.is_on_hold else None,
             ended_by_admin=attempt.ended_by_id is not None,
+            messages=[
+                ProctorMessage(id=m.id, body=m.body, sent_at=m.sent_at)
+                for m in attempt.messages
+                if m.acknowledged_at is None
+            ],
         )
 
 

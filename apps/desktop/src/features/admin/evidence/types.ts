@@ -26,6 +26,18 @@ export interface EvidenceItem {
   episodeId: string | null
   sourceEventIds: string[]
   explanation: string
+  /** The evidence clip recorded around this item's starting event, if any (FR-017). */
+  clip: EvidenceClipRef | null
+}
+
+export type ClipStatus = 'CREATING' | 'READY' | 'FAILED' | 'EXPIRED' | 'DELETED'
+
+export interface EvidenceClipRef {
+  clipId: string
+  status: ClipStatus
+  sourceType: 'PRIMARY_CAMERA' | 'SECONDARY_CAMERA'
+  durationMs: number | null
+  hasVideo: boolean
 }
 
 export interface EvidenceEpisode {
@@ -77,6 +89,7 @@ export function toItem(raw: Raw): EvidenceItem {
     episodeId: (raw.episode_id as string | null) ?? null,
     sourceEventIds: (raw.source_event_ids as string[]) ?? [],
     explanation: raw.explanation as string,
+    clip: raw.clip ? toClipRef(raw.clip as Raw) : null,
   }
 }
 
@@ -129,4 +142,14 @@ export function mergePages(pages: EvidencePage[]): { items: EvidenceItem[]; epis
     for (const e of p.episodes) episodes.set(e.episodeId, e)
   }
   return { items, episodes }
+}
+
+export function toClipRef(raw: Raw): EvidenceClipRef {
+  return {
+    clipId: raw.clip_id as string,
+    status: raw.status as ClipStatus,
+    sourceType: raw.source_type as EvidenceClipRef['sourceType'],
+    durationMs: (raw.duration_ms as number | null) ?? null,
+    hasVideo: Boolean(raw.has_video),
+  }
 }

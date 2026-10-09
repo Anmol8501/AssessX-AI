@@ -1,0 +1,35 @@
+# Scheduled maintenance (Phase 8 final, CX-14). The API on Render Free sleeps when idle, so retention,
+# the evidence upload sweep, the audit chain check and the missing-backup check must not depend on the API's
+# own timer: this calls the token-protected endpoint every hour (which also wakes the service).
+#
+# Needs the repository secret MAINTENANCE_TOKEN (same value as on Render) and the variable ASSESSX_API_URL.
+# The endpoint only applies the configured retention policy; it cannot be told to delete anything else.
+
+name: Maintenance
+
+on:
+  schedule:
+    - cron: "5 * * * *" # hourly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run maintenance
+        env:
+          API: ${{ vars.ASSESSX_API_URL }}
+          TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
+        run: |
+          # A sleeping instance takes up to a minute to start; retry before calling it a failure.
+          curl -fsS --retry 5 --retry-delay 30 --retry-all-errors --max-time 120 -X POST \
+            "$API/api/v1/internal/maintenance" -H "Authorization: Bearer $TOKEN" -o result.json
+          python3 -c "import json; r = json.load(open('result.json')); print(r); raise SystemExit(0 if r.get('audit_chain_verified') else 1)"

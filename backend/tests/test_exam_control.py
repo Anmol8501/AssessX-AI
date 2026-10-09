@@ -90,6 +90,7 @@ def test_short_absences_are_not_tab_switches(client, active):
         "hold_reason": None,
         "held_at": None,
         "ended_by_admin": False,
+        "messages": [],
     }
 
 
@@ -104,6 +105,7 @@ def test_two_warnings_then_the_third_switch_holds_the_exam(client, db, active):
         "hold_reason": None,
         "held_at": None,
         "ended_by_admin": False,
+        "messages": [],
     }
     answer(client, active)  # still answering after two warnings
 

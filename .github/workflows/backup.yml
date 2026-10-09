@@ -1,0 +1,99 @@
+# Daily encrypted database backup, monthly restore drill, and a heartbeat to the API (Phase 8 final, CX-06).
+#
+# Needs repository secrets (Settings → Secrets and variables → Actions), set by the owner:
+#   BACKUP_DATABASE_URL  — a Supabase connection URL that can read the database (session pooler)
+#   BACKUP_PASSPHRASE    — 16+ characters; keep a copy in the password manager (without it nothing restores)
+#   MAINTENANCE_TOKEN    — the same value as Render's MAINTENANCE_TOKEN
+# and the repository variable ASSESSX_API_URL (e.g. https://assessx-backend-0nw6.onrender.com).
+#
+# The backup is encrypted (GnuPG AES-256) before it is uploaded as a workflow artifact kept 30 days; the
+# plaintext dump never leaves the runner and is deleted by the script. If this job stops reporting success,
+# the API raises a `backup_missing` alert (BACKUP_MAX_AGE_HOURS, default 26). docs/DISASTER-RECOVERY.md.
+
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # daily, 02:17 UTC
+    - cron: "47 3 1 * *" # monthly: backup + restore drill
+  workflow_dispatch:
+    inputs:
+      drill:
+        description: "Also run a restore drill"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      drill:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: drill
+          POSTGRES_PASSWORD: drill-only-throwaway
+          POSTGRES_DB: assessx_restore_drill
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U drill" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      BACKUP_DIR: /tmp/assessx-backups
+      BACKUP_KEEP: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: PostgreSQL 17 client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+      - name: Encrypted backup
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: python3 infrastructure/backup/backup.py
+      - name: Keep the encrypted backup (30 days)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: assessx-backup-${{ github.run_id }}
+          path: /tmp/assessx-backups/assessx-*.dump.gpg*
+          retention-days: 30
+          if-no-files-found: error
+      - name: Restore drill into a throwaway database
+        if: ${{ inputs.drill == true || github.event.schedule == '47 3 1 * *' }}
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          RESTORE_DATABASE_URL: postgresql://drill:drill-only-throwaway@localhost:5432/assessx_restore_drill
+          SOURCE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          latest=$(find "$BACKUP_DIR" -name 'assessx-*.dump.gpg' | sort | tail -1)
+          python3 infrastructure/backup/restore.py "$latest" --compare-with-env SOURCE_URL
+      - name: Report success
+        env:
+          API: ${{ vars.ASSESSX_API_URL }}
+          TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
+        run: |
+          size=$(stat -c %s "$(find "$BACKUP_DIR" -name 'assessx-*.dump.gpg' | sort | tail -1)")
+          curl -fsS --retry 3 --retry-delay 20 -X POST "$API/api/v1/internal/maintenance/backup-heartbeat" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"status\":\"success\",\"size_bytes\":$size}"
+      - name: Report failure
+        if: ${{ failure() }}
+        env:
+          API: ${{ vars.ASSESSX_API_URL }}
+          TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
+        run: |
+          curl -sS --retry 3 --retry-delay 20 -X POST "$API/api/v1/internal/maintenance/backup-heartbeat" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d '{"status":"failure","note":"backup workflow failed"}' || true

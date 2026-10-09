@@ -5,6 +5,7 @@ from app.api.v1 import (
     admin_exam_control,
     admin_monitoring,
     admin_reviews,
+    admin_security,
     assessments,
     attempts,
     auth,
@@ -37,6 +38,8 @@ api_v1.include_router(candidate_coding.progress_router)
 api_v1.include_router(proctoring.router)
 api_v1.include_router(admin_monitoring.router)
 api_v1.include_router(admin_attempts.router)
+api_v1.include_router(admin_security.router)
+api_v1.include_router(admin_security.internal)
 api_v1.include_router(admin_exam_control.router)
 api_v1.include_router(admin_reviews.router)
 # Before `interviews`: `/interviews/reports` must not be read as `/interviews/{interview_id}`.

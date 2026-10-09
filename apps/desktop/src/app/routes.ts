@@ -26,6 +26,7 @@ export const routes = {
     /** A live interview call (Phase 7D). Rendered outside the application shell — see app/router.tsx. */
     interviewCall: (interviewId: string, callId: string) => `/admin/interviews/${interviewId}/calls/${callId}`,
     review: (attemptId: string) => `/admin/reviews/${attemptId}`,
+    security: '/admin/security',
     settings: '/admin/settings',
   },
 

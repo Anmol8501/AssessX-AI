@@ -24,6 +24,15 @@ export interface SessionUser {
   username: string | null
 }
 
+/** Administrator second factor (Phase 8 final): what the sign-in still needs. */
+export type SecondFactor = 'none' | 'required' | 'enroll'
+
+/** A sign-in the server accepted, and whether it still needs the admin's second factor. */
+export interface SignedIn {
+  user: SessionUser
+  mfa: SecondFactor
+}
+
 /** The sign-in security check issued by the server. The answer never leaves the server. */
 export interface LoginChallenge {
   id: string
@@ -61,10 +70,10 @@ export type Credentials = CandidateCredentials | AdminCredentials
  */
 export interface AuthClient {
   /** Restore a previously established session, if one exists and the server still accepts it. */
-  restore(): Promise<SessionUser | null>
+  restore(): Promise<SignedIn | null>
   /** Fetch a fresh security check for the sign-in form. */
   challenge(): Promise<LoginChallenge>
-  signIn(credentials: Credentials): Promise<SessionUser>
+  signIn(credentials: Credentials): Promise<SignedIn>
   signOut(): Promise<void>
 }
 
@@ -75,3 +84,5 @@ export type SessionState =
   | { status: 'initializing' }
   | { status: 'anonymous'; reason?: SignedOutReason }
   | { status: 'authenticated'; user: SessionUser }
+  /** Password accepted; the administrator must still pass (or set up) the second factor. */
+  | { status: 'second-factor'; user: SessionUser; mfa: 'required' | 'enroll' }

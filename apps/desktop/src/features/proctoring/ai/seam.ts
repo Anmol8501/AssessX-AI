@@ -45,7 +45,16 @@ export interface AITestSeam {
   eventDiagnostics?: AIEventDiagnostics
 }
 
+/**
+ * The test seam exists only in development and test builds (Phase 8B, BX-06). In a production build
+ * `import.meta.env.DEV` is the constant `false` and the mode is `production`, so this returns undefined
+ * and the bundler removes the lookup entirely — a production app has no hook through which a script could
+ * swap in the scripted or mock runtime. `scripts/check-production-bundle.mjs` verifies the built bundle.
+ */
+export const TEST_SEAMS_ENABLED: boolean = import.meta.env.DEV || import.meta.env.MODE === 'test'
+
 function seam(): AITestSeam | undefined {
+  if (!TEST_SEAMS_ENABLED) return undefined
   return (globalThis as { __assessxAI?: AITestSeam }).__assessxAI
 }
 
@@ -81,6 +90,8 @@ function production(overrides: { objectModel?: ObjectModelId; objectModelUrl?: s
 }
 
 export function selectComponents(): SelectedComponents {
+  // Constant in a production build: everything after this line is removed from the bundle.
+  if (!TEST_SEAMS_ENABLED) return production()
   const injected = seam()
   if (!injected) return production()
   if (injected.createRuntime) {

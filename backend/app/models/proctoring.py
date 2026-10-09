@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Uuid
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -134,6 +134,12 @@ class ProctoringSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     #: The last time the client reported device state. The foundation of session health for the
     #: live-monitoring phase; nothing acts on its age yet.
     devices_reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: The candidate's app said, when it activated the session, that it can record evidence clips
+    #: (FR-017). Only then does the server ask it for clips: an older app, or one without a recorder,
+    #: never leaves clips waiting for an upload that cannot come.
+    evidence_recorder: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
 
     attempt: Mapped["AssessmentAttempt"] = relationship(back_populates="proctoring_session")
     #: Phase 4B observations, oldest first. Append-only; see `ProctoringEvent`.

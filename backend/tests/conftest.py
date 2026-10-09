@@ -78,6 +78,29 @@ def db() -> Iterator[Session]:
         connection.close()
 
 
+@pytest.fixture(autouse=True)
+def _security_events_in_test_database(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Security events are normally written in their own transaction (so a failed request still leaves
+    one). In tests they go into the test's rolled-back transaction when the test uses `db`; otherwise
+    (tests that commit real data) into the test database in their own short transaction — never into the
+    development database."""
+    from app.services import security_events
+
+    committed = "db" not in request.fixturenames
+    if committed:
+        security_events.use_factory(lambda: TestingSession(bind=engine))
+    else:
+        security_events.use_session(request.getfixturevalue("db"))
+    yield
+    security_events.use_session(None)
+    security_events.use_factory(None)
+    if committed:
+        # Committed events would otherwise be seen by every later test (tests run one at a time).
+        with engine.begin() as conn:
+            conn.execute(text("DELETE FROM security_alerts"))
+            conn.execute(text("DELETE FROM security_events"))
+
+
 @pytest.fixture
 def client(db: Session) -> Iterator[TestClient]:
     app = create_app()

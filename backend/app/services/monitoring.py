@@ -154,7 +154,7 @@ class MonitoringService:
 # -- AI state (Phase 5C) -----------------------------------------------------------------------
 
 _E = ProctoringEventType
-_QUALITY = frozenset({_E.CAMERA_TOO_DARK, _E.FACE_TOO_FAR, _E.FACE_TOO_CLOSE})
+_QUALITY = frozenset({_E.CAMERA_TOO_DARK, _E.FACE_TOO_FAR, _E.FACE_TOO_CLOSE, _E.UPPER_BODY_NOT_VISIBLE})
 #: Object episode type → the object class it reports (2026-10-02).
 _OBJECTS = {
     _E.PHONE_DETECTED: "cell_phone",
@@ -165,7 +165,7 @@ _OBJECTS = {
 _MEASURING = frozenset({"RUNNING", "DEGRADED"})
 
 
-def derive_ai_state(events: list[ProctoringEvent]) -> AIMonitoringState:
+def derive_ai_state(events: list[ProctoringEvent], *, production: bool | None = None) -> AIMonitoringState:
     """The on-device AI's current factual state from a session's AI events (oldest first).
 
     Pure: the same events always give the same state, so REST and realtime deltas agree.
@@ -173,16 +173,27 @@ def derive_ai_state(events: list[ProctoringEvent]) -> AIMonitoringState:
     status: str | None = None
     reason: str | None = None
     impaired: list[str] = []
+    production_capable: bool | None = None
     for event in events:
         if event.event_type is _E.AI_STATUS:
             status = event.details.get("ai_status")
             reason = event.details.get("ai_reason")
             impaired = list(event.details.get("impaired", []))
+            production_capable = event.details.get("production_capable")
     active = sorted(open_episodes(events).values(), key=lambda e: e.recorded_at)
     open_types = {e.event_type: e for e in active}
 
+    if production is None:
+        from app.core.config import get_settings
+
+        production = get_settings().is_production
+    # In production, a runtime that says it is not the production one (a test double, which a production
+    # build cannot contain) measures nothing real (Phase 8B, BX-06). Development and test deployments run
+    # the scripted runtime on purpose.
+    untrusted_runtime = production and production_capable is False
+
     def measuring(detector: str) -> bool:
-        return status in _MEASURING and detector not in impaired
+        return status in _MEASURING and detector not in impaired and not untrusted_runtime
 
     no_face = _E.FACE_NOT_DETECTED in open_types
     face_known = measuring("face_presence")

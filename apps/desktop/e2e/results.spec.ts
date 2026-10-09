@@ -124,6 +124,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('a candidate answers, submits, and sees a score the admin can also see', async ({ page, request }) => {
+  test.setTimeout(90_000) // sign-in, a full exam, the result, and the admin's view
   const title = unique('Scored Exam')
   const { id } = await seedExam(request, title)
 
