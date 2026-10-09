@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.paging import SCOPED_CEILING, Page
 from app.models.attempt import AssessmentAttempt
 from app.models.result import AttemptResult
 
@@ -19,19 +20,28 @@ class ResultRepository:
         self.db.flush()
         return result
 
-    def list_for_candidate(self, candidate_id: uuid.UUID) -> list[AttemptResult]:
+    def list_for_candidate(
+        self, candidate_id: uuid.UUID, page: "Page | None" = None, released_only: bool = False
+    ) -> list[AttemptResult]:
         """A candidate's own results, newest first, with the assessment and attempt they belong to.
 
         Scoped by `candidate_id` in the query, so another candidate's result is not reachable.
         """
-        return list(
-            self.db.scalars(
-                select(AttemptResult)
-                .options(joinedload(AttemptResult.assessment), joinedload(AttemptResult.attempt))
-                .where(AttemptResult.candidate_id == candidate_id)
-                .order_by(AttemptResult.evaluated_at.desc())
-            )
+        query = (
+            select(AttemptResult)
+            .options(joinedload(AttemptResult.assessment), joinedload(AttemptResult.attempt))
+            .where(AttemptResult.candidate_id == candidate_id)
+            .order_by(AttemptResult.evaluated_at.desc(), AttemptResult.id.desc())
         )
+        if released_only:
+            from app.models.assessment import Assessment
+
+            query = query.join(Assessment, Assessment.id == AttemptResult.assessment_id).where(
+                Assessment.show_results.is_(True)
+            )
+        if page is not None:
+            query = page.apply(query)
+        return list(self.db.scalars(query))
 
     def list_for_assessment(self, assessment_id: uuid.UUID) -> list[AttemptResult]:
         """Every result for one assessment, for the admin table.
@@ -45,6 +55,7 @@ class ResultRepository:
                 .options(joinedload(AttemptResult.candidate), joinedload(AttemptResult.attempt))
                 .where(AttemptResult.assessment_id == assessment_id)
                 .order_by(AttemptResult.evaluated_at.desc())
+                .limit(SCOPED_CEILING)
             )
         )
 

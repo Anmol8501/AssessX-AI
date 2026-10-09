@@ -28,6 +28,7 @@ export const AI_EVENT_TYPES = [
   'CAMERA_TOO_DARK',
   'FACE_TOO_FAR',
   'FACE_TOO_CLOSE',
+  'UPPER_BODY_NOT_VISIBLE',
   'PHONE_DETECTED',
   'BOOK_DETECTED',
   'LAPTOP_DETECTED',
@@ -185,6 +186,8 @@ export const DEFAULT_AI_EVENT_CONFIG: AIEventConfig = {
     CAMERA_TOO_DARK: standard(5000, 6),
     FACE_TOO_FAR: standard(5000, 6),
     FACE_TOO_CLOSE: standard(5000, 6),
+    // Head and chest not in view for 4 s (provisional, like the other camera conditions).
+    UPPER_BODY_NOT_VISIBLE: standard(4000, 5),
     PHONE_DETECTED: objectTiming,
     BOOK_DETECTED: objectTiming,
     LAPTOP_DETECTED: objectTiming,

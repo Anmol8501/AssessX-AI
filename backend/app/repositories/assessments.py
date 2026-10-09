@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.api.paging import Page
 from app.models.assessment import Assessment
 from app.models.question import Question
 
@@ -21,13 +22,15 @@ class AssessmentRepository:
             query = query.options(selectinload(Assessment.questions).selectinload(Question.options))
         return self.db.scalar(query)
 
-    def list(self) -> list[Assessment]:
-        """Newest first. Questions are loaded eagerly so counts do not trigger a query per row."""
+    def list(self, page: "Page | None" = None) -> list[Assessment]:
+        """Newest first, one page. Questions are loaded eagerly so counts do not trigger a query per row."""
         query = (
             select(Assessment)
             .options(selectinload(Assessment.questions), selectinload(Assessment.assignments))
-            .order_by(Assessment.created_at.desc())
+            .order_by(Assessment.created_at.desc(), Assessment.id.desc())
         )
+        if page is not None:
+            query = page.apply(query)
         return list(self.db.scalars(query))
 
     def add(self, assessment: Assessment) -> Assessment:

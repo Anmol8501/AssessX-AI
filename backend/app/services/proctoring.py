@@ -153,6 +153,8 @@ class ProctoringService:
         if not resumed:
             session.status = ProctoringSessionStatus.ACTIVE
             session.started_at = now
+        # The app that (re)activated the session is the one recording now: its say counts.
+        session.evidence_recorder = report.evidence_recorder
         self._record(session, report, now)
         self.events.record_server(
             session,
@@ -241,7 +243,7 @@ class ProctoringService:
 
                 away = event.details.get("duration_ms")
                 if isinstance(away, int):
-                    AttemptControlService(self.db).focus_returned(attempt, away)
+                    AttemptControlService(self.db).focus_returned(attempt, away, event.details.get("left_to"))
         return event, created
 
     # -- internals ------------------------------------------------------------------------

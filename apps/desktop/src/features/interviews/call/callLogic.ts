@@ -4,9 +4,12 @@ import type { ChatMessage, PeerMedia } from './types'
  * The pure parts of a live call (Phase 7D), kept apart from WebRTC so they can be unit-tested.
  */
 
-/** The signaling socket for one call. The token goes in the query: a browser WebSocket cannot set headers. */
-export function callSocketUrl(apiBase: string, callId: string, token: string): string {
-  return `${apiBase.replace(/^http/, 'ws')}/api/v1/ws/interview-calls/${callId}?token=${encodeURIComponent(token)}`
+/**
+ * The signaling socket for one call. A browser WebSocket cannot set headers, so the credential goes in the
+ * query — a one-time ticket (Phase 8A), never the session token.
+ */
+export function callSocketUrl(apiBase: string, callId: string, ticket: string): string {
+  return `${apiBase.replace(/^http/, 'ws')}/api/v1/ws/interview-calls/${callId}?ticket=${encodeURIComponent(ticket)}`
 }
 
 /**

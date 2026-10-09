@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { routes } from '@/app/routes'
 import { CheckIcon, ClockIcon, InfoIcon } from '@/components/icons'
 import { Button, Card, CardBody, ErrorState, LoadingState, StateView, StatusBadge } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { clearExamLocalData } from '@/lib/localData'
 import { codingDetail, outcomeTone } from './resultText'
 import { OUTCOME_LABEL, type AttemptDetail, type CandidateResult, type QuestionResult } from './types'
 import { formatPercentage, useAttemptResult } from './useResults'
@@ -19,6 +21,10 @@ import { formatPercentage, useAttemptResult } from './useResults'
  */
 export function ExamFinished({ attempt }: { attempt: AttemptDetail }) {
   const navigate = useNavigate()
+  // The exam is over: its drafts and queued events have no further use on this (possibly shared) PC.
+  useEffect(() => {
+    clearExamLocalData(attempt.id)
+  }, [attempt.id])
   const { state, reload } = useAttemptResult(attempt.id)
   const expired = attempt.status === 'TIME_EXPIRED'
 

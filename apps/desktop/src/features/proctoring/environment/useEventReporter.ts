@@ -11,7 +11,7 @@ const MAX_PENDING = 200
 
 export type EventMetadata = Record<string, string | number | boolean | string[] | Record<string, string>>
 
-interface PendingEvent {
+export interface PendingEvent {
   client_event_id: string
   event_type: string
   metadata: EventMetadata
@@ -57,8 +57,25 @@ function savePending(attemptId: string, pending: PendingEvent[]) {
  *   session's ceiling is reached, the queue is discarded; an event the server rejects as invalid is
  *   dropped rather than retried forever.
  */
-export function useEventReporter(attemptId: string) {
+/** What the server answered for an event: the evidence-clip decision, when there is one (FR-017). */
+export interface RecordedEvent {
+  id: string
+  clip_request?: { clip_id: string; upload: boolean } | null
+}
+
+export interface ReporterHooks {
+  /** An event was queued (observed now, sent soon). */
+  onQueued?(event: PendingEvent): void
+  /** The server recorded the event (or recognised a retry) and answered with this. */
+  onRecorded?(event: PendingEvent, recorded: RecordedEvent): void
+}
+
+export function useEventReporter(attemptId: string, hooks?: ReporterHooks) {
   const api = useApi()
+  const hooksRef = useRef(hooks)
+  useEffect(() => {
+    hooksRef.current = hooks
+  })
   const queue = useRef<PendingEvent[]>([])
   const lastSeen = useRef<Map<string, number>>(new Map())
   const sending = useRef(false)
@@ -74,8 +91,9 @@ export function useEventReporter(attemptId: string) {
     try {
       while (queue.current.length > 0 && !stopped.current) {
         const next = queue.current[0]
+        let recorded: RecordedEvent | undefined
         try {
-          await api(`${ME}/attempts/${attemptId}/proctoring/events`, { method: 'POST', body: next })
+          recorded = await api<RecordedEvent>(`${ME}/attempts/${attemptId}/proctoring/events`, { method: 'POST', body: next })
         } catch (caught) {
           if (caught instanceof ApiError && caught.kind === 'http') {
             if (caught.code === 'attempt_locked' || caught.code === 'event_limit_reached') {
@@ -100,6 +118,13 @@ export function useEventReporter(attemptId: string) {
         queue.current.shift()
         retryDelay.current = RETRY_BASE_MS
         persist()
+        if (recorded && next) {
+          try {
+            hooksRef.current?.onRecorded?.(next, recorded)
+          } catch {
+            // Evidence handling must never stop events from flowing.
+          }
+        }
       }
     } finally {
       sending.current = false
@@ -129,12 +154,18 @@ export function useEventReporter(attemptId: string) {
       lastSeen.current.set(key, now)
       if (previous !== undefined && now - previous < REPEAT_WINDOW_MS) return false
 
-      queue.current.push({
+      const event: PendingEvent = {
         client_event_id: crypto.randomUUID(),
         event_type: eventType,
         metadata,
         client_reported_at: new Date().toISOString(),
-      })
+      }
+      queue.current.push(event)
+      try {
+        hooksRef.current?.onQueued?.(event)
+      } catch {
+        // Evidence handling must never stop events from flowing.
+      }
       if (queue.current.length > MAX_PENDING) queue.current.splice(0, queue.current.length - MAX_PENDING)
       persist()
       void flush()

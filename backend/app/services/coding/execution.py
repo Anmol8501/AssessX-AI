@@ -52,6 +52,11 @@ MAX_CUSTOM_INPUT = 65_536
 #: Per attempt, in any 60 seconds.
 RUNS_PER_MINUTE = 10
 SUBMITS_PER_MINUTE = 3
+#: Per attempt, across all its questions (Phase 8 final, CX-05): jobs waiting or running at once, and the
+#: most runs one attempt may ever request. With one job per question and 10 runs a minute this bounds what
+#: one candidate can put in front of the shared runner; generous for real use (a run takes seconds).
+MAX_IN_FLIGHT_PER_ATTEMPT = 2
+MAX_RUNS_PER_ATTEMPT = 300
 #: Nothing more is queued once this many jobs are waiting (one runner must not be buried).
 QUEUE_CAP = 500
 #: How much of each test's output and error stream is kept.
@@ -239,6 +244,18 @@ class ExecutionService:
             CodeExecution.status.in_(IN_FLIGHT),
         ):
             raise ExecutionInProgress()
+        if self._count(CodeExecution.attempt_id == attempt.id, CodeExecution.status.in_(IN_FLIGHT)) >= (
+            MAX_IN_FLIGHT_PER_ATTEMPT
+        ):
+            raise ExecutionInProgress("Wait for your code that is already running to finish.")
+        if (
+            kind is ExecutionKind.RUN
+            and self._count(CodeExecution.attempt_id == attempt.id, CodeExecution.kind == kind)
+            >= MAX_RUNS_PER_ATTEMPT
+        ):
+            raise ExecutionRateLimited(
+                f"This exam allows at most {MAX_RUNS_PER_ATTEMPT} runs. You can still submit your answer."
+            )
         window = utcnow() - timedelta(seconds=60)
         limit = RUNS_PER_MINUTE if kind is ExecutionKind.RUN else SUBMITS_PER_MINUTE
         if (

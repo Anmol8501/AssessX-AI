@@ -17,6 +17,7 @@ export function RequireRole({ role }: { role: Role }) {
     case 'initializing':
       return <AppLoadingScreen />
     case 'anonymous':
+    case 'second-factor':
       return <Navigate to={routes.login} replace />
     case 'authenticated':
       return state.user.role === role ? <Outlet /> : <Navigate to={homeFor(state.user.role)} replace />

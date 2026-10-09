@@ -253,7 +253,9 @@ def test_the_endpoint_returns_turn_when_configured(client, helpers: Helpers, use
     monkeypatch.setattr(realtime_api, "provider", IceServerProvider(FakeCloudflare(), Clock()))
     client.app.dependency_overrides[get_settings] = lambda: turn_settings()
     try:
-        body = client.get(ICE, headers=candidate_headers(helpers)).json()
+        # Phase 8A (AX-13): the relay is for someone who needs it now — an administrator here; a candidate
+        # only during a proctored exam or a call (tests/test_security_hardening.py).
+        body = client.get(ICE, headers=admin_headers(helpers)).json()
     finally:
         del client.app.dependency_overrides[get_settings]
     assert body["turn_enabled"] is True

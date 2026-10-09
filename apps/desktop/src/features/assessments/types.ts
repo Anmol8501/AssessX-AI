@@ -204,6 +204,24 @@ export interface CandidateInput {
 }
 
 /** A candidate's own view of an assigned assessment. Carries no questions or answer keys. */
+/**
+ * Wire shape of `backend/app/schemas/proctoring.py::EvidencePolicyOut`: the server's limits for evidence
+ * clips. The app records only within them, and tells the candidate what they are.
+ */
+export interface RecordingPolicy {
+  enabled: boolean
+  event_types: string[]
+  pre_seconds: number
+  post_seconds: number
+  max_clip_seconds: number
+  max_clip_bytes: number
+  video_bits_per_second: number
+  max_width: number
+  max_height: number
+  frame_rate: number
+  retention_days: number
+}
+
 export interface MyAssessment {
   assignment_id: string
   assessment_id: string
@@ -217,6 +235,8 @@ export interface MyAssessment {
   max_attempts: number
   /** Whether a new attempt will be proctored. A running attempt answers for itself (`AttemptDetail.proctoring`). */
   proctoring_required: boolean
+  /** What a proctored attempt records as evidence clips (FR-017) — shown to the candidate up front. */
+  recording?: RecordingPolicy
   availability_start: string | null
   availability_end: string | null
   status: AssignmentStatus

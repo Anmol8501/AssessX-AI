@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Button, StatusBadge } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { eventTypeLabel } from '../monitoring/events'
+import { clipStatusLabel } from './clips'
+import { EvidenceClipPanel } from './EvidenceClipPanel'
 import { clock, contributionLabel, durationLabel, statusLabel } from './labels'
 import type { EvidenceEpisode, EvidenceItem, SourceEvent } from './types'
 import { useEvidence } from './useEvidence'
@@ -76,6 +78,7 @@ export function EvidenceTimeline({
               <li key={item.evidenceId}>
                 {startsEpisode && <EpisodeHeader episode={episode} />}
                 <EvidenceRow
+                  attemptId={attemptId}
                   item={item}
                   grouped={Boolean(episode)}
                   expanded={open === item.evidenceId}
@@ -111,6 +114,7 @@ function EpisodeHeader({ episode }: { episode: EvidenceEpisode }) {
 }
 
 function EvidenceRow({
+  attemptId,
   item,
   grouped,
   expanded,
@@ -118,6 +122,7 @@ function EvidenceRow({
   loadSources,
   review,
 }: {
+  attemptId: string
   item: EvidenceItem
   grouped: boolean
   expanded: boolean
@@ -150,6 +155,13 @@ function EvidenceRow({
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <span className="text-ink-subtle text-[11.5px] tabular-nums">{contributionLabel(item)}</span>
+          {item.clip && (
+            <span data-evidence="clip-badge">
+              <StatusBadge tone={clipStatusLabel(item.clip.status).tone} className="border-line border">
+                {clipStatusLabel(item.clip.status).label}
+              </StatusBadge>
+            </span>
+          )}
           {item.status !== 'INSTANT' && <StatusBadge tone={status.tone}>{status.label}</StatusBadge>}
           {mark && (
             <StatusBadge tone={MARKS[mark].tone} className="border-line border">
@@ -172,6 +184,7 @@ function EvidenceRow({
               {sources.map((s) => `${eventTypeLabel(s.eventType)} (${clock(s.recordedAt)}, ${s.source === 'SERVER' ? 'server' : 'candidate app'})`).join('; ')}
             </p>
           )}
+          {item.clip && <EvidenceClipPanel attemptId={attemptId} clipId={item.clip.clipId} />}
           {review?.editable && (
             <div className="flex items-center gap-2 pt-1" data-evidence="review-mark">
               <span className="text-ink-subtle text-[11.5px]">Your review:</span>

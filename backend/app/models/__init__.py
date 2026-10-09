@@ -9,6 +9,7 @@ from app.models.attempt import (
     AttemptAnswerOption,
     AttemptStatus,
 )
+from app.models.attempt_message import AttemptMessage
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.auth_session import AuthSession
 from app.models.base import Base
@@ -22,6 +23,7 @@ from app.models.coding import (
     TestCaseVisibility,
 )
 from app.models.coding_draft import CodingDraft
+from app.models.evidence_clip import EvidenceClip, EvidenceClipEvent, EvidenceClipStatus, EvidenceSource
 from app.models.interview import (
     CompletionReason,
     Interview,
@@ -69,9 +71,21 @@ from app.models.review import (
     ReviewOutcome,
     ReviewStatus,
 )
+from app.models.security import PasswordResetCode, RateLimitHit
+from app.models.security_event import MaintenanceHeartbeat, SecurityAlert, SecurityEvent
 from app.models.user import User, UserRole
 
 __all__ = [
+    "MaintenanceHeartbeat",
+    "SecurityAlert",
+    "SecurityEvent",
+    "EvidenceClip",
+    "EvidenceClipEvent",
+    "EvidenceClipStatus",
+    "EvidenceSource",
+    "PasswordResetCode",
+    "RateLimitHit",
+    "AttemptMessage",
     "CodingDraft",
     "CodeExecution",
     "ExecutionKind",

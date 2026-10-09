@@ -8,6 +8,7 @@
 //! `latest.json`, and installs an update only if its signature matches the public key in
 //! `tauri.conf.json` (see docs/RELEASING.md). `process` provides the relaunch after an update.
 
+mod credentials;
 mod kiosk;
 mod lockdown;
 mod readiness;
@@ -23,10 +24,14 @@ pub fn run() {
             lockdown::lockdown_release,
             lockdown::lockdown_restore_fullscreen,
             lockdown::environment_snapshot,
+            lockdown::exam_close_guard,
             readiness::readiness_scan,
             readiness::readiness_close_apps,
             kiosk::kiosk_status,
             kiosk::kiosk_generate_config,
+            credentials::session_token_store,
+            credentials::session_token_load,
+            credentials::session_token_clear,
         ])
         .on_window_event(lockdown::on_window_event)
         .on_page_load(|webview, _payload| lockdown::release_on_page_load(&webview.window()))

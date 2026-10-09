@@ -36,5 +36,5 @@ class UserService:
             )
         )
 
-    def list(self, *, role: UserRole | None = None) -> list[User]:
-        return self.repo.list(role=role)
+    def list(self, *, role: UserRole | None = None, page=None) -> list[User]:  # noqa: ANN001 — a Page
+        return self.repo.list(role=role, page=page)

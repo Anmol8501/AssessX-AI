@@ -59,6 +59,9 @@ class ProctoringEventType(enum.StrEnum):
     APP_CLOSE_REQUESTED = "APP_CLOSE_REQUESTED"
     APP_CLOSED = "APP_CLOSED"
     APP_CLOSE_FAILED = "APP_CLOSE_FAILED"
+    #: The candidate tried to close AssessX during the exam (window ✕, Alt+F4, the taskbar). The app
+    #: refuses while an exam is in progress; the attempt is recorded as a fact.
+    EXAM_CLOSE_ATTEMPT = "EXAM_CLOSE_ATTEMPT"
     DEVICE_CHECK_PASSED = "DEVICE_CHECK_PASSED"
     DEVICE_CHECK_FAILED = "DEVICE_CHECK_FAILED"
     # AI observations (Phase 5C) — factual, temporally stabilised conditions reported by the
@@ -78,6 +81,10 @@ class ProctoringEventType(enum.StrEnum):
     BOOK_DETECTED = "BOOK_DETECTED"
     LAPTOP_DETECTED = "LAPTOP_DETECTED"
     HANDHELD_DEVICE_DETECTED = "HANDHELD_DEVICE_DETECTED"
+    # Framing (2026-10-05): the candidate's head and upper body (to the chest) must be in view, so a
+    # hand or phone held below the face is visible too. Shoulders not in view, or the face cut off by
+    # the frame edge, for several seconds.
+    UPPER_BODY_NOT_VISIBLE = "UPPER_BODY_NOT_VISIBLE"
     #: AI health (Phase 5C) — whether AssessX's AI monitoring is working. A system condition, never
     #: an observation about the candidate.
     AI_STATUS = "AI_STATUS"

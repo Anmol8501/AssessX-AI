@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.logging import client_ip_var, request_id_var
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.base import utcnow
 
@@ -18,7 +19,7 @@ class AuditRepository:
     def record(
         self,
         *,
-        actor_id: uuid.UUID,
+        actor_id: uuid.UUID | None,
         action: AuditAction,
         attempt_id: uuid.UUID | None = None,
         assessment_id: uuid.UUID | None = None,
@@ -36,6 +37,8 @@ class AuditRepository:
             interview_session_id=interview_session_id,
             details=details,
             occurred_at=utcnow(),
+            request_id=request_id_var.get(),
+            client_ip=client_ip_var.get(),
         )
         self.db.add(row)
         self.db.flush()

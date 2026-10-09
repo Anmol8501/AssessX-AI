@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useApi } from '@/features/session'
+import { fetchAllPages, useApi, usePagedList } from '@/features/session'
 import { ApiError } from '@/lib/api'
 import type {
   AssessmentDetail,
@@ -30,31 +30,9 @@ export function describeError(error: unknown, fallback: string): string {
 
 type Loadable<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; data: T }
 
-/** The admin assessment list, with a `reload` for after a create or delete. */
+/** The admin assessment list, newest first and paged, with a `reload` for after a create or delete. */
 export function useAssessmentList() {
-  const api = useApi()
-  const [state, setState] = useState<Loadable<AssessmentSummary[]>>({ status: 'loading' })
-
-  const load = useCallback(
-    (signal?: AbortSignal) =>
-      api<AssessmentSummary[]>('/api/v1/assessments', { signal })
-        .then((data) => {
-          if (!signal?.aborted) setState({ status: 'ready', data })
-        })
-        .catch((error: unknown) => {
-          if (!signal?.aborted) setState({ status: 'error', message: describeError(error, 'Could not load assessments.') })
-        }),
-    [api],
-  )
-
-  // Synchronising with the server: state changes only once the request settles.
-  useEffect(() => {
-    const controller = new AbortController()
-    void load(controller.signal)
-    return () => controller.abort()
-  }, [load])
-
-  return { state, reload: load }
+  return usePagedList<AssessmentSummary>('/api/v1/assessments', 'Could not load assessments.')
 }
 
 /** One assessment with its questions; `reload` refreshes it after a write. */
@@ -146,7 +124,8 @@ export function useAssessmentActions() {
         api<void>(`/api/v1/assessments/${id}/assignments/${candidateId}`, { method: 'DELETE' }),
       [api],
     ),
-    listCandidates: useCallback(() => api<CandidateSummary[]>('/api/v1/candidates'), [api]),
+    // Every candidate (for assignment pickers), fetched in bounded pages.
+    listCandidates: useCallback(() => fetchAllPages<CandidateSummary>('/api/v1/candidates'), []),
     createCandidate: useCallback(
       (input: CandidateInput) => api<CandidateSummary>('/api/v1/candidates', { method: 'POST', body: input }),
       [api],

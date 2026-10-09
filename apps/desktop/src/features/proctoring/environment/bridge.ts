@@ -32,6 +32,8 @@ export interface WindowSnapshot {
   focused: boolean
   displayCount: number
   remoteSession: boolean
+  /** When not focused, where focus went (desktop app only): another app, the desktop, or Windows itself. */
+  leftTo?: 'app' | 'desktop' | 'system' | null
 }
 
 /** A system shortcut the native guard swallowed. Only its name — never the key stream. */
@@ -49,6 +51,8 @@ export interface DesktopBridge {
   snapshot(): Promise<WindowSnapshot>
   onShortcut(handler: (shortcut: NativeShortcut) => void): Promise<() => void>
   onWindowChange(handler: (snapshot: WindowSnapshot) => void): Promise<() => void>
+  /** The candidate tried to close AssessX during the exam and the app refused (desktop app only). */
+  onCloseBlocked(handler: () => void): Promise<() => void>
 }
 
 const tauriBridge: DesktopBridge = {
@@ -59,6 +63,7 @@ const tauriBridge: DesktopBridge = {
   snapshot: () => invoke<WindowSnapshot>('environment_snapshot'),
   onShortcut: (handler) => listen<NativeShortcut>('lockdown://shortcut', (event) => handler(event.payload)),
   onWindowChange: (handler) => listen<WindowSnapshot>('lockdown://window', (event) => handler(event.payload)),
+  onCloseBlocked: (handler) => listen('exam://close-blocked', () => handler()),
 }
 
 function browserSnapshot(): WindowSnapshot {
@@ -105,6 +110,8 @@ const browserBridge: DesktopBridge = {
     document.addEventListener('fullscreenchange', notify)
     return () => document.removeEventListener('fullscreenchange', notify)
   },
+  // A web page cannot be stopped from closing; there is nothing to listen to.
+  onCloseBlocked: async () => () => undefined,
 }
 
 export function desktopBridge(): DesktopBridge {

@@ -236,6 +236,10 @@ leaves open. They need a product-owner decision before or during the relevant st
    * a way to capture clips around an event on the candidate's device.
 
    Decide whether 6B is metadata-only evidence (as planned) or includes media.
+
+   **Decided (2026-10-06):** 6B stays metadata-only. Media evidence is added separately as event-triggered
+   **evidence clips**: short, video-only, private, hashed and retention-bound clips linked to the 6B items.
+   The candidate is told before the exam. See [`EVIDENCE-CLIPS.md`](EVIDENCE-CLIPS.md).
 4. **Review actions.** PRD **FR-018** names investigation actions **confirm / dismiss / escalate**; the
    plan defines review **states** UNREVIEWED → UNDER_REVIEW → REVIEWED plus a note. Decide whether
    the conclusion also records a confirm/dismiss/escalate outcome, and what "escalate" means with a

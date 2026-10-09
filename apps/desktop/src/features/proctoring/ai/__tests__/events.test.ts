@@ -37,7 +37,8 @@ const head = (yawDeg: number, pitchDeg: number) => obs('HEAD_POSE', { yawDeg, pi
 const gaze = (h: number, v: number) => obs('GAZE', { gazeHorizontal: h, gazeVertical: v })
 const quality = (meanLuminance: number, faceAreaRatio?: number) =>
   obs('FRAME_QUALITY', { meanLuminance, luminanceStdDev: 0.2, ...(faceAreaRatio !== undefined ? { faceAreaRatio } : {}) })
-const normal = () => [face(1), head(2, 3), gaze(0.1, 0), quality(0.45, 0.12)]
+const framing = (shouldersVisible: number, faceCutOff = false) => obs('FRAMING', { shouldersVisible, faceCutOff, lowestShoulderY: 0.78 })
+const normal = () => [face(1), head(2, 3), gaze(0.1, 0), quality(0.45, 0.12), framing(2)]
 /** One object class's best candidate, as the object detector reports it. */
 const object = (objectClass: string, confidence: number, objectModel = 'yolox_s', boxAreaRatio?: number, region = 'full') =>
   obs('OBJECT_DETECTION', { objectClass, objectModel, region, ...(boxAreaRatio !== undefined ? { boxAreaRatio } : {}) }, confidence)
@@ -47,6 +48,18 @@ const noObjects = () => ['cell_phone', 'book', 'laptop', 'remote'].map((c) => ob
 // -- 1. reading conditions ---------------------------------------------------------------------------
 
 describe('readConditions', () => {
+  it('framing: head and chest in view only with both shoulders and an uncut face', () => {
+    expect(readConditions([face(1), framing(2)], T).UPPER_BODY_NOT_VISIBLE.state).toBe('absent')
+    expect(readConditions([face(1), framing(1)], T).UPPER_BODY_NOT_VISIBLE).toEqual({
+      state: 'present',
+      metadata: { detector: 'framing', shoulders_visible: 1, face_cut_off: false },
+    })
+    expect(readConditions([face(1), framing(2, true)], T).UPPER_BODY_NOT_VISIBLE.state).toBe('present')
+    // No face, or no framing measurement: unknown — never "framed" and never "not framed".
+    expect(readConditions([face(0), framing(0)], T).UPPER_BODY_NOT_VISIBLE.state).toBe('unknown')
+    expect(readConditions([face(1)], T).UPPER_BODY_NOT_VISIBLE.state).toBe('unknown')
+  })
+
   it('reads a normal frame as every condition absent', () => {
     const r = readConditions([...normal(), ...noObjects()], T, 0) // neutral yaw calibrated at 0°
     for (const reading of Object.values(r)) expect(reading.state).toBe('absent')
@@ -359,7 +372,7 @@ describe('aiStatusOf', () => {
 
   it('names impaired detectors by their server names', () => {
     const v = view({ state: 'DEGRADED', detectors: [{ id: 'mediapipe.gaze', state: 'ERROR' }, { id: 'object-detection', state: 'DEGRADED' }] })
-    expect(aiStatusOf(v)).toEqual({ ai_status: 'DEGRADED', ai_reason: 'detector_impaired', impaired: ['gaze', 'object_detection'], accelerator: 'CPU' })
+    expect(aiStatusOf(v)).toEqual({ ai_status: 'DEGRADED', ai_reason: 'detector_impaired', impaired: ['gaze', 'object_detection'], accelerator: 'CPU', runtime_kind: 'mediapipe', production_capable: true })
   })
 })
 
@@ -538,7 +551,7 @@ describe('AIEventProcessor', () => {
     expect(h.sent).toEqual([]) // not yet stable
     h.at(1000)
     h.processor.tick()
-    expect(h.sent).toEqual([{ type: 'AI_STATUS', metadata: { ai_status: 'RUNNING', ai_reason: 'none', impaired: [], accelerator: 'CPU' } }])
+    expect(h.sent).toEqual([{ type: 'AI_STATUS', metadata: { ai_status: 'RUNNING', ai_reason: 'none', impaired: [], accelerator: 'CPU', runtime_kind: 'mediapipe', production_capable: true } }])
 
     // borderline latency flapping RUNNING ↔ DEGRADED every 300 ms: nothing new is reported
     for (let t = 1100; t < 4000; t += 300) {

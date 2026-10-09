@@ -33,6 +33,9 @@ def ws_calls_use_test_db(db, monkeypatch):
         yield db
 
     monkeypatch.setattr(ws_calls, "_session", _session)
+    from app.realtime import security as socket_security
+
+    monkeypatch.setattr(socket_security, "db_session", _session)
 
 
 @pytest.fixture

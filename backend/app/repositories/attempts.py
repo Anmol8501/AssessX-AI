@@ -51,18 +51,20 @@ class AttemptRepository:
             .with_for_update(of=AssessmentAttempt)
         )
 
-    def latest_by_assessment(self, candidate_id: uuid.UUID) -> dict[uuid.UUID, AssessmentAttempt]:
+    def latest_by_assessment(
+        self, candidate_id: uuid.UUID, assessment_ids: list[uuid.UUID] | None = None
+    ) -> dict[uuid.UUID, AssessmentAttempt]:
         """`{assessment_id: most recent attempt}` for one candidate.
 
         One query for the whole My Exams list. A candidate holds few attempts, so the newest per
         assessment is picked in Python rather than with a window function.
         """
         latest: dict[uuid.UUID, AssessmentAttempt] = {}
-        rows = self.db.scalars(
-            select(AssessmentAttempt)
-            .where(AssessmentAttempt.candidate_id == candidate_id)
-            .order_by(AssessmentAttempt.attempt_number)
-        )
+        query = select(AssessmentAttempt).where(AssessmentAttempt.candidate_id == candidate_id)
+        if assessment_ids is not None:
+            # Only the assessments on the page being shown (CX-04).
+            query = query.where(AssessmentAttempt.assessment_id.in_(assessment_ids))
+        rows = self.db.scalars(query.order_by(AssessmentAttempt.attempt_number))
         for attempt in rows:
             latest[attempt.assessment_id] = attempt  # ascending order leaves the newest last
         return latest

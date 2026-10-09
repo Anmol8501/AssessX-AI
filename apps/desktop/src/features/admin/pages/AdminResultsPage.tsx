@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { routes } from '@/app/routes'
-import { Card, CardBody, EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '@/components/ui'
+import { Card, CardBody, EmptyState, ErrorState, LoadingState, LoadMore, PageHeader, StatusBadge } from '@/components/ui'
 import type { AssessmentSummary } from '@/features/assessments/types'
 import { useAssessmentList } from '@/features/assessments/useAssessments'
 
@@ -11,7 +11,7 @@ import { useAssessmentList } from '@/features/assessments/useAssessments'
  * the next screen; this one is a way in, not a dashboard.
  */
 export function AdminResultsPage() {
-  const { state, reload } = useAssessmentList()
+  const { state, reload, hasMore, loadMore, loadingMore } = useAssessmentList()
 
   return (
     <>
@@ -65,6 +65,7 @@ export function AdminResultsPage() {
                   </CardBody>
                 </Card>
               ))}
+              <LoadMore hasMore={hasMore} loading={loadingMore} onClick={() => void loadMore()} />
             </div>
           )
         })()}

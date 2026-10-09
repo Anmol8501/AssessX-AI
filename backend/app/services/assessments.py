@@ -6,7 +6,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.errors import AssessmentInUse, NotFound, ValidationFailed
+from app.core.errors import AssessmentInUse, Conflict, NotFound, ValidationFailed
 from app.models.assessment import Assessment, AssessmentStatus, AssessmentType
 from app.models.attempt import AssessmentAttempt
 from app.models.coding import CodingProblemVersion
@@ -22,6 +22,25 @@ from app.services import readiness
 log = logging.getLogger("assessx.assessments")
 
 
+#: Settings that define how an exam is taken. Once any candidate has an attempt they are frozen, so two
+#: candidates are never examined under different rules (Phase 8A, AX-10). Title, description,
+#: availability, attempts allowed and whether results are shown stay editable.
+EXAM_DEFINING_FIELDS = frozenset(
+    {
+        "proctoring_required",
+        "question_navigation",
+        "duration_minutes",
+        "total_marks",
+        "passing_marks",
+        "randomize_questions",
+        "randomize_options",
+        "coding_allow_custom_input",
+        "coding_allow_paste",
+        "coding_max_submissions",
+    }
+)
+
+
 class AssessmentService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -30,8 +49,8 @@ class AssessmentService:
 
     # -- assessments ---------------------------------------------------------------------
 
-    def list_assessments(self) -> list[Assessment]:
-        return self.assessments.list()
+    def list_assessments(self, page=None) -> list[Assessment]:  # noqa: ANN001 — a Page
+        return self.assessments.list(page)
 
     def get(self, assessment_id: uuid.UUID, *, with_questions: bool = False) -> Assessment:
         assessment = self.assessments.get(assessment_id, with_questions=with_questions)
@@ -170,6 +189,17 @@ class AssessmentService:
                 )
         elif new_type is None:
             changes.pop("assessment_type", None)
+        frozen = sorted(
+            f for f in changes if f in EXAM_DEFINING_FIELDS and changes[f] != getattr(assessment, f)
+        )
+        if frozen:
+            try:
+                self._require_editable(assessment_id)
+            except AssessmentInUse as error:
+                raise AssessmentInUse(
+                    "Candidates have already taken this exam: how it is taken can no longer change "
+                    f"({', '.join(frozen)})."
+                ) from error
         for field, value in changes.items():
             setattr(assessment, field, value or None if field in {"description", "instructions"} else value)
 
@@ -306,8 +336,11 @@ class AssessmentService:
         return assessment
 
     def revert_to_draft(self, assessment_id: uuid.UUID) -> Assessment:
-        """READY -> DRAFT so an admin can keep editing. Publishing/archiving belong to Phase 2C."""
+        """READY -> DRAFT so an admin can keep editing. A PUBLISHED exam is refused here: it returns to
+        draft only through `unpublish`, which first requires every candidate to be unassigned (AX-09)."""
         assessment = self.get(assessment_id, with_questions=True)
+        if assessment.status is AssessmentStatus.PUBLISHED:
+            raise Conflict("Unpublish this assessment to return it to draft.")
         if assessment.status is not AssessmentStatus.DRAFT:
             assessment.status = AssessmentStatus.DRAFT
             self.db.flush()

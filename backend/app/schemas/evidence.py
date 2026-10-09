@@ -16,6 +16,7 @@ from app.models.proctoring_event import (
     ProctoringEventSource,
     ProctoringEventType,
 )
+from app.schemas.evidence_clips import EvidenceClipRef
 from app.services.risk.evidence import EvidenceEpisode, EvidenceItem
 
 Status = Literal["INSTANT", "ONGOING", "RESOLVED", "NO_END_RECORDED"]
@@ -46,6 +47,8 @@ class EvidenceItemOut(BaseModel):
     source_event_ids: list[uuid.UUID]
     explanation: str
     facts: dict[str, Any]
+    #: The evidence clip recorded around this item's starting event, if any (FR-017).
+    clip: "EvidenceClipRef | None" = None
 
     @classmethod
     def of(cls, item: EvidenceItem) -> "EvidenceItemOut":

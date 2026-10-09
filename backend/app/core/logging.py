@@ -23,6 +23,9 @@ from typing import Any
 from starlette.requests import Request
 
 request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
+#: The request's client address as this deployment trusts it (`core.limits.client_ip`), for audit rows.
+client_ip_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("client_ip", default=None)
+_SAFE_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 # Keys that must never appear in structured log fields, whatever a caller passes.
 SENSITIVE_KEYS = frozenset(
@@ -130,8 +133,14 @@ class RequestContextMiddleware:
             return
 
         request = Request(scope)
-        request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+        # A client-supplied id is echoed only if it is short and plain (no log injection); else our own.
+        supplied = request.headers.get("x-request-id") or ""
+        request_id = supplied if _SAFE_REQUEST_ID.fullmatch(supplied) else uuid.uuid4().hex[:12]
         token = request_id_var.set(request_id)
+        from app.core.limits import client_ip
+
+        client = client_ip(request)
+        client_token = client_ip_var.set(client)
         started = time.perf_counter()
         status_code = 500
 
@@ -158,8 +167,26 @@ class RequestContextMiddleware:
                     "status": status_code,
                     "duration_ms": duration_ms,
                     "user_id": getattr(request.state, "user_id", None),
+                    "client_ip": client,
                 },
             )
+            # Security monitoring (CX-02/03): refused and failing requests become security events.
+            try:
+                from app.services.security_events import observe_response
+
+                await observe_response(
+                    method=request.method,
+                    path=request.url.path,
+                    status=status_code,
+                    user_id=getattr(request.state, "user_id", None),
+                    role=getattr(request.state, "user_role", None),
+                    client=client,
+                    request_id=request_id,
+                    had_credentials=bool(request.headers.get("authorization")),
+                )
+            except Exception:  # noqa: BLE001 — monitoring must never break a request
+                self.log.debug("Security observation failed", exc_info=True)
+            client_ip_var.reset(client_token)
             request_id_var.reset(token)
 
 

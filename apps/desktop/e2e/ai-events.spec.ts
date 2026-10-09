@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test'
-import { API_BASE_URL, DEV_ADMIN, DEV_CANDIDATE, signIn } from './helpers'
+import { API_BASE_URL, DEV_ADMIN, DEV_CANDIDATE, signIn, storedToken } from './helpers'
 import { candidateAuth, examDetail, ME, openDetails, recordedEvents, seedExam, syntheticDevices, unique } from './proctoring-helpers'
 
 /**
@@ -227,7 +227,7 @@ test.describe('AI events (real detectors, scripted scene)', () => {
     await expect(dialog.getByText(/Head orientation changed \(left\) — ended \(after \d+s, cleared\)|Head orientation changed — ended/).first()).toBeVisible()
 
     // The wall tile shows the AI's health and the number of ongoing observations — no score.
-    await admin.getByRole('button', { name: 'Close' }).click()
+    await admin.getByRole('button', { name: 'Close', exact: true }).click()
     await expect(admin.getByText('AI observations:').first()).toBeVisible()
     await expect(admin.locator('body')).not.toContainText(/risk|cheat|suspicious|verdict/i)
 
@@ -280,6 +280,33 @@ test.describe('AI events (real detectors, scripted scene)', () => {
     expect(JSON.stringify(ended).toLowerCase()).not.toMatch(/risk|cheat|verdict|suspicious/)
 
     await admin.context().close()
+    await page.context().close()
+  })
+
+  test('head and chest out of view: the candidate is told how to sit, the supervisor sees it, and it clears', async ({ browser, request }) => {
+    test.setTimeout(120_000)
+    const title = unique('AI Framing Exam')
+    const exam = await seedExam(request, title, true)
+    const page = await candidatePage(browser, { ...FAST, scene: { faces: 1 } })
+    const attemptId = await enterExam(page, request, title, exam.id)
+    await until(request, attemptId, (events) => ofType(events, 'AI_STATUS').some((e) => e.metadata.ai_status === 'RUNNING'))
+
+    // Too close: no shoulders in view, face cut off at the edge.
+    await setScene(page, { faces: 1, shouldersVisible: 0, faceCutOff: true })
+    const started = await until(request, attemptId, (events) => ofType(events, 'UPPER_BODY_NOT_VISIBLE').length === 1)
+    expect(ofType(started, 'UPPER_BODY_NOT_VISIBLE')[0]!.metadata).toMatchObject({
+      phase: 'started',
+      detector: 'framing',
+      shoulders_visible: 0,
+      face_cut_off: true,
+    })
+    await expect(page.getByRole('alert').filter({ hasText: 'down to your chest' })).toBeVisible()
+
+    // Sitting back: both shoulders in view, face whole — it ends.
+    await setScene(page, { faces: 1 })
+    const ended = await until(request, attemptId, (events) => ofType(events, 'UPPER_BODY_NOT_VISIBLE').length === 2)
+    expect(ofType(ended, 'UPPER_BODY_NOT_VISIBLE')[1]!.metadata).toMatchObject({ phase: 'resolved', resolution: 'condition_cleared' })
+    await expect(page.getByRole('alert').filter({ hasText: 'down to your chest' })).toHaveCount(0)
     await page.context().close()
   })
 
@@ -344,13 +371,20 @@ test.describe('AI events (real detectors, scripted scene)', () => {
     const exam = await seedExam(request, title, true)
     const page = await candidatePage(browser, { ...FAST, scene: { faces: 1 } })
     const attemptId = await enterExam(page, request, title, exam.id)
-    const headers = await candidateAuth(request)
-    const post = (event_type: string, metadata: Record<string, unknown>) =>
+    // The exam's own sign-in session: an exam in progress belongs to the session that opened it
+    // (Phase 8A, AX-07), so the forgery attempts below are made with that session's token.
+    const headers = { Authorization: `Bearer ${await storedToken(page)}` }
+    const post = (event_type: string, metadata: Record<string, unknown>, as = headers) =>
       request.post(`${ME}/attempts/${attemptId}/proctoring/events`, {
-        headers,
+        headers: as,
         data: { client_event_id: crypto.randomUUID(), event_type, metadata },
       })
     const episode = crypto.randomUUID()
+
+    // A second sign-in of the same candidate cannot write into the exam while it is open elsewhere.
+    const elsewhere = await post('FACE_NOT_DETECTED', { phase: 'started', episode_id: crypto.randomUUID() }, await candidateAuth(request))
+    expect(elsewhere.status()).toBe(409)
+    expect((await elsewhere.json()).error.code).toBe('attempt_in_use_elsewhere')
 
     expect((await post('CHEATING_DETECTED', { phase: 'started', episode_id: episode })).status()).toBe(422)
     expect((await post('PHONE_DETECTED', { phase: 'started', episode_id: episode, object_class: 'cell_phone', image: 'AAAA' })).status()).toBe(422)

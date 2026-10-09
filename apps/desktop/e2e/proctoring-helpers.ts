@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { API_BASE_URL, apiToken, DEV_ADMIN, DEV_CANDIDATE } from './helpers'
+import { API_BASE_URL, apiToken, DEV_ADMIN, DEV_CANDIDATE, storedToken } from './helpers'
 
 /**
  * Shared set-up for the proctoring specs (Phase 4A/4B): seeding exams, synthetic camera and
@@ -91,8 +91,15 @@ export async function examDetail(request: APIRequestContext, id: string) {
   return (await response.json()) as { active_attempt_id: string | null; attempts_used: number; proctoring_required: boolean }
 }
 
-export async function proctoringSession(request: APIRequestContext, attemptId: string) {
-  const response = await request.get(`${ME}/attempts/${attemptId}/proctoring`, { headers: await candidateAuth(request) })
+/** The exam's sign-in session, from the page that has it open. An exam in progress answers only the
+ * session that opened it (Phase 8A, AX-07), so a test observing a live exam reads through this one. */
+export async function pageAuth(page: Page) {
+  return { Authorization: `Bearer ${await storedToken(page)}` }
+}
+
+export async function proctoringSession(request: APIRequestContext, attemptId: string, page?: Page) {
+  const headers = page ? await pageAuth(page) : await candidateAuth(request)
+  const response = await request.get(`${ME}/attempts/${attemptId}/proctoring`, { headers })
   expect(response.ok()).toBeTruthy()
   return (await response.json()) as { status: string; camera_state: string; microphone_state: string; started_at: string | null }
 }

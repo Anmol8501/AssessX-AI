@@ -25,12 +25,13 @@ export function payload(
   const { tasks, ...rest } = overrides
   return {
     kind: 'mediapipe',
-    tasks: { faceDetector: 'OK', faceLandmarker: 'SKIPPED', objectDetector: 'OK', ...tasks },
+    tasks: { faceDetector: 'OK', faceLandmarker: 'SKIPPED', objectDetector: 'OK', poseLandmarker: 'SKIPPED', ...tasks },
     faces: [],
     landmarkedFaces: null,
     objects: [],
+    shoulders: null,
     statistics: { meanLuminance: 0.4, luminanceStdDev: 0.2 },
-    timingsMs: { statistics: 1, faceDetector: 1, faceLandmarker: 0, objectDetector: 1, total: 3 },
+    timingsMs: { statistics: 1, faceDetector: 1, faceLandmarker: 0, objectDetector: 1, poseLandmarker: 0, total: 3 },
     ...rest,
     objectModel: rest.objectModel ?? 'efficientdet_lite0',
   }

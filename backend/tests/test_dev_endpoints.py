@@ -16,9 +16,12 @@ def test_dev_router_is_mounted_outside_production(client, users):
 def test_dev_router_is_absent_in_production(monkeypatch):
     base = get_settings()
     production = Settings(**{**base.model_dump(), "app_env": "production"})
-    monkeypatch.setattr("app.main.get_settings", lambda: production)
 
-    paths = {route.path for route in create_app().routes}
+    # The OpenAPI schema lists every HTTP route however a FastAPI version nests routers internally;
+    # dev routes are in it whenever they are mounted (the control below proves it).
+    assert "/api/v1/dev/login-challenges" in create_app().openapi()["paths"]  # control: non-production
+    monkeypatch.setattr("app.main.get_settings", lambda: production)
+    paths = set(create_app().openapi()["paths"])
 
     assert "/api/v1/dev/login-challenges" not in paths
     assert "/api/v1/auth/login/candidate" in paths

@@ -7,6 +7,7 @@ candidate's app and the monitoring wall. The optional note is visible to adminis
 """
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter
@@ -14,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from app.api.deps import AdminUser, DbSession
 from app.models.attempt import AssessmentAttempt, AttemptStatus
+from app.models.attempt_message import MAX_MESSAGE_LENGTH
 from app.models.user import User
 from app.schemas.attempt import AttemptControl
 from app.schemas.review import Person
@@ -29,12 +31,32 @@ class HoldRequest(BaseModel):
     note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
 
 
+class MessageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    body: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_LENGTH)
+    ]
+
+
+class SentMessage(BaseModel):
+    """A message as the proctor sees it: who sent it and whether the candidate has read it."""
+
+    id: uuid.UUID
+    body: str
+    sent_at: datetime
+    sent_by: Person | None
+    acknowledged_at: datetime | None
+
+
 class AdminAttemptControl(AttemptControl):
     attempt_id: uuid.UUID
     status: AttemptStatus
     held_by: Person | None
     hold_note: str | None
     ended_by: Person | None
+    #: Every message sent during this attempt, oldest first.
+    sent_messages: list[SentMessage] = []
 
 
 def _person(db: DbSession, user_id: uuid.UUID | None) -> Person | None:
@@ -50,6 +72,16 @@ def _out(db: DbSession, attempt: AssessmentAttempt) -> AdminAttemptControl:
         held_by=_person(db, attempt.held_by_id) if attempt.is_on_hold else None,
         hold_note=attempt.hold_note if attempt.is_on_hold else None,
         ended_by=_person(db, attempt.ended_by_id),
+        sent_messages=[
+            SentMessage(
+                id=m.id,
+                body=m.body,
+                sent_at=m.sent_at,
+                sent_by=Person(id=m.sender.id, name=m.sender.name) if m.sender else None,
+                acknowledged_at=m.acknowledged_at,
+            )
+            for m in attempt.messages
+        ],
     )
 
 
@@ -71,6 +103,15 @@ def hold_attempt(
 def release_attempt(attempt_id: uuid.UUID, admin: AdminUser, db: DbSession) -> AdminAttemptControl:
     """Lets the candidate continue with the time that is left. The tab-switch count is kept."""
     return _out(db, AttemptControlService(db).release(attempt_id, admin))
+
+
+@router.post("/{attempt_id}/messages", response_model=AdminAttemptControl)
+def send_message(
+    attempt_id: uuid.UUID, payload: MessageRequest, admin: AdminUser, db: DbSession
+) -> AdminAttemptControl:
+    """Shows the candidate a short message on their exam screen (for example a warning about something
+    seen on camera) until they acknowledge it. Only while the exam is running."""
+    return _out(db, AttemptControlService(db).send_message(attempt_id, admin, payload.body))
 
 
 @router.post("/{attempt_id}/end", response_model=AdminAttemptControl)

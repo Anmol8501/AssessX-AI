@@ -1,10 +1,11 @@
 import { useState, type ComponentType, type SVGProps } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { RefreshIcon, SignOutIcon } from '@/components/icons'
+import { LockIcon, RefreshIcon, SignOutIcon } from '@/components/icons'
 import { Logo } from '@/components/Logo'
 import { Button, ConfirmDialog, StatusBadge } from '@/components/ui'
 import { APP_VERSION } from '@/config/app'
 import { ROLE_LABEL, useCurrentUser, useSession } from '@/features/session'
+import { AccountDialog } from '@/features/session/AccountDialog'
 import { cn } from '@/lib/cn'
 
 export interface NavItem {
@@ -32,6 +33,7 @@ export function AppShell({ nav }: AppShellProps) {
   const { signOut } = useSession()
   const { pathname } = useLocation()
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -96,6 +98,14 @@ export function AppShell({ nav }: AppShellProps) {
           </div>
           <button
             type="button"
+            onClick={() => setAccountOpen(true)}
+            className="text-ink-inverse-muted hover:bg-sidebar-hover mt-1 flex h-9 w-full items-center gap-3 rounded-md px-3 text-[13.5px] font-medium transition-colors hover:text-white"
+          >
+            <LockIcon className="text-[18px]" />
+            Account security
+          </button>
+          <button
+            type="button"
             onClick={() => setConfirmingSignOut(true)}
             className="text-ink-inverse-muted hover:bg-sidebar-hover mt-1 flex h-9 w-full items-center gap-3 rounded-md px-3 text-[13.5px] font-medium transition-colors hover:text-white"
           >
@@ -149,6 +159,7 @@ export function AppShell({ nav }: AppShellProps) {
         onConfirm={handleSignOut}
         onCancel={() => setConfirmingSignOut(false)}
       />
+      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} />
     </div>
   )
 }

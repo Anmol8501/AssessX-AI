@@ -91,9 +91,12 @@ test('an admin builds a coding problem and uses it in a coding-only assessment',
   await builderStep(page, 'Settings')
   await expect(page.getByRole('checkbox', { name: 'Allow copy and paste inside the code editor' })).toBeChecked()
 
-  // Publishing waits for the runner (stage C2).
+  // Publishing waits for the runner (stage C2). With a runner configured (ASSESSX_RUNNER_E2E) the
+  // notice must not appear; coding-runner.spec.ts covers publishing in that mode.
   await builderStep(page, 'Review')
-  await expect(page.getByText("Coding questions can't be published yet: the code runner has not been set up.")).toBeVisible()
+  const runnerMissing = page.getByText("Coding questions can't be published yet: the code runner has not been set up.")
+  if (process.env.ASSESSX_RUNNER_E2E) await expect(runnerMissing).toHaveCount(0)
+  else await expect(runnerMissing).toBeVisible()
 
   // --- MCQ-only offers only MCQs; Mixed offers both ----------------------------------------------------------
   await createAssessment(page, unique('Java Fundamentals'), 'MCQ only')

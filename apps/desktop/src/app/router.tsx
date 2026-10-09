@@ -13,6 +13,7 @@ import { LiveMonitoringPage } from '@/features/admin/monitoring/LiveMonitoringPa
 import { SettingsPage } from '@/features/admin/pages/SettingsPage'
 import { AttemptReviewPage } from '@/features/admin/review/AttemptReviewPage'
 import { ReviewQueuePage } from '@/features/admin/review/ReviewQueuePage'
+import { SecurityPage } from '@/features/admin/security/SecurityPage'
 import { InterviewEditorPage } from '@/features/interviews/admin/InterviewEditorPage'
 import { AdminCallPage } from '@/features/interviews/call/AdminCallPage'
 import { CandidateCallPage } from '@/features/interviews/call/CandidateCallPage'
@@ -77,6 +78,7 @@ export const router = createHashRouter([
               { path: 'results', element: <AdminResultsPage /> },
               { path: 'results/:assessmentId', element: <AssessmentResultsPage /> },
               { path: 'reviews', element: <ReviewQueuePage /> },
+              { path: 'security', element: <SecurityPage /> },
               { path: 'reviews/:attemptId', element: <AttemptReviewPage /> },
               { path: 'interviews', element: <InterviewsPage /> },
               { path: 'interviews/reports', element: <ReportQueuePage /> },

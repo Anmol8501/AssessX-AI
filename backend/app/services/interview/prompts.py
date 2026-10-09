@@ -9,6 +9,7 @@ context carries no candidate identity — only the question, the rubric and the 
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
@@ -46,7 +47,47 @@ appearance or any other personal characteristic. Language fluency is not assesse
 to 1 describing how clear-cut your assessment is.
 10. Do not include your reasoning process. Return only the fields the tool requires."""
 
-_ANSWER_TAG = re.compile(r"</?\s*candidate_answer\s*>", re.IGNORECASE)
+#: Anything shaped like one of our delimiters or a chat role/tool tag (after Unicode normalisation).
+_ANSWER_TAG = re.compile(
+    r"<\s*/?\s*(candidate_answer|evaluation_context|system|assistant|user|developer|tool|tool_call|"
+    r"tool_result|function_call|instructions?)\b[^>]{0,40}>",
+    re.IGNORECASE,
+)
+#: Instruction-like text aimed at the evaluator (Phase 8 final, CX-08). Detection only: such an answer is
+#: still evaluated as an answer, and the reviewer sees the flag `INSTRUCTION_LIKE_TEXT`.
+_INJECTION = re.compile(
+    r"(ignore|disregard|forget|override)\s+(all\s+|any\s+|the\s+|your\s+)?(previous|prior|above|earlier|system)\s+"
+    r"(instructions?|prompts?|rules?|messages?)"
+    r"|(you\s+are\s+now|act\s+as|pretend\s+to\s+be)\s+(an?\s+)?(evaluator|grader|examiner|system|admin)"
+    r"|system\s+prompt|developer\s+message|reveal\s+(the\s+|your\s+)?(rubric|instructions|prompt)"
+    r"|(give|award|assign|set)\s+(me|this(\s+answer)?|the\s+candidate)\s+(a\s+)?(full|perfect|maximum|max|100|10)"
+    r"|(score|grade|mark)\s+(this|me|it)\s+(as\s+)?(10|100|full|perfect|correct)"
+    r"|change\s+(my|the)\s+(score|grade|marks?)|treat\s+this\s+(answer\s+)?as\s+correct"
+    r"|dimension_scores|record_evaluation|tool_choice"
+    r"|ignora\s+las\s+instrucciones|ignore[rz]?\s+les\s+instructions|ignoriere\s+(alle\s+)?(vorherigen\s+)?anweisungen"
+    r"|पिछले\s+निर्देश|निर्देशों\s+को\s+(अनदेखा|नज़रअंदाज़)|pichle\s+nirdesh",
+    re.IGNORECASE,
+)
+_KEEP_CONTROLS = {"\n", "\t"}
+
+
+def sanitize_answer(answer: str) -> str:
+    """The answer as the evaluator may see it: Unicode-normalised (NFKC, so look-alike and full-width forms
+    become plain), with control and invisible formatting characters removed — zero-width spaces/joiners,
+    bidirectional overrides and isolates, BOMs — and newlines/tabs kept. Text is otherwise unchanged."""
+    text = unicodedata.normalize("NFKC", answer).replace("\r\n", "\n").replace("\r", "\n")
+    return "".join(
+        ch for ch in text if ch in _KEEP_CONTROLS or unicodedata.category(ch) not in ("Cc", "Cf", "Co", "Cs")
+    )
+
+
+def injection_signals(answer: str) -> list[str]:
+    """Instruction-like phrases in an answer (normalised first, so invisible characters cannot hide them)."""
+    text = sanitize_answer(answer)
+    found = sorted({m.group(0).strip().lower()[:40] for m in _INJECTION.finditer(text)})
+    if _ANSWER_TAG.search(text):
+        found.append("delimiter_or_role_tag")
+    return found[:5]
 
 
 @dataclass(frozen=True)
@@ -67,8 +108,9 @@ class EvaluationContext:
 
 
 def neutralise(answer: str) -> str:
-    """Stops the answer from closing (or reopening) its own delimiter block."""
-    return _ANSWER_TAG.sub("[tag removed]", answer)
+    """Sanitises the answer and stops it from closing (or reopening) its own delimiter block, or posing as
+    another role or a tool call. Applied after normalisation, so invisible characters cannot split a tag."""
+    return _ANSWER_TAG.sub("[tag removed]", sanitize_answer(answer))
 
 
 def user_message(ctx: EvaluationContext) -> str:

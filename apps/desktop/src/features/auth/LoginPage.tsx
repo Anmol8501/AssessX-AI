@@ -7,6 +7,8 @@ import { useSession, type Credentials } from '@/features/session'
 import { ApiError } from '@/lib/api'
 import { AccountTypeSwitch, type AccountType } from './AccountTypeSwitch'
 import { Captcha } from './Captcha'
+import { ResetCodeForm } from './ResetCodeForm'
+import { SecondFactorStep } from './SecondFactorStep'
 import { SecurityShowcase } from './SecurityShowcase'
 import { useLoginChallenge } from './useLoginChallenge'
 
@@ -51,6 +53,10 @@ function describeSignInError(error: unknown): { field?: keyof FormErrors; messag
         return { message: 'This account is inactive. Contact your administrator.' }
       case 'challenge_invalid':
         return { field: 'captcha', message: 'The code did not match. Try the new one.' }
+      case 'too_many_attempts':
+      case 'server_busy':
+        // The server's own wording says how long to wait (Phase 8A).
+        return { message: error.message }
       case 'validation_error':
         return { message: 'Please check the details you entered.' }
       default:
@@ -64,7 +70,7 @@ const EMPTY: FormValues = { rollNumber: '', username: '', email: '', password: '
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { state, signIn } = useSession()
+  const { state, signIn, signOut, completeSecondFactor } = useSession()
   const { challenge, loading: challengeLoading, error: challengeError, refresh: refreshChallenge } = useLoginChallenge()
 
   const [type, setType] = useState<AccountType>('candidate')
@@ -74,6 +80,8 @@ export function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [showResetHint, setShowResetHint] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
 
   const set = (key: keyof FormValues) => (value: string) => setValues((v) => ({ ...v, [key]: value }))
 
@@ -108,8 +116,9 @@ export function LoginPage() {
 
     setSubmitting(true)
     try {
-      const user = await signIn(credentials)
-      navigate(homeFor(user.role), { replace: true })
+      const signed = await signIn(credentials)
+      // An administrator may still need the second factor: the screen switches to that step.
+      if (signed.mfa === 'none') navigate(homeFor(signed.user.role), { replace: true })
     } catch (error) {
       const described = describeSignInError(error)
       if (described.field) setErrors({ [described.field]: described.message })
@@ -136,13 +145,44 @@ export function LoginPage() {
               </p>
             </div>
 
-            {signedOutNotice && !formError && (
+            {resetDone && !formError && (
+              <Notice tone="info" role="status">
+                Your password has been changed. Sign in with the new password.
+              </Notice>
+            )}
+
+            {signedOutNotice && !formError && !resetDone && (
               <Notice tone="info" role="status">
                 {signedOutNotice}
               </Notice>
             )}
 
             <Card className="p-6">
+              {state.status === 'second-factor' ? (
+                <SecondFactorStep
+                  mode={state.mfa}
+                  onDone={() => {
+                    completeSecondFactor()
+                    navigate(homeFor(state.user.role), { replace: true })
+                  }}
+                  onCancel={() => void signOut()}
+                />
+              ) : resetting ? (
+                <ResetCodeForm
+                  onCancel={() => {
+                    setResetting(false)
+                    void refreshChallenge()
+                  }}
+                  onDone={() => {
+                    setResetting(false)
+                    setShowResetHint(false)
+                    setResetDone(true)
+                    setValues((v) => ({ ...v, password: '', captcha: '' }))
+                    void refreshChallenge()
+                  }}
+                />
+              ) : (
+              <>
               <AccountTypeSwitch value={type} onChange={switchType} disabled={submitting} />
 
               <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4" aria-label={`${type} sign-in`}>
@@ -237,7 +277,18 @@ export function LoginPage() {
 
                 {showResetHint && (
                   <p className="text-ink-subtle text-[12.5px]">
-                    Password reset is not available yet. Contact your organisation's administrator to regain access.
+                    Ask your organisation's administrator for a one-time reset code, then{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetDone(false)
+                        setResetting(true)
+                      }}
+                      className="text-accent hover:text-accent-hover font-medium"
+                    >
+                      enter the reset code
+                    </button>
+                    .
                   </p>
                 )}
 
@@ -266,6 +317,8 @@ export function LoginPage() {
                   {type === 'candidate' ? 'Sign in as Candidate' : 'Sign in as Administrator'}
                 </Button>
               </form>
+              </>
+              )}
             </Card>
 
             <p className="text-ink-subtle mt-5 text-center text-[13px]">

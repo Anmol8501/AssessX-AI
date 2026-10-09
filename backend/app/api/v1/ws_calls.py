@@ -15,6 +15,7 @@ is recorded.
 
 import logging
 import re
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -27,6 +28,7 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.realtime.calls import CallMessage, call_hub, other
+from app.realtime.security import SocketGuard, admit, authenticate, slots
 from app.schemas.interview_call import ChatMessageOut
 from app.services.auth import AuthService
 from app.services.interview.calls import CallService
@@ -82,16 +84,40 @@ def _offer_id(data: dict) -> dict[str, str]:
     return {"offer_id": value} if isinstance(value, str) and _OFFER_ID.match(value) else {}
 
 
+def _legacy(token: str) -> tuple[User, None] | None:
+    """The pre-0.1.4 `?token=` credential (only while WS_ALLOW_LEGACY_TOKEN is on)."""
+    user = _authenticate(token)
+    return (user, None) if user else None
+
+
+class _ChatLimit:
+    """At most one chat message per second on average, bursts of five."""
+
+    def __init__(self) -> None:
+        self.tokens = 5.0
+        self.updated = time.monotonic()
+
+    def allow(self) -> bool:
+        now = time.monotonic()
+        self.tokens = min(5.0, self.tokens + (now - self.updated))
+        self.updated = now
+        if self.tokens >= 1:
+            self.tokens -= 1
+            return True
+        return False
+
+
 def _clean(value: object) -> bool:
     return isinstance(value, str) and 0 < len(value) <= _SDP_MAX
 
 
 @router.websocket("/ws/interview-calls/{call_id}")
 async def interview_call(ws: WebSocket, call_id: uuid.UUID) -> None:
-    user = _authenticate(ws.query_params.get("token"))
-    if user is None:
+    found = authenticate(ws, "call", _legacy)
+    if found is None:
         await ws.close(code=_POLICY_VIOLATION)
         return
+    user, session_id = found
     side = _side(call_id, user)
     if side is None:
         await ws.accept()
@@ -99,24 +125,30 @@ async def interview_call(ws: WebSocket, call_id: uuid.UUID) -> None:
         await ws.close(code=_POLICY_VIOLATION)
         return
 
+    if not await admit(ws, user):
+        return
     await ws.accept()
     if not await call_hub.join(call_id, side, user.id, ws):
+        slots.release(user.id)
         await ws.send_json(_msg(CallMessage.ERROR, error="occupied"))
         await ws.close(code=_POLICY_VIOLATION)
         return
     peer = other(side)
     await ws.send_json(_msg(CallMessage.READY, role=side, peer_present=call_hub.present(call_id, peer)))
     await call_hub.send(call_id, peer, _msg(CallMessage.PEER_JOINED, role=side))
+    guard = SocketGuard(ws, session_id, user.id)
+    chat = _ChatLimit()
     try:
-        while True:
-            data = await ws.receive_json()
-            if isinstance(data, dict):
-                await _handle(ws, call_id, side, user, data)
+        while (data := await guard.receive()) is not None:
+            if data.get("type") == CallMessage.CHAT.value and not chat.allow():
+                continue  # chat is rate-limited separately: each message is a database write
+            await _handle(ws, call_id, side, user, data)
     except WebSocketDisconnect:
         pass
     except Exception:  # noqa: BLE001
         log.debug("Interview call socket error", exc_info=True)
     finally:
+        slots.release(user.id)
         if call_hub.leave(call_id, side, ws):
             await call_hub.send(call_id, peer, _msg(CallMessage.PEER_LEFT, role=side))
 

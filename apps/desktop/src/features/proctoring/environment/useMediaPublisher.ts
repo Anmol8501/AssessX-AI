@@ -4,6 +4,7 @@ import { API_BASE_URL } from '@/lib/api'
 import { loadIceServers } from '@/features/admin/monitoring/webrtc'
 import { CONTROL_EVENT } from './useAttemptControl'
 import type { MediaDevice } from '../useMediaDevice'
+import { socketBase, socketTicket } from '@/lib/wsTicket'
 
 const RECONNECT_MAX_MS = 8000
 
@@ -12,9 +13,9 @@ interface Signal {
   [key: string]: unknown
 }
 
-function wsUrl(token: string, attemptId: string): string {
-  const base = API_BASE_URL.replace(/^http/, 'ws')
-  return `${base}/api/v1/ws/candidates/me/proctoring?token=${encodeURIComponent(token)}&attempt_id=${attemptId}`
+/** The proctoring socket, opened with a one-time ticket — never the session token (Phase 8A). */
+function wsUrl(ticket: string, attemptId: string): string {
+  return `${socketBase(API_BASE_URL)}/api/v1/ws/candidates/me/proctoring?ticket=${encodeURIComponent(ticket)}&attempt_id=${attemptId}`
 }
 
 /**
@@ -123,28 +124,34 @@ export function useMediaPublisher(attemptId: string, camera: MediaDevice, microp
       })()
     }
 
+    const retryLater = () => {
+      if (closed) return
+      retryTimer = window.setTimeout(connect, retry)
+      retry = Math.min(retry * 2, RECONNECT_MAX_MS)
+    }
     const connect = () => {
       if (closed) return
-      const ws = new WebSocket(wsUrl(token, attemptId))
-      socket = ws
-      ws.onmessage = (raw) => {
-        try {
-          onSignal(JSON.parse(raw.data as string) as Signal)
-        } catch {
-          /* ignore malformed */
-        }
-      }
-      ws.onclose = () => {
-        if (socket === ws) socket = null
-        closePc()
+      void socketTicket(token, 'proctoring').then((ticket) => {
         if (closed) return
-        retryTimer = window.setTimeout(connect, retry)
-        retry = Math.min(retry * 2, RECONNECT_MAX_MS)
-      }
-      ws.onopen = () => {
-        retry = 500
-      }
-      ws.onerror = () => ws.close()
+        const ws = new WebSocket(wsUrl(ticket, attemptId))
+        socket = ws
+        ws.onmessage = (raw) => {
+          try {
+            onSignal(JSON.parse(raw.data as string) as Signal)
+          } catch {
+            /* ignore malformed */
+          }
+        }
+        ws.onclose = () => {
+          if (socket === ws) socket = null
+          closePc()
+          retryLater()
+        }
+        ws.onopen = () => {
+          retry = 500
+        }
+        ws.onerror = () => ws.close()
+      }, retryLater)
     }
     connect()
 

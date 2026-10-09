@@ -1,6 +1,6 @@
 [package]
 name = "assessx-desktop"
-version = "0.1.3"
+version = "0.1.4"
 description = "AssessX desktop application"
 edition = "2021"
 
@@ -25,12 +25,16 @@ tauri-plugin-process = "~2.3.1"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    "Win32_Security_Credentials",
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ] }
+# The documented virtual-desktop COM interface (IVirtualDesktopManager): during an exam the window is
+# moved back onto the desktop the candidate switched to. Same version Tauri already builds (no new crate).
+windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }
 
 # See https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

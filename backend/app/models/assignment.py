@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, UniqueConstraint, Uuid
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utcnow
@@ -33,6 +33,8 @@ class AssessmentAssignment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "assessment_assignments"
     __table_args__ = (
         UniqueConstraint("assessment_id", "candidate_id", name="uq_assignment_assessment_candidate"),
+        # Paged list order (Phase 8 final, CX-04; migration 0028).
+        Index("ix_assignments_candidate_assigned", "candidate_id", "assigned_at"),
     )
 
     assessment_id: Mapped[uuid.UUID] = mapped_column(

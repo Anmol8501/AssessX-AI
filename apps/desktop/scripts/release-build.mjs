@@ -11,10 +11,14 @@
  * 2. Runs `tauri build` with updater artifacts enabled, producing the installer and its `.sig`.
  * 3. Writes `latest.json` next to the installer. Installed apps read it from the latest GitHub
  *    Release to learn about the new version and verify the download.
+ * 4. Writes `SHA256SUMS.txt` (Phase 8B, BX-07): the SHA-256 of the installer and `latest.json`, so
+ *    anyone downloading by hand from the website can check the file is the one that was released.
  *
- * Then create the GitHub Release `v<version>` and upload the installer and `latest.json`.
+ * Then create the GitHub Release `v<version>` and upload the installer, `latest.json` and
+ * `SHA256SUMS.txt`.
  */
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -68,11 +72,17 @@ const manifest = {
 const manifestPath = join(nsis, 'latest.json')
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
 
+// 4. Checksums for manual downloads, in the `sha256sum -c` format (also readable by eye).
+const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex')
+const sumsPath = join(nsis, 'SHA256SUMS.txt')
+writeFileSync(sumsPath, [installer, 'latest.json'].map((name) => `${sha256(join(nsis, name))}  ${name}`).join('\n') + '\n')
+
 console.log(`
 Release ${version} is ready. Publish it on GitHub:
   1. https://github.com/${REPO}/releases/new  →  tag: v${version}  (target: main)
-  2. Upload these two files:
+  2. Upload these three files:
        ${join(nsis, installer)}
        ${manifestPath}
+       ${sumsPath}
   3. Publish as the latest release (not a pre-release).
 Installed apps (0.1.1 or later) will then offer this update the next time they open.`)

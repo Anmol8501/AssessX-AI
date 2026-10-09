@@ -44,8 +44,8 @@ dashboard before a test session.
 | Language / Runtime | Python 3 |
 | Branch | the branch you want to test |
 | **Root Directory** | `backend` |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log` |
+| **Build Command** | `pip install --require-hashes -r requirements.lock` (the hashed lock, Phase 8B BX-14) |
+| **Start Command** | `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log --ws-max-size 262144` |
 | **Health Check Path** | `/health` |
 | Instance type | Free |
 
@@ -66,7 +66,15 @@ into tickets/chat.
 | Variable | Value | Required |
 |---|---|---|
 | `APP_ENV` | `production` | yes |
-| `DATABASE_URL` | the Supabase **Session pooler** URI with `?sslmode=require` — *secret* | yes |
+| `DATABASE_URL` | the Supabase **Session pooler** URI with `?sslmode=require` — *secret*. Phase 8B: move it to a least-privilege user and `sslmode=verify-full` — `docs/security/DATABASE-ROLES.md` §3–4 | yes |
+| `ALEMBIC_DATABASE_URL` | the owner's pooler URI, used only by `alembic upgrade head` once `DATABASE_URL` is the least-privilege user (`docs/security/DATABASE-ROLES.md` §3) — *secret* | with BX-05 |
+| `CLIENT_IP_HEADER` | `cf-connecting-ip` — the header sign-in throttling reads the client address from; verify as in `docs/security/DATABASE-ROLES.md` §5 | recommended |
+| `EVIDENCE_CLIPS_ENABLED`, `EVIDENCE_STORAGE_BACKEND`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (*secret*) | evidence clips (FR-017): off in production until a **private** Supabase bucket is configured — setup in `docs/EVIDENCE-CLIPS.md` | optional |
+| `MAINTENANCE_TOKEN` | 32+ random characters (*secret*); the same value as the GitHub secret used by `.github/workflows/maintenance.yml` and `backup.yml`. Unset: the maintenance route is off | yes (Phase 8 final) |
+| `ALERT_WEBHOOK_URL` | an https Slack/Discord/ntfy incoming webhook (*secret*) for security alerts — `docs/SECURITY-OPERATIONS.md` | recommended |
+| `ADMIN_MFA_REQUIRED` | leave unset: admin two-factor sign-in is required in production (`false` is refused) | — |
+| `RETENTION_*`, `EVIDENCE_RETENTION_DAYS` | retention periods — `docs/DATA-RETENTION.md` | optional |
+| `WS_ALLOW_LEGACY_TOKEN` | `true` (default) until every desktop app is ≥ 0.1.4, then `false` | Phase 8A |
 | `SECRET_KEY` | a random value ≥ 32 characters — *secret*. Generate: `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Rotating it signs everyone out | yes |
 | `CORS_ORIGINS` | `http://tauri.localhost,https://tauri.localhost` | yes |
 | `FORWARDED_ALLOW_IPS` | `*` — trust Render's proxy for `X-Forwarded-*` (client IP / scheme); read natively by uvicorn | yes |
@@ -96,8 +104,8 @@ contains `*` or `SECRET_KEY` is shorter than 32 characters or the development pl
 |---|---|
 | `GET https://<service>.onrender.com/health` | Liveness: `{"status":"ok"}`, HTTP 200. No database or AI work — this is Render's health check |
 | `GET https://<service>.onrender.com/api/v1/health` | Readiness: `{"status":"ok","database":"ok"}`, or HTTP 503 when the database is unreachable |
-| `wss://<service>.onrender.com/api/v1/ws/admin/monitoring?token=…` | Phase 4C admin monitoring WebSocket (admins only) |
-| `wss://<service>.onrender.com/api/v1/ws/candidates/me/proctoring?token=…&attempt_id=…` | Phase 4C candidate WebSocket (the candidate's own active attempt only) |
+| `wss://<service>.onrender.com/api/v1/ws/admin/monitoring?ticket=…` | Phase 4C admin monitoring WebSocket (admins only). Phase 8A: a one-time ticket from `POST /api/v1/realtime/ws-ticket`, not the session token |
+| `wss://<service>.onrender.com/api/v1/ws/candidates/me/proctoring?ticket=…&attempt_id=…` | Phase 4C candidate WebSocket (the candidate's own active attempt only) |
 
 ## 4. First administrator
 
@@ -141,7 +149,7 @@ export APP_ENV=production PORT=10000 FORWARDED_ALLOW_IPS='*' \
        DATABASE_URL="postgresql://assessx:assessx@localhost:5433/assessx_prodcheck" \
        SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" \
        CORS_ORIGINS="http://tauri.localhost,https://tauri.localhost" DB_POOL_SIZE=3 DB_MAX_OVERFLOW=2
-alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log
+alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log --ws-max-size 262144
 # then: curl http://127.0.0.1:10000/health   and   curl http://127.0.0.1:10000/api/v1/health
 ```
 

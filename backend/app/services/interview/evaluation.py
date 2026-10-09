@@ -31,6 +31,8 @@ from app.services.interview.prompts import (
     MAX_ITEMS,
     SYSTEM_PROMPT,
     EvaluationContext,
+    injection_signals,
+    sanitize_answer,
     tool_schema,
     user_message,
 )
@@ -147,7 +149,7 @@ def validate(payload: Any, ctx: EvaluationContext) -> ValidatedEvaluation:
 
     # Quotes must actually occur in the stored answer; anything else is dropped and flagged.
     flags: list[str] = []
-    answer = _normal(ctx.answer)
+    answer = _normal(sanitize_answer(ctx.answer))
     quotes = [q for q in _texts(out.evidence_quotes) if _normal(q) and _normal(q) in answer]
     if len(quotes) != len(_texts(out.evidence_quotes)):
         flags.append("UNVERIFIED_QUOTE_REMOVED")
@@ -167,6 +169,9 @@ def validate(payload: Any, ctx: EvaluationContext) -> ValidatedEvaluation:
         flags.append("LOW_CONFIDENCE")
     if any(_HIRING.search(t) for t in [feedback, *strengths, *incorrect]):
         flags.append("HIRING_LANGUAGE")
+    # The answer tried to instruct the evaluator: still scored as an answer, but a person must look.
+    if injection_signals(ctx.answer):
+        flags.append("INSTRUCTION_LIKE_TEXT")
 
     return ValidatedEvaluation(
         dimension_scores=scores,

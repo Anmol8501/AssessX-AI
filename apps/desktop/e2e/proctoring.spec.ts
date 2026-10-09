@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { DEV_CANDIDATE, signIn } from './helpers'
 import {
-  candidateAuth,
   check,
   examDetail,
   ME,
   openDetails,
+  pageAuth,
   proctoringSession,
   seedExam,
   setDevice,
@@ -68,7 +68,7 @@ test('a proctored exam is checked, run under proctoring, and its session ends on
   const detail = await examDetail(request, id)
   expect(detail.active_attempt_id).not.toBeNull()
   const attemptId = detail.active_attempt_id!
-  const active = await proctoringSession(request, attemptId)
+  const active = await proctoringSession(request, attemptId, page)
   expect(active.status).toBe('ACTIVE')
   expect(active.camera_state).toBe('READY')
   expect(active.microphone_state).toBe('READY')
@@ -81,7 +81,7 @@ test('a proctored exam is checked, run under proctoring, and its session ends on
   await page.getByRole('dialog').getByRole('button', { name: 'Submit Exam' }).click()
   await expect(page.getByRole('heading', { name: 'Exam submitted successfully.' })).toBeVisible()
 
-  const ended = await proctoringSession(request, attemptId)
+  const ended = await proctoringSession(request, attemptId, page)
   expect(ended.status).toBe('ENDED')
   // The camera and microphone are released with the exam: no live track is left behind.
   await expect(page.getByLabel('Proctoring status')).toHaveCount(0)
@@ -97,7 +97,7 @@ test('resuming a proctored exam goes through the check again and keeps the same 
   await page.getByRole('button', { name: 'Start Exam' }).click()
   await expect(page.getByRole('banner').getByText(/^Question 1 of 2$/)).toBeVisible()
   const attemptId = (await examDetail(request, id)).active_attempt_id!
-  const first = await proctoringSession(request, attemptId)
+  const first = await proctoringSession(request, attemptId, page)
 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Proctoring check' })).toBeVisible()
@@ -106,7 +106,7 @@ test('resuming a proctored exam goes through the check again and keeps the same 
   await page.getByRole('button', { name: 'Continue Exam' }).click()
   await expect(page.getByRole('banner').getByText(/^Question 1 of 2$/)).toBeVisible()
 
-  const again = await proctoringSession(request, attemptId)
+  const again = await proctoringSession(request, attemptId, page)
   expect(again.status).toBe('ACTIVE')
   expect(again.started_at).toBe(first.started_at) // same session, original start
 })
@@ -159,7 +159,7 @@ test('a camera lost mid-exam is shown and recorded, and the exam carries on', as
     track?.dispatchEvent(new Event('ended'))
   })
   await expect(page.getByRole('button', { name: 'Reconnect camera' })).toBeVisible()
-  await expect.poll(async () => (await proctoringSession(request, attemptId)).camera_state).toBe('UNAVAILABLE')
+  await expect.poll(async () => (await proctoringSession(request, attemptId, page)).camera_state).toBe('UNAVAILABLE')
 
   // Not a verdict: the exam carries on and answers still save.
   await page.getByRole('radio', { name: 'Queue' }).check()
@@ -167,8 +167,8 @@ test('a camera lost mid-exam is shown and recorded, and the exam carries on', as
 
   await page.getByRole('button', { name: 'Reconnect camera' }).click()
   await expect(page.getByRole('button', { name: 'Reconnect camera' })).toHaveCount(0)
-  await expect.poll(async () => (await proctoringSession(request, attemptId)).camera_state).toBe('READY')
-  expect((await proctoringSession(request, attemptId)).status).toBe('ACTIVE')
+  await expect.poll(async () => (await proctoringSession(request, attemptId, page)).camera_state).toBe('READY')
+  expect((await proctoringSession(request, attemptId, page)).status).toBe('ACTIVE')
 })
 
 test('an exam that is not proctored starts straight away, exactly as before', async ({ page, request }) => {
@@ -184,6 +184,6 @@ test('an exam that is not proctored starts straight away, exactly as before', as
   await expect(page.getByRole('heading', { name: 'Proctoring check' })).toHaveCount(0)
   await expect(page.getByLabel('Proctoring status')).toHaveCount(0)
   const attemptId = (await examDetail(request, id)).active_attempt_id!
-  const response = await request.get(`${ME}/attempts/${attemptId}/proctoring`, { headers: await candidateAuth(request) })
+  const response = await request.get(`${ME}/attempts/${attemptId}/proctoring`, { headers: await pageAuth(page) })
   expect(response.status()).toBe(404) // no session for an unproctored attempt
 })

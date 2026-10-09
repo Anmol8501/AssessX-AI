@@ -13,20 +13,33 @@ answering unproctored.
 """
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 
 from app.api.deps import CandidateUser, DbSession
+from app.core.config import get_settings
+from app.core.errors import EvidenceTooLarge
 from app.models.proctoring_event import ProctoringEvent
-from app.schemas.proctoring import DeviceReport, ProctoringEventIn, ProctoringEventOut, ProctoringSessionOut
+from app.schemas.proctoring import (
+    DeviceReport,
+    EvidenceFailureIn,
+    EvidenceRequestOut,
+    EvidenceUploadOut,
+    ProctoringEventIn,
+    ProctoringEventOut,
+    ProctoringSessionOut,
+)
 from app.services.attempts import AttemptService
+from app.services.evidence_clips.service import ClipRequest, EvidenceClipService
 from app.services.proctoring import ProctoringService
 
 router = APIRouter(prefix="/candidates/me", tags=["proctoring"])
 
 
-def _event(event: ProctoringEvent) -> ProctoringEventOut:
+def _event(event: ProctoringEvent, clip: ClipRequest | None = None) -> ProctoringEventOut:
     return ProctoringEventOut(
+        clip_request=EvidenceRequestOut(clip_id=clip.clip_id, upload=clip.upload) if clip else None,
         id=event.id,
         event_type=event.event_type,
         category=event.category,
@@ -90,7 +103,63 @@ def report_event(
     read, change or delete events as a candidate.
     """
     attempt = AttemptService(db).get_attempt_for_update(user, attempt_id)
-    event, created = ProctoringService(db).record_event(attempt, payload)
+    proctoring = ProctoringService(db)
+    event, created = proctoring.record_event(attempt, payload)
+    # Evidence clips (FR-017): decided after the event is recorded, and never able to undo it.
+    clip = EvidenceClipService(db).on_event(attempt, proctoring.session_of(attempt), event, created=created)
     if not created:
         response.status_code = status.HTTP_200_OK
-    return _event(event)
+    return _event(event, clip)
+
+
+async def _clip_body(request: Request) -> bytes:
+    """The upload body, read with the evidence size ceiling (the app's Content-Length is not trusted)."""
+    limit = get_settings().evidence_max_clip_bytes
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise EvidenceTooLarge()
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+@router.put(
+    "/attempts/{attempt_id}/proctoring/evidence-clips/{clip_id}",
+    response_model=EvidenceUploadOut,
+)
+def upload_evidence_clip(
+    attempt_id: uuid.UUID,
+    clip_id: uuid.UUID,
+    request: Request,
+    data: Annotated[bytes, Depends(_clip_body)],
+    user: CandidateUser,
+    db: DbSession,
+    duration_ms: Annotated[int | None, Query(ge=0, le=600_000)] = None,
+) -> EvidenceUploadOut:
+    """The recording for a clip the server created for this candidate's own attempt (FR-017).
+
+    The body is the WebM video itself (`Content-Type: video/webm`). Accepted once, before the clip's
+    upload deadline, within the size limit, and only for a clip of this attempt — the server derives
+    everything else and computes the hash itself. Allowed briefly after the attempt ends, so a clip
+    whose window straddled the submission is not lost; no new clip can start then.
+    """
+    attempt = AttemptService(db).get_attempt(user, attempt_id)
+    clip = EvidenceClipService(db).accept_upload(
+        attempt, clip_id, data, request.headers.get("content-type"), duration_ms
+    )
+    return EvidenceUploadOut(clip_id=clip.id, status="READY")
+
+
+@router.post(
+    "/attempts/{attempt_id}/proctoring/evidence-clips/{clip_id}/failure",
+    response_model=EvidenceUploadOut,
+)
+def report_evidence_failure(
+    attempt_id: uuid.UUID, clip_id: uuid.UUID, payload: EvidenceFailureIn, user: CandidateUser, db: DbSession
+) -> EvidenceUploadOut:
+    """The app could not record or send a clip. The clip is marked FAILED; the event still stands."""
+    attempt = AttemptService(db).get_attempt(user, attempt_id)
+    clip = EvidenceClipService(db).report_failure(attempt, clip_id, payload.reason)
+    return EvidenceUploadOut(clip_id=clip.id, status="READY" if clip.status.value == "READY" else "FAILED")

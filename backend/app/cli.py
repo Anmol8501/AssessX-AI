@@ -133,6 +133,10 @@ def create_admin(email: str, name: str, username: str) -> int:
     return 0
 
 
+#: Largest WebSocket frame accepted (Phase 8A, AX-05): an SDP offer is tens of kilobytes at most.
+WS_MAX_SIZE = 256 * 1024
+
+
 def serve(reload: bool) -> int:
     import uvicorn
 
@@ -143,7 +147,34 @@ def serve(reload: bool) -> int:
         port=settings.api_port,
         reload=reload,
         log_config=None,  # the app configures logging itself
+        ws_max_size=WS_MAX_SIZE,
     )
+    return 0
+
+
+def evidence_maintenance() -> int:
+    """Marks clips whose upload never arrived as FAILED and deletes videos past retention (FR-017)."""
+    from app.services.retention import run_all
+
+    with SessionLocal() as db:
+        result = run_all(db, get_settings())
+        db.commit()
+    print("Maintenance: " + ", ".join(f"{k}={v}" for k, v in result.items() if k != "audit_head"))
+    return 0 if result.get("errors", 0) == 0 and result.get("audit_chain_verified") else 1
+
+
+def reset_admin_mfa(email: str) -> int:
+    """Operator recovery when no other administrator can reset a lost second factor. Audited."""
+    from app.services.mfa import MfaService
+
+    with SessionLocal() as db:
+        user = UserRepository(db).get_by_email(email)
+        if user is None or user.role is not UserRole.ADMIN:
+            print("No administrator with that email.", file=sys.stderr)
+            return 1
+        MfaService(db, get_settings()).reset(user, user)
+        db.commit()
+    print(f"Two-factor sign-in reset for {email}; they set it up again at their next sign-in.")
     return 0
 
 
@@ -161,6 +192,12 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument(
         "--reload", action="store_true", help="auto-reload on code changes (development)"
     )
+    sub.add_parser(
+        "evidence-maintenance",
+        help="evidence clips: fail overdue uploads and apply retention (run on a schedule)",
+    )
+    mfa_parser = sub.add_parser("reset-admin-mfa", help="clear an admin's two-factor sign-in (lost device)")
+    mfa_parser.add_argument("--email", required=True)
     args = parser.parse_args(argv)
     if args.command == "seed-dev-users":
         return seed_dev_users()
@@ -168,6 +205,10 @@ def main(argv: list[str] | None = None) -> int:
         return create_admin(args.email, args.name, args.username)
     if args.command == "serve":
         return serve(reload=args.reload)
+    if args.command == "evidence-maintenance":
+        return evidence_maintenance()
+    if args.command == "reset-admin-mfa":
+        return reset_admin_mfa(args.email)
     return 1
 
 

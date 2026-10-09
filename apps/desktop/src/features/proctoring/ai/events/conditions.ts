@@ -36,6 +36,7 @@ export const DETECTOR_NAMES: Record<string, string> = {
   'mediapipe.gaze': 'gaze',
   'object-detection': 'object_detection',
   'frame-quality': 'frame_quality',
+  framing: 'framing',
 }
 
 const UNKNOWN: ConditionReading = { state: 'unknown', metadata: {} }
@@ -146,8 +147,22 @@ export function readConditions(
     CAMERA_TOO_DARK: dark,
     FACE_TOO_FAR: tooFar,
     FACE_TOO_CLOSE: tooClose,
+    UPPER_BODY_NOT_VISIBLE: framingReading(observations, faceSeen),
     ...objectReadings(observations, thresholds),
   }
+}
+
+/**
+ * Framing: present when the head and chest are not both in view — fewer than two shoulders in view, or
+ * the face cut off by the frame edge. Unknown without a face (FACE_NOT_DETECTED covers that) or when
+ * the pose model did not run on this frame.
+ */
+function framingReading(observations: Observation[], faceSeen: boolean): ConditionReading {
+  const framing = first(observations, 'FRAMING')
+  const shoulders = num(framing, 'shouldersVisible')
+  if (!faceSeen || framing === undefined || shoulders === null) return UNKNOWN
+  const cutOff = framing.metadata.faceCutOff === true
+  return reading(shoulders < 2 || cutOff, { detector: 'framing', shoulders_visible: shoulders, face_cut_off: cutOff })
 }
 
 const RUNNING_MODELS: readonly string[] = ['yolox_s', 'yolox_tiny', 'efficientdet_lite0']
@@ -192,6 +207,7 @@ export function unknownConditions(): Record<AIEventType, ConditionReading> {
     CAMERA_TOO_DARK: UNKNOWN,
     FACE_TOO_FAR: UNKNOWN,
     FACE_TOO_CLOSE: UNKNOWN,
+    UPPER_BODY_NOT_VISIBLE: UNKNOWN,
     PHONE_DETECTED: UNKNOWN,
     BOOK_DETECTED: UNKNOWN,
     LAPTOP_DETECTED: UNKNOWN,

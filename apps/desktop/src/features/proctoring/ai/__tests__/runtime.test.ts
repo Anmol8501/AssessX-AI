@@ -37,7 +37,7 @@ class FakeWorker {
 
 const LOADED: WorkerResponse = {
   type: 'loaded',
-  tasks: { faceDetector: 'READY', faceLandmarker: 'READY', objectDetector: 'READY' },
+  tasks: { faceDetector: 'READY', faceLandmarker: 'READY', objectDetector: 'READY', poseLandmarker: 'READY' },
   accelerator: 'CPU',
   objectBackend: { model: 'efficientdet_lite0', accelerator: 'CPU', loadMs: 10, warmupMs: null, firstInferenceMs: null, fallback: null },
   errors: [],

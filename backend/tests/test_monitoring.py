@@ -33,6 +33,10 @@ def ws_uses_test_db(db, monkeypatch):
         yield db  # never closed here — the test fixture owns it
 
     monkeypatch.setattr(ws_module, "_session", _session)
+    # Phase 8A: the socket session checks (tickets, periodic re-validation) use the test transaction too.
+    from app.realtime import security as socket_security
+
+    monkeypatch.setattr(socket_security, "db_session", _session)
 
 
 def active(client, helpers: Helpers, users) -> dict:

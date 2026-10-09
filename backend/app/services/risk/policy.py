@@ -119,6 +119,14 @@ EXCLUDED: dict[ProctoringEventType, str] = {
     # Objects in view (2026-10-02): shown to reviewers as observations with their duration and
     # confidence, but not scored until the provisional thresholds are calibrated on real data.
     E.PHONE_DETECTED: _OBJECTS,
+    E.UPPER_BODY_NOT_VISIBLE: (
+        "Framing (head and chest in view) uses provisional rules — "
+        "reviewed in the evidence timeline, not scored."
+    ),
+    E.EXAM_CLOSE_ATTEMPT: (
+        "An attempt to close AssessX during the exam; the app refused it. Shown in the evidence timeline, "
+        "not scored."
+    ),
     E.BOOK_DETECTED: _OBJECTS,
     E.LAPTOP_DETECTED: _OBJECTS,
     E.HANDHELD_DEVICE_DETECTED: _OBJECTS,

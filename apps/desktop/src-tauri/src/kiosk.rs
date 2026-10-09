@@ -151,12 +151,20 @@ pub fn kiosk_generate_config(kiosk_account: String, exe_path: String) -> KioskCo
         && account.len() <= 64
         && account.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'));
     let account = if account_ok { account } else { "assessx-exam" };
-    // The install path, with quotes/backticks stripped so it cannot break out of the XML/script.
+    // The install path goes into PowerShell and XML that an administrator runs elevated, so it is
+    // accepted only if it is a plain Windows path to an .exe (Phase 8B, BX-10). Anything else — a
+    // quote, a newline, `$`, a here-string terminator, `..` — is refused outright rather than
+    // "cleaned", and the default install path is used instead.
     let trimmed = exe_path.trim();
-    let exe = if trimmed.is_empty() {
-        r"C:\Program Files\AssessX\assessx-desktop.exe".to_string()
+    let (exe, path_note) = if trimmed.is_empty() {
+        (DEFAULT_EXE.to_string(), "")
+    } else if let Some(path) = safe_exe_path(trimmed) {
+        (path, "")
     } else {
-        trimmed.replace(['`', '"', '<', '>', '&'], "")
+        (
+            DEFAULT_EXE.to_string(),
+            " The install path you entered was not a plain Windows path to an .exe, so the default install path is used.",
+        )
     };
 
     KioskConfig {
@@ -164,8 +172,28 @@ pub fn kiosk_generate_config(kiosk_account: String, exe_path: String) -> KioskCo
         assigned_access_xml: assigned_access_xml(account, &exe),
         apply_script: apply_script(account, &exe),
         remove_script: remove_script(account),
-        notes: ADMIN_NOTES.to_string(),
+        notes: format!("{ADMIN_NOTES}{path_note}"),
     }
+}
+
+const DEFAULT_EXE: &str = r"C:\Program Files\AssessX\assessx-desktop.exe";
+
+/// A drive-letter path to an `.exe` made only of characters that are inert in a single-quoted
+/// PowerShell string, a PowerShell here-string and an XML attribute: letters, digits, space and
+/// `\ _ - . ( )`. No quotes, `$`, backticks, `;`, `&`, `<`, `>`, `%`, newlines or `..` segments.
+fn safe_exe_path(path: &str) -> Option<String> {
+    let bytes = path.as_bytes();
+    let drive = bytes.len() > 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'\\';
+    let chars_ok = path
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '\\' | ':' | '_' | '-' | '.' | '(' | ')'));
+    if !(drive && chars_ok) {
+        return None;
+    }
+    let colon_only_after_drive = !path[2..].contains(':');
+    let no_parent = !path.split('\\').any(|part| part.trim() == "..");
+    let exe = path.to_ascii_lowercase().ends_with(".exe");
+    (colon_only_after_drive && no_parent && exe && path.len() <= 260).then(|| path.to_string())
 }
 
 fn assigned_access_xml(account: &str, exe: &str) -> String {
@@ -302,5 +330,51 @@ mod tests {
         assert!(apply.contains("#Requires -RunAsAdministrator"));
         assert!(apply.contains("Type YES to continue"));
         assert!(remove_script("exam-user").contains("$obj.Configuration = ''"));
+    }
+
+    #[test]
+    fn plain_install_paths_are_accepted() {
+        for path in [
+            r"C:\Program Files\AssessX\assessx-desktop.exe",
+            r"D:\Apps (x86)\AssessX_2\assessx-desktop.EXE",
+            r"C:\Users\exam-user\AppData\Local\AssessX\assessx-desktop.exe",
+        ] {
+            assert_eq!(safe_exe_path(path).as_deref(), Some(path), "{path}");
+        }
+    }
+
+    #[test]
+    fn injected_install_paths_are_refused() {
+        for path in [
+            // Breaks out of the single-quoted `$exe = '...'` line.
+            r"C:\x.exe'; Remove-Item C:\ -Recurse; '.exe",
+            // Terminates the @' ... '@ here-string that holds the XML.
+            "C:\\x.exe\n'@\nRemove-Item C:\\ -Recurse\n@'\nC:\\y.exe",
+            r"C:\$(Remove-Item C:\).exe",
+            r"C:\`whoami`.exe",
+            r"C:\a.exe & calc.exe",
+            r"C:\a.exe; calc.exe",
+            r#"C:\a" /><App DesktopAppPath="C:\evil.exe"#,
+            r"C:\%TEMP%\evil.exe",
+            r"C:\Program Files\..\..\Windows\System32\cmd.exe",
+            r"\\server\share\evil.exe",
+            r"C:\Program Files\AssessX\assessx-desktop.bat",
+            "assessx-desktop.exe",
+            r"C:\a:b.exe",
+        ] {
+            assert_eq!(safe_exe_path(path), None, "{path:?} must be refused");
+        }
+    }
+
+    #[test]
+    fn a_refused_path_never_reaches_the_script() {
+        let hostile = "C:\\x.exe'\n'@\nRemove-Item C:\\ -Recurse -Force\n@'";
+        let exe = safe_exe_path(hostile).unwrap_or_else(|| DEFAULT_EXE.to_string());
+        let apply = apply_script("exam-user", &exe);
+        assert!(!apply.contains("Remove-Item C:"));
+        assert!(apply.contains(&format!("$exe = '{DEFAULT_EXE}'")));
+        // Exactly one here-string, opened and closed once.
+        assert_eq!(apply.matches("@'").count(), 1);
+        assert_eq!(apply.matches("'@").count(), 1);
     }
 }

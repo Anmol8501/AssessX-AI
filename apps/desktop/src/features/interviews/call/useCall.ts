@@ -4,6 +4,7 @@ import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
 import { callSocketUrl, chatText, hasRelay, mergeMessages, peerMedia, slotAt, SLOTS, type Slot } from './callLogic'
 import type { CallRole, ChatMessage, PeerMedia } from './types'
+import { socketTicket } from '@/lib/wsTicket'
 
 const RECONNECT_MAX_MS = 8000
 /** How long one attempt may take to connect video before it is retried. */
@@ -393,34 +394,41 @@ export function useCall(callId: string, role: CallRole, initialMessages: ChatMes
       }
     }
 
+    const retryLater = () => {
+      if (closed) return
+      setPhase('reconnecting')
+      retryTimer = window.setTimeout(connect, retry)
+      retry = Math.min(retry * 2, RECONNECT_MAX_MS)
+    }
     const connect = () => {
       if (closed) return
-      const ws = new WebSocket(callSocketUrl(API_BASE_URL, callId, token))
-      state.socket = ws
-      ws.onmessage = (raw) => {
-        let message: Signal
-        try {
-          message = JSON.parse(raw.data as string) as Signal
-        } catch {
-          return // ignore malformed
-        }
-        // One at a time, in arrival order: an ICE candidate must not overtake the offer it belongs to.
-        queue = queue.then(() => onSignal(message)).catch(() => undefined)
-      }
-      ws.onopen = () => {
-        retry = 500
-      }
-      ws.onclose = () => {
-        if (state.socket === ws) state.socket = null
+      void socketTicket(token, 'call').then((ticket) => {
         if (closed) return
-        peerHere = false
-        closePc()
-        setPeerPresent(false)
-        setPhase('reconnecting')
-        retryTimer = window.setTimeout(connect, retry)
-        retry = Math.min(retry * 2, RECONNECT_MAX_MS)
-      }
-      ws.onerror = () => ws.close()
+        const ws = new WebSocket(callSocketUrl(API_BASE_URL, callId, ticket))
+        state.socket = ws
+        ws.onmessage = (raw) => {
+          let message: Signal
+          try {
+            message = JSON.parse(raw.data as string) as Signal
+          } catch {
+            return // ignore malformed
+          }
+          // One at a time, in arrival order: an ICE candidate must not overtake the offer it belongs to.
+          queue = queue.then(() => onSignal(message)).catch(() => undefined)
+        }
+        ws.onopen = () => {
+          retry = 500
+        }
+        ws.onclose = () => {
+          if (state.socket === ws) state.socket = null
+          if (closed) return
+          peerHere = false
+          closePc()
+          setPeerPresent(false)
+          retryLater()
+        }
+        ws.onerror = () => ws.close()
+      }, retryLater)
     }
 
     void openMedia().then(({ stream, error }) => {

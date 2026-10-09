@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.paging import Page
 from app.models.interview import (
     Interview,
     InterviewAssignment,
@@ -135,9 +136,11 @@ class InterviewRepository:
 
     # -- candidate ---------------------------------------------------------------------------
 
-    def for_candidate(self, candidate_id: uuid.UUID) -> list[tuple[Interview, InterviewSession | None]]:
+    def for_candidate(
+        self, candidate_id: uuid.UUID, page: "Page | None" = None
+    ) -> list[tuple[Interview, InterviewSession | None]]:
         """The candidate's assigned, published interviews and their session, if started."""
-        rows = self.db.execute(
+        query = (
             select(Interview, InterviewSession)
             .join(InterviewAssignment, InterviewAssignment.interview_id == Interview.id)
             .outerjoin(InterviewSession, InterviewSession.assignment_id == InterviewAssignment.id)
@@ -147,6 +150,9 @@ class InterviewRepository:
             )
             .order_by(InterviewAssignment.assigned_at.desc(), Interview.id)
         )
+        if page is not None:
+            query = page.apply(query)
+        rows = self.db.execute(query)
         return [(i, s) for i, s in rows.all()]
 
     def session_for(

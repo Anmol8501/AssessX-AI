@@ -32,9 +32,10 @@ from app.models.base import utcnow
 from app.models.interview import InterviewQuestion, InterviewSession, InterviewSessionItem
 from app.models.interview_evaluation import EvaluationFailure, EvaluationStatus, InterviewEvaluation
 from app.repositories.audit import AuditRepository
+from app.services import security_events
 from app.services.interview.evaluation import EvaluationOutcome, evaluate
 from app.services.interview.llm import EvaluationProvider, provider_from_settings
-from app.services.interview.prompts import EvaluationContext
+from app.services.interview.prompts import EvaluationContext, injection_signals
 from app.services.interview.rubrics import RUBRICS
 from app.services.interview.sessions import EvaluatorInfo, InterviewSessionService
 
@@ -133,6 +134,17 @@ class EvaluationRunner:
             if evaluation.attempts > 1:
                 self._audit(db, session, AuditAction.INTERVIEW_EVALUATION_RETRIED, **evaluation.details())
             db.flush()
+            if evaluation.attempts == 1:
+                signals = injection_signals(item.answer_text or "")
+                if signals:
+                    # Instruction-like text in an answer: recorded once, by session — never the answer.
+                    security_events.record(
+                        "ai_injection_suspected",
+                        actor_id=session.candidate_id,
+                        target_type="interview_session",
+                        target_id=session.id,
+                        details={"signals": len(signals)},
+                    )
             rubric = next(r for r in RUBRICS if r.version == evaluation.rubric_version)
             interview = session.interview
             return EvaluationContext(

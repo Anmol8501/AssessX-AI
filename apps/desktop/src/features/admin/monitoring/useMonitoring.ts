@@ -4,6 +4,7 @@ import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
 import type { ConnectionState } from './status'
 import { toSession, type MonitoringSession, type MonitoringSummary } from './types'
+import { socketBase, socketTicket } from '@/lib/wsTicket'
 
 const RECONNECT_MAX_MS = 8000
 
@@ -36,9 +37,9 @@ export interface Monitoring {
 /** While the live connection is down, the wall is refreshed over REST this often. */
 export const FALLBACK_POLL_MS = 5000
 
-function wsUrl(token: string): string {
-  const base = API_BASE_URL.replace(/^http/, 'ws')
-  return `${base}/api/v1/ws/admin/monitoring?token=${encodeURIComponent(token)}`
+/** The monitoring socket, opened with a one-time ticket — never the session token (Phase 8A). */
+function wsUrl(ticket: string): string {
+  return `${socketBase(API_BASE_URL)}/api/v1/ws/admin/monitoring?ticket=${encodeURIComponent(ticket)}`
 }
 
 function summarise(sessions: MonitoringSession[]): MonitoringSummary {
@@ -133,24 +134,30 @@ export function useMonitoring(): Monitoring {
     const token = tokenStorage.get()
     if (!token || closed.current) return
     setConnection((c) => (c === 'connected' ? 'reconnecting' : c))
-    const ws = new WebSocket(wsUrl(token))
-    socket.current = ws
-
-    ws.onopen = () => {
-      retry.current = 500
-      setConnection('connected')
-      // Reconcile: the socket may have missed changes while it was down.
-      void fetchActive().catch(() => undefined)
-    }
-    ws.onmessage = onMessage
-    ws.onclose = () => {
-      if (socket.current === ws) socket.current = null
+    const retryLater = () => {
       if (closed.current) return
       setConnection('disconnected')
       retryTimer.current = window.setTimeout(() => connectRef.current(), retry.current)
       retry.current = Math.min(retry.current * 2, RECONNECT_MAX_MS)
     }
-    ws.onerror = () => ws.close()
+    void socketTicket(token, 'monitoring').then((ticket) => {
+      if (closed.current) return
+      const ws = new WebSocket(wsUrl(ticket))
+      socket.current = ws
+
+      ws.onopen = () => {
+        retry.current = 500
+        setConnection('connected')
+        // Reconcile: the socket may have missed changes while it was down.
+        void fetchActive().catch(() => undefined)
+      }
+      ws.onmessage = onMessage
+      ws.onclose = () => {
+        if (socket.current === ws) socket.current = null
+        retryLater()
+      }
+      ws.onerror = () => ws.close()
+    }, retryLater)
   }, [fetchActive, onMessage])
   useEffect(() => {
     connectRef.current = connect

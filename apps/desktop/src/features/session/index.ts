@@ -14,4 +14,5 @@ export type {
 } from './types'
 export { tokenStorage } from './tokenStorage'
 export { useApi } from './useApi'
+export { fetchAllPages, usePagedList } from './usePagedList'
 export { useCurrentUser, useSession } from './useSession'

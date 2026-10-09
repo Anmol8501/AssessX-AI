@@ -40,9 +40,14 @@ class ResultService:
     def outcomes(self, attempt: AssessmentAttempt) -> list[QuestionOutcome]:
         return self.evaluation.outcomes_for(attempt)
 
-    def list_for_candidate(self, candidate: User) -> list[AttemptResult]:
+    def list_for_candidate(
+        self,
+        candidate: User,
+        page=None,
+        released_only: bool = False,  # noqa: ANN001 — a Page
+    ) -> list[AttemptResult]:
         """The candidate's own results. Scoped to them by the query itself."""
-        return self.repo.list_for_candidate(candidate.id)
+        return self.repo.list_for_candidate(candidate.id, page, released_only)
 
     def list_for_assessment(self, assessment_id: uuid.UUID) -> list[AttemptResult]:
         """Every result for one assessment, evaluating any finished attempt that still lacks one.

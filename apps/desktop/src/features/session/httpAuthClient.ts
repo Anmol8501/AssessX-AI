@@ -1,6 +1,6 @@
 import { ApiError, apiRequest } from '@/lib/api'
 import { tokenStorage } from './tokenStorage'
-import type { AuthClient, Credentials, LoginChallenge, Role, SessionUser } from './types'
+import type { AuthClient, Credentials, LoginChallenge, Role, SecondFactor, SessionUser, SignedIn } from './types'
 
 /** Wire shapes from `backend/app/schemas`. Kept private; the app works with `SessionUser`. */
 interface UserPublicDto {
@@ -17,6 +17,12 @@ interface LoginResponseDto {
   token_type: string
   expires_at: string
   user: UserPublicDto
+  mfa?: SecondFactor
+}
+interface MfaStatusDto {
+  required: boolean
+  enabled: boolean
+  verified: boolean
 }
 interface ChallengeResponseDto {
   challenge_id: string
@@ -38,11 +44,17 @@ function toSessionUser(dto: UserPublicDto): SessionUser {
 
 /** Real authentication against `/api/v1/auth`. The server decides identity and role. */
 export class HttpAuthClient implements AuthClient {
-  async restore(): Promise<SessionUser | null> {
+  async restore(): Promise<SignedIn | null> {
+    await tokenStorage.load() // a remembered token lives in the OS credential store (desktop app)
     const token = tokenStorage.get()
     if (!token) return null
     try {
-      return toSessionUser(await apiRequest<UserPublicDto>('/api/v1/auth/me', { token }))
+      const user = toSessionUser(await apiRequest<UserPublicDto>('/api/v1/auth/me', { token }))
+      if (user.role !== 'ADMIN') return { user, mfa: 'none' }
+      // An administrator's session may still be waiting for the second factor (e.g. the app was closed).
+      const mfa = await apiRequest<MfaStatusDto>('/api/v1/auth/mfa', { token })
+      const pending = (mfa.required || mfa.enabled) && !mfa.verified
+      return { user, mfa: pending ? (mfa.enabled ? 'required' : 'enroll') : 'none' }
     } catch (error) {
       // A rejected token is dead: forget it. A network failure keeps it for the next launch
       // but the app still starts signed out.
@@ -56,7 +68,7 @@ export class HttpAuthClient implements AuthClient {
     return { id: dto.challenge_id, imageSvg: dto.image_svg, expiresAt: dto.expires_at }
   }
 
-  async signIn(credentials: Credentials): Promise<SessionUser> {
+  async signIn(credentials: Credentials): Promise<SignedIn> {
     const dto =
       credentials.kind === 'candidate'
         ? await apiRequest<LoginResponseDto>('/api/v1/auth/login/candidate', {
@@ -81,8 +93,9 @@ export class HttpAuthClient implements AuthClient {
               remember_me: credentials.remember,
             },
           })
-    tokenStorage.set(dto.token, credentials.remember)
-    return toSessionUser(dto.user)
+    // Administrators are never "remembered" (the server limits their sessions to 12 hours as well).
+    tokenStorage.set(dto.token, credentials.remember && credentials.kind === 'candidate')
+    return { user: toSessionUser(dto.user), mfa: dto.mfa ?? 'none' }
   }
 
   async signOut(): Promise<void> {

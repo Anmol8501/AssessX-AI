@@ -1,6 +1,6 @@
 import { AlertIcon, LockIcon } from '@/components/icons'
 import { Button } from '@/components/ui'
-import type { AttemptControl } from '@/features/exam/types'
+import type { AttemptControl, ProctorMessage } from '@/features/exam/types'
 import { EXAM_RULES, aiWarningMessage } from './examRules'
 import type { TabSwitchWarning } from './useAttemptControl'
 
@@ -72,6 +72,26 @@ export function TabSwitchWarningDialog({ warning, onClose }: { warning: TabSwitc
           )}
         </p>
         <Button className="mt-5" onClick={onClose}>
+          I understand
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** A message from the exam supervisor, shown over the exam until the candidate acknowledges it. */
+export function ProctorMessageDialog({ message, onAcknowledge }: { message: ProctorMessage; onAcknowledge(): void }) {
+  const sent = new Date(message.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="bg-ink/60 fixed inset-0 z-[55] flex items-center justify-center p-6" role="alertdialog" aria-labelledby="proctor-message" data-testid="proctor-message">
+      <div className="bg-card w-full max-w-md rounded-lg px-6 py-6 text-center shadow-xl">
+        <AlertIcon className="text-warn mx-auto text-[28px]" />
+        <h2 id="proctor-message" className="text-ink mt-2 text-[16px] font-semibold">
+          Message from the exam supervisor
+        </h2>
+        <p className="text-ink mt-3 text-[14.5px] leading-relaxed whitespace-pre-wrap">{message.body}</p>
+        <p className="text-ink-subtle mt-3 text-[12px]">Sent at {sent}</p>
+        <Button className="mt-5" onClick={onAcknowledge}>
           I understand
         </Button>
       </div>
