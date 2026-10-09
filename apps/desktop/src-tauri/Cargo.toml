@@ -34,7 +34,7 @@ windows-sys = { version = "0.61", features = [
 ] }
 # The documented virtual-desktop COM interface (IVirtualDesktopManager): during an exam the window is
 # moved back onto the desktop the candidate switched to. Same version Tauri already builds (no new crate).
-windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }
+windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }
 
 # See https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
