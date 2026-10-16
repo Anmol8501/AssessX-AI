@@ -1,6 +1,6 @@
 # AssessX API — development/CI image. Migrations run on start; the app listens on 8000.
 # Pinned to a digest (Phase 8B, BX-14): the same base image every build. Dependabot proposes updates.
-FROM python:3.13-slim@sha256:2b6e177adb67a564bba97e6f0eab8760a7dc3645582d70277a055a4327a737e5
+FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
