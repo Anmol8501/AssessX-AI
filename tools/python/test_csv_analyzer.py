@@ -66,5 +66,23 @@ class TestCSVAnalyzer(unittest.TestCase):
             analyze_csv(self.csv_path)
 
 
+    def test_missing_file_raises_error(self):
+        missing_path = self.csv_path.parent / "missing.csv"
+
+        with self.assertRaises(FileNotFoundError):
+            analyze_csv(missing_path)
+
+    def test_csv_with_only_headers_has_zero_rows(self):
+        self.write_csv([
+            ["name", "score"],
+        ])
+
+        report = analyze_csv(self.csv_path)
+
+        self.assertEqual(report["total_rows"], 0)
+        self.assertEqual(report["total_columns"], 2)
+        self.assertEqual(report["duplicate_rows"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
