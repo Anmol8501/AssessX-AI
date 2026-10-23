@@ -8,4 +8,3 @@ export function formatDateTime(value: string | Date): string {
     timeStyle: 'short',
   }).format(date)
 }
-
