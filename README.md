@@ -1,20 +1,54 @@
+<div align="center">
+
 # AssessX
 
-AssessX is a secure assessment and candidate-evaluation platform. It combines a
-Windows desktop exam client, a FastAPI/PostgreSQL backend, on-device proctoring
-signals, coding assessments, AI-assisted interviews, explainable risk and
-evidence workflows, and human review.
+### Secure assessments. Explainable signals. Human-led decisions.
 
-The **Windows desktop application is the product**. The React website is the
-public landing, documentation, and download surface; it is not the examination
-runtime.
+<p>
+  <strong>AssessX is a Windows-first assessment and candidate-evaluation
+  platform.</strong><br>
+  It combines controlled exams, structured proctoring observations, coding
+  assessments, AI-assisted interviews, evidence workflows, and human review.
+</p>
 
-> **Important product principle**
->
+<p>
+  <a href="DEVELOPMENT.md"><strong>Get started</strong></a>
+  ·
+  <a href="docs/PROJECT-CONTEXT.md">Architecture</a>
+  ·
+  <a href="docs/DEVELOPMENT-ROADMAP.md">Roadmap</a>
+  ·
+  <a href="docs/SECURITY.md">Security</a>
+</p>
+
+![Status](https://img.shields.io/badge/status-development_snapshot-f59e0b?style=flat-square)
+![Desktop](https://img.shields.io/badge/desktop-Windows-2563eb?style=flat-square)
+![Backend](https://img.shields.io/badge/backend-FastAPI-009688?style=flat-square)
+![License](https://img.shields.io/badge/license-not_declared-6b7280?style=flat-square)
+
+</div>
+
+> [!IMPORTANT]
+> The **Windows desktop application is the product**. The React website is the
+> public landing, documentation, and download surface; it is not the examination
+> runtime.
+
+> [!NOTE]
 > AssessX follows **Detect → Correlate → Explain → Provide Evidence → Human
 > Review**. A single signal never becomes an automatic cheating or hiring
 > verdict. AI observations and risk outputs are evidence for an authorised
 > human reviewer.
+
+## Contents
+
+- [Project status](#project-status)
+- [Product surfaces](#product-surfaces)
+- [Main capabilities](#main-capabilities)
+- [Architecture](#architecture-and-repository-layout)
+- [Quick start](#quick-start-on-windows)
+- [Testing and quality](#testing-linting-and-builds)
+- [Security boundaries](#security-and-honesty-boundaries)
+- [Documentation](#documentation-map)
 
 ## Project status
 
@@ -51,6 +85,14 @@ and operational readiness. See [`docs/PHASE-8-PLAN.md`](docs/PHASE-8-PLAN.md).
 This status is a development snapshot, not a production-readiness or security
 certification claim. Some integrations, deployment controls, and real-world
 WebRTC/media validation remain environment-dependent.
+
+| Area | Current state |
+| --- | --- |
+| Core platform | Implemented through Phases 1–4 |
+| AI and review | 5A–5D and 6A–6C implemented |
+| Interviews | 7A–7D implemented |
+| Coding assessments | C1–C5 implemented |
+| Production hardening | Phase 8 planned |
 
 ## Product surfaces
 
