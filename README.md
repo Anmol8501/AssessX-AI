@@ -28,17 +28,20 @@ The implementation is substantially beyond the original prototype:
   admin monitoring, WebSocket updates, and a WebRTC monitoring foundation.
 - AI proctoring foundation: on-device MediaPipe detectors, factual observation
   events, debouncing, evidence clips, and YOLOX object detection for supported
-  classes.
-- Risk and evidence: explainable on-demand risk, derived evidence timelines,
-  review queues, evidence marks, human-authored outcomes, revisions, and
-  append-only audit records.
-- Interviews: configured text interviews, deterministic question selection,
-  bounded adaptive follow-ups, server-side AI evaluation, reports, human review,
-  and one-to-one live WebRTC interviews with chat, screen sharing, and private
-  notes.
+  classes. Object warnings are provisional, factual, and never an automatic
+  exam lock or verdict.
+- Risk and evidence (6A–6C): explainable on-demand risk, derived evidence
+  timelines, review queues, evidence marks, human-authored outcomes, revisions,
+  and append-only audit records. Administrative outcomes remain separate from
+  computed risk.
+- Interviews (7A–7D): configured text interviews, deterministic question
+  selection, bounded adaptive follow-ups, server-side AI evaluation, reports,
+  human review, and one-to-one live WebRTC interviews with chat, screen sharing,
+  private notes, and no recording.
 - Coding assessments: versioned problem library, CodeMirror candidate workspace,
   server-side drafts, isolated runner jobs, server-side judging, idempotent
-  Run/Submit flows, best-submission scoring, and admin analytics.
+  Run/Submit flows, best-submission scoring, admin analytics, and the C5 runner
+  policy, production checks, attack tests, and mixed-assessment coverage.
 
 **Phase 8 — production security and hardening — is the remaining planned
 programme.** It includes the application/API security audit, infrastructure and
@@ -160,7 +163,7 @@ docs/                      plans, runbooks, security and release documentation
 | --- | --- |
 | Desktop | Tauri 2, Rust, WebView2, React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7 |
 | Website | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
-| API | Python 3.12+, FastAPI, Pydantic, SQLAlchemy 2, Alembic |
+| API | Python 3.12+ (3.13 development environment), FastAPI, Pydantic, SQLAlchemy 2, Alembic |
 | Data | PostgreSQL 17; Redis and workers are reserved for phases that require them |
 | Proctoring | MediaPipe Tasks, ONNX Runtime Web, YOLOX object detection, structured event pipeline |
 | Realtime | WebSockets for events/signaling; WebRTC for peer media |
@@ -370,6 +373,8 @@ documents rather than hidden behind marketing claims.
 - [`docs/CODING-ASSESSMENT-PLAN.md`](docs/CODING-ASSESSMENT-PLAN.md) and
   [`docs/RUNNER-RUNBOOK.md`](docs/RUNNER-RUNBOOK.md) — coding assessments and
   runner operations
+- [`runner/README.md`](runner/README.md) — separate runner setup, sandbox
+  boundaries, language policy, and deployment options
 
 ### Phase and operations documentation
 
