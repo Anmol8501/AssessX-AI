@@ -1,0 +1,25 @@
+{
+    "report_type": "CSV Data Quality",
+    "generated_at": "2026-10-22T16:52:49.694487+00:00",
+    "source": "tools/python/sample.csv",
+    "summary": {
+        "total_rows": 4,
+        "total_columns": 3,
+        "duplicate_rows": 1
+    },
+    "column_analysis": {
+        "name": {
+            "empty_values": 0,
+            "unique_values": 3
+        },
+        "score": {
+            "empty_values": 1,
+            "unique_values": 2
+        },
+        "city": {
+            "empty_values": 0,
+            "unique_values": 3
+        }
+    },
+    "status": "completed"
+}
