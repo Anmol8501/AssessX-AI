@@ -94,9 +94,7 @@ def _attempt_detail(attempt: AssessmentAttempt, service: AttemptService) -> Atte
         ),
         secondary_camera_enabled=getattr(assessment, "secondary_camera_enabled", False),
         secondary_camera_mandatory=getattr(assessment, "secondary_camera_mandatory", False),
-        secondary_camera_orientation=getattr(
-            assessment, "secondary_camera_orientation", "LANDSCAPE"
-        ),
+        secondary_camera_orientation=getattr(assessment, "secondary_camera_orientation", "LANDSCAPE"),
         secondary_camera_grace_period_seconds=getattr(
             assessment, "secondary_camera_grace_period_seconds", 60
         ),
