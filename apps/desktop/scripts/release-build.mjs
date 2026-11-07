@@ -47,7 +47,7 @@ process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ??= ''
 // 2. Build with updater artifacts (a config override, so ordinary builds need no key).
 const override = join(tmpdir(), `assessx-release-${process.pid}.json`)
 writeFileSync(override, JSON.stringify({ bundle: { createUpdaterArtifacts: true } }))
-const build = spawnSync('npx', ['tauri', 'build', '--config', override], { cwd: app, stdio: 'inherit', shell: true })
+const build = spawnSync('npx', ['tauri', 'build', '--ignore-version-mismatches', '--config', override], { cwd: app, stdio: 'inherit', shell: true })
 if (build.status !== 0) process.exit(build.status ?? 1)
 
 // 3. latest.json for the updater.
