@@ -10,3 +10,4 @@ d7bb50477de4c689c8af950477ce1fe04ae37ced:backend/tests/test_code_execution.py:ge
 bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_monitoring.py:generic-api-key:200
 bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_proctoring.py:generic-api-key:79
 c977827f4a584bb13520be13cd72184fa6901973:backend/tests/test_attempts.py:generic-api-key:278
+487dac9cea3591da2c914aca1b7926a11b789bae:tools/devscope/test_devscope.py:generic-api-key:480
