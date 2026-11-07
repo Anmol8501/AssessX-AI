@@ -17,8 +17,10 @@ import { useDeviceReadiness, type ReadinessEvent } from './environment/useDevice
 import { useEnvironmentEnforcement } from './environment/useEnvironmentEnforcement'
 import { useEventReporter } from './environment/useEventReporter'
 import { useMediaPublisher } from './environment/useMediaPublisher'
+import { Logo } from '@/components/Logo'
 import { ProctoringCheck, type SessionCheck } from './ProctoringCheck'
 import { ProctoringStatus } from './ProctoringStatus'
+import { SecondaryCameraPairing } from './secondary/SecondaryCameraPairing'
 import { useMediaDevice, type MediaDevice } from './useMediaDevice'
 import { useProctoringApi, type DeviceReport } from './useProctoringApi'
 import { supportedMimeType } from './evidence/rollingRecorder'
@@ -68,6 +70,9 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
   const [entered, setEntered] = useState(false)
   const [busy, setBusy] = useState(false)
   const [sessionError, setSessionError] = useState<string | null>(null)
+  const [stagedAttempt, setStagedAttempt] = useState<AttemptDetail | null>(attempt)
+  const [primaryCheckDone, setPrimaryCheckDone] = useState(false)
+  const [secondaryCameraStream, setSecondaryCameraStream] = useState<MediaStream | null>(null)
   const lastReported = useRef<string | null>(null)
   // Readiness runs before the session exists; its observations are held here and replayed into the
   // event log once the exam is entered (the session is active by then). `null` until the check
@@ -81,11 +86,12 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
   }
   const reportKey = `${report.camera}/${report.microphone}`
 
-  async function enter() {
+  async function enter(explicitAttempt?: AttemptDetail | null) {
     setBusy(true)
     setSessionError(null)
     try {
-      const current = attempt ?? (await startAttempt(exam.assessment_id))
+      const current = explicitAttempt ?? stagedAttempt ?? attempt ?? (await startAttempt(exam.assessment_id))
+      setStagedAttempt(current)
       if (current.proctoring === null) {
         // Started without proctoring after all (the setting was switched off in between): the
         // attempt is what decides, so go straight in.
@@ -107,6 +113,24 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
       setSessionError(describeError(caught, 'Could not start the proctored exam. Check your connection and try again.'))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handlePrimaryContinue() {
+    if (exam.secondary_camera_enabled) {
+      setBusy(true)
+      setSessionError(null)
+      try {
+        const cur = stagedAttempt ?? attempt ?? (await startAttempt(exam.assessment_id))
+        setStagedAttempt(cur)
+        setPrimaryCheckDone(true)
+      } catch (caught) {
+        setSessionError(describeError(caught, 'Could not initialize examination session for secondary camera.'))
+      } finally {
+        setBusy(false)
+      }
+    } else {
+      void enter()
     }
   }
 
@@ -140,44 +164,77 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
     )
   }
 
-  if (!entered || !attempt) {
+  // Secondary camera pairing screen (Step 2 of proctoring check when enabled)
+  if (!entered && exam.secondary_camera_enabled && primaryCheckDone && stagedAttempt) {
+    return (
+      <div className="bg-surface flex h-full w-full flex-col">
+        <header className="border-line bg-card flex h-14 shrink-0 items-center gap-3 border-b px-6">
+          <Logo size="sm" />
+          <span className="bg-line h-5 w-px shrink-0" aria-hidden />
+          <h1 className="text-ink truncate text-[14px] font-semibold">{exam.title}</h1>
+        </header>
+
+        <div className="flex min-h-0 flex-1 items-start justify-center overflow-y-auto px-8 py-8">
+          <div className="w-full max-w-3xl">
+            <SecondaryCameraPairing
+              attemptId={stagedAttempt.id}
+              mandatory={exam.secondary_camera_mandatory}
+              orientation={exam.secondary_camera_orientation}
+              onVerified={(stream) => {
+                setSecondaryCameraStream(stream)
+                void enter(stagedAttempt)
+              }}
+              onCancel={() => setPrimaryCheckDone(false)}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!entered || !stagedAttempt) {
     const session: SessionCheck = busy
-      ? { status: 'working', detail: attempt ? 'Reconnecting to your exam…' : 'Starting your exam…' }
+      ? { status: 'working', detail: stagedAttempt ? 'Reconnecting to your exam…' : 'Starting your exam…' }
       : sessionError
         ? { status: 'error', detail: sessionError }
-        : attempt
+        : stagedAttempt
           ? { status: 'ready', detail: 'Your attempt is in progress and its clock is running.' }
           : { status: 'ready', detail: `${exam.duration_minutes} minutes, starting when you start the exam.` }
 
     return (
       <ProctoringCheck
         examTitle={exam.title}
-        recording={attempt?.proctoring?.recording ?? exam.recording}
+        recording={stagedAttempt?.proctoring?.recording ?? exam.recording}
         camera={camera}
         microphone={microphone}
         session={session}
-        resuming={attempt !== null}
+        resuming={stagedAttempt !== null}
         busy={busy}
-        onContinue={() => void enter()}
+        onContinue={() => void handlePrimaryContinue()}
         onBack={() => navigate(routes.candidate.examDetail(exam.assessment_id))}
       />
     )
   }
 
-  if (!proctored) {
-    return <ExamRunner attempt={attempt} onFinished={onFinished} onStale={onStale} />
+  const effectiveAttempt = stagedAttempt ?? attempt
+  if (!proctored || !effectiveAttempt) {
+    return <ExamRunner attempt={effectiveAttempt!} onFinished={onFinished} onStale={onStale} />
   }
 
   return (
     <EnforcedExam
-      attempt={attempt}
+      attempt={effectiveAttempt}
       initialEvents={readinessEvents ?? []}
       camera={camera}
       microphone={microphone}
       onFinished={onFinished}
       onStale={onStale}
     >
-      <ProctoringStatus camera={camera} microphone={microphone} />
+      <ProctoringStatus
+        camera={camera}
+        microphone={microphone}
+        secondaryCameraStream={exam.secondary_camera_enabled ? secondaryCameraStream : undefined}
+      />
     </EnforcedExam>
   )
 }

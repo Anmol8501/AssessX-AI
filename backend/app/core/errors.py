@@ -37,6 +37,14 @@ class ValidationFailed(AppError):
     message = "The request is invalid."
 
 
+class BadRequest(AppError):
+    """General client error (malformed request or unprocessable semantic content)."""
+
+    status_code = 400
+    code = "bad_request"
+    message = "Bad request."
+
+
 class Unauthorized(AppError):
     """Missing, invalid or expired authentication."""
 

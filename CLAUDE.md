@@ -27,6 +27,11 @@ Three PDFs in `docs/` are authoritative. Read the relevant one before writing co
 | `docs/PRD/AssessX Product Requirements.pdf` | Product requirements and intended behaviour. Read before implementing product features. Defines FR-001…FR-025 and NFR-001…NFR-007. |
 | `docs/TRD/AssessX — Technical Requirements Document.pdf` | Technical architecture and implementation requirements. Read before changing architecture. |
 | `docs/Knowledge-Base/AssessX Master Project Knowledge Base.pdf` | Supporting product/technical knowledge, rationale and design philosophy. **Not** licence to invent requirements. |
+| `docs/Knowledge-Base/ASSESSX-SECURE-EXAM-ENVIRONMENT.md` | Product Knowledge Base & Feature Specification for the four-phase Windows Secure Exam Environment extension (Phases 1–4). |
+| `docs/Knowledge-Base/ASSESSX-PHASE-1-WINDOWS-SECURE-FOUNDATION.md` | Phase 1 Detailed Technical Knowledge Base & Implementation Specification: Windows Secure Environment Foundation. |
+| `docs/Knowledge-Base/ASSESSX-PHASE-1A-IMPLEMENTATION-PROMPT.md` | Phase 1A Master Implementation Prompt: Windows Environment & Device Provisioning — modules, stages, testing requirements, and definition of done. |
+| `docs/Knowledge-Base/ASSESSX-AI-ASSISTANT-IMPLEMENTATION-PROMPT.md` | AI Assistant Master Implementation Prompt: Floating Admin Chatbot for intelligent exam creation, question generation, validation and publishing via Google Gemini. |
+| `docs/Knowledge-Base/ASSESSX-SECONDARY-CAMERA-PROCTORING-PROMPT.md` | Secondary Camera Proctoring Master Implementation Prompt: QR-Based Mobile Phone Secondary Camera for Home-Based Assessments. |
 
 `docs/PROJECT-CONTEXT.md` is a working summary of all three, with requirement IDs, the phase plan, the event/risk model and a tracked list of open decisions (§21). Start there for orientation; go to the PDFs for anything you are about to build.
 

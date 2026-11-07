@@ -27,6 +27,11 @@ PUBLIC = {
     ("POST", "/api/v1/auth/login/candidate"),
     ("POST", "/api/v1/auth/login/admin"),
     ("POST", "/api/v1/auth/password-reset"),
+    # Secondary camera mobile phone pairing & telemetry (authenticated by pairing token)
+    ("POST", "/api/v1/proctoring/secondary-camera/pair"),
+    ("POST", "/api/v1/proctoring/secondary-camera/heartbeat"),
+    ("GET", "/api/v1/proctoring/secondary-camera/{session_id}/status"),
+    ("GET", "/api/v1/proctoring/secondary-camera/{session_id}/ice-servers"),
 }
 #: Routes any signed-in user may call (their own account and session, ICE servers, socket tickets).
 ANY_SIGNED_IN = {
@@ -81,7 +86,7 @@ def test_role_guards_on_every_route(client, helpers, users):
     for method, path in ROUTES:
         if (method, path) in PUBLIC or (method, path) in ANY_SIGNED_IN:
             continue
-        if path.startswith("/api/v1/candidates/me"):
+        if path.startswith(("/api/v1/candidates/me", "/api/v1/proctoring/secondary-camera/attempts")):
             status = _call(client, method, path, admin).status_code
             if status != 403:
                 leaks.append(f"admin → {method} {path}: {status}")

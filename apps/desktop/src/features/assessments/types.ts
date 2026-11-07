@@ -42,6 +42,11 @@ export interface AssessmentSettings {
   question_navigation: QuestionNavigation
   /** Phase 4A: candidates pass a camera/microphone check and sit the exam under a proctoring session. */
   proctoring_required: boolean
+  /** Secondary Camera: require candidate to pair mobile phone camera as second angle. */
+  secondary_camera_enabled: boolean
+  secondary_camera_mandatory: boolean
+  secondary_camera_orientation: 'LANDSCAPE' | 'PORTRAIT' | 'ANY'
+  secondary_camera_grace_period_seconds: number
   availability_start: string | null
   availability_end: string | null
   /** Coding assessments: candidates may run their code on their own input (otherwise samples only). */
@@ -235,6 +240,10 @@ export interface MyAssessment {
   max_attempts: number
   /** Whether a new attempt will be proctored. A running attempt answers for itself (`AttemptDetail.proctoring`). */
   proctoring_required: boolean
+  secondary_camera_enabled?: boolean
+  secondary_camera_mandatory?: boolean
+  secondary_camera_orientation?: 'LANDSCAPE' | 'PORTRAIT' | 'ANY'
+  secondary_camera_grace_period_seconds?: number
   /** What a proctored attempt records as evidence clips (FR-017) — shown to the candidate up front. */
   recording?: RecordingPolicy
   availability_start: string | null

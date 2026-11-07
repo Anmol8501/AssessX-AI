@@ -145,6 +145,19 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     proctoring_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    #: Secondary Camera Proctoring (mobile phone connected via QR code).
+    secondary_camera_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    secondary_camera_mandatory: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    secondary_camera_orientation: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="LANDSCAPE", server_default="LANDSCAPE"
+    )
+    secondary_camera_grace_period_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
     availability_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     availability_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

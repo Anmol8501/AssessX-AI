@@ -167,6 +167,10 @@ class AttemptDetail(BaseModel):
     #: Per attempt rather than per assessment: it reflects the setting at the moment the attempt
     #: started, so a later change to the assessment does not change a running exam.
     proctoring: ProctoringSessionOut | None
+    secondary_camera_enabled: bool = False
+    secondary_camera_mandatory: bool = False
+    secondary_camera_orientation: str = "LANDSCAPE"
+    secondary_camera_grace_period_seconds: int = 60
     #: MCQ only, coding only, or mixed — what the exam screen labels questions as.
     assessment_type: str = "MCQ"
     #: Coding questions' progress (empty for an MCQ-only assessment).

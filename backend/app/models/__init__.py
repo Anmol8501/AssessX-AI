@@ -71,6 +71,7 @@ from app.models.review import (
     ReviewOutcome,
     ReviewStatus,
 )
+from app.models.secondary_camera import SecondaryCameraSession, SecondaryCameraStatus
 from app.models.security import PasswordResetCode, RateLimitHit
 from app.models.security_event import MaintenanceHeartbeat, SecurityAlert, SecurityEvent
 from app.models.user import User, UserRole
@@ -85,6 +86,8 @@ __all__ = [
     "EvidenceSource",
     "PasswordResetCode",
     "RateLimitHit",
+    "SecondaryCameraSession",
+    "SecondaryCameraStatus",
     "AttemptMessage",
     "CodingDraft",
     "CodeExecution",

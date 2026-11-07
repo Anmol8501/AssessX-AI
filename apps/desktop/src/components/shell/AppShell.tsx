@@ -6,6 +6,7 @@ import { Button, ConfirmDialog, StatusBadge } from '@/components/ui'
 import { APP_VERSION } from '@/config/app'
 import { ROLE_LABEL, useCurrentUser, useSession } from '@/features/session'
 import { AccountDialog } from '@/features/session/AccountDialog'
+import { AIAssistantButton } from '@/features/admin/ai-assistant/AIAssistantButton'
 import { cn } from '@/lib/cn'
 
 export interface NavItem {
@@ -160,6 +161,7 @@ export function AppShell({ nav }: AppShellProps) {
         onCancel={() => setConfirmingSignOut(false)}
       />
       <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} />
+      {user.role === 'ADMIN' && <AIAssistantButton />}
     </div>
   )
 }

@@ -86,6 +86,13 @@ export default defineConfig({
     strictPort: true,
     host: host || false,
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
     // 3. Don't watch the Rust crate.
     watch: { ignored: ['**/src-tauri/**'] },
   },

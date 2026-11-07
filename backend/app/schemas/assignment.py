@@ -88,6 +88,10 @@ class MyAssessment(BaseModel):
     #: Whether a new attempt at this exam will be proctored (Phase 4A). An attempt already under
     #: way answers that for itself through `AttemptDetail.proctoring`.
     proctoring_required: bool
+    secondary_camera_enabled: bool = False
+    secondary_camera_mandatory: bool = False
+    secondary_camera_orientation: str = "LANDSCAPE"
+    secondary_camera_grace_period_seconds: int = 60
     #: What a proctored attempt records as evidence clips (FR-017), shown to the candidate before they
     #: start: short clips around certain factual events only, video only, kept for a fixed period.
     recording: EvidencePolicyOut = Field(default_factory=current_evidence_policy)
@@ -125,6 +129,12 @@ class MyAssessment(BaseModel):
             question_count=question_count,
             max_attempts=assessment.max_attempts,
             proctoring_required=assessment.proctoring_required,
+            secondary_camera_enabled=getattr(assessment, "secondary_camera_enabled", False),
+            secondary_camera_mandatory=getattr(assessment, "secondary_camera_mandatory", False),
+            secondary_camera_orientation=getattr(assessment, "secondary_camera_orientation", "LANDSCAPE"),
+            secondary_camera_grace_period_seconds=getattr(
+                assessment, "secondary_camera_grace_period_seconds", 60
+            ),
             availability_start=assessment.availability_start,
             availability_end=assessment.availability_end,
             status=assignment.status,

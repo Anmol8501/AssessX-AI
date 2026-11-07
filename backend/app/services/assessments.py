@@ -28,6 +28,8 @@ log = logging.getLogger("assessx.assessments")
 EXAM_DEFINING_FIELDS = frozenset(
     {
         "proctoring_required",
+        "secondary_camera_enabled",
+        "secondary_camera_mandatory",
         "question_navigation",
         "duration_minutes",
         "total_marks",

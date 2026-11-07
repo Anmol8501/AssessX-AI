@@ -70,12 +70,16 @@ class Settings(BaseSettings):
     # Phase 7B — AI answer evaluation. Server-side only: the key is never sent to any client, logged or
     # returned. `none` (default) records evaluations as unavailable and interviews continue without
     # them; `stub` is a labelled, deterministic test double allowed only in development/test.
-    llm_provider: Literal["none", "anthropic", "stub"] = "none"
+    llm_provider: Literal["none", "anthropic", "stub", "gemini"] = "none"
     llm_api_key: SecretStr | None = None
     llm_model: str = Field(default="claude-haiku-4-5-20251001", min_length=1, max_length=100)
     llm_timeout_seconds: float = Field(default=20.0, ge=2.0, le=60.0)
     #: Extra attempts for a rate-limited / unavailable / timed-out provider call (not for bad output).
     llm_max_retries: int = Field(default=2, ge=0, le=2)
+    # AI Assistant (exam creation chatbot). Server-side only: the key is never sent to any client.
+    # `gemini` enables the exam-creation assistant; `none` (default) disables it.
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str = Field(default="gemini-flash-lite-latest", min_length=1, max_length=100)
     #: How long a candidate waits for an evaluation before the interview moves on without it.
     evaluation_wait_seconds: int = Field(default=25, ge=5, le=60)
     session_ttl_hours: int = 12
@@ -220,6 +224,8 @@ class Settings(BaseSettings):
             problems.append("LLM_PROVIDER=stub is a test double and is not allowed in production")
         if self.llm_provider == "anthropic" and not self.llm_api_key:
             problems.append("LLM_PROVIDER=anthropic needs LLM_API_KEY")
+        if self.llm_provider == "gemini" and not self.gemini_api_key:
+            problems.append("LLM_PROVIDER=gemini needs GEMINI_API_KEY")
         if self.runner_token and len(self.runner_token.get_secret_value()) < PRODUCTION_SECRET_MIN_LENGTH:
             problems.append(
                 f"RUNNER_TOKEN must be a random value of at least {PRODUCTION_SECRET_MIN_LENGTH} characters"

@@ -34,6 +34,7 @@ import { ProfilePage } from '@/features/candidate/pages/ProfilePage'
 import { RequireAnonymous, RequireRole } from '@/features/session'
 import { StartupGate } from '@/features/startup/StartupGate'
 import { WelcomePage } from '@/features/startup/WelcomePage'
+import { MobileCameraPage } from '@/features/proctoring/secondary/MobileCameraPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { RouteErrorBoundary } from './RouteErrorBoundary'
 import { routes } from './routes'
@@ -47,6 +48,9 @@ export const router = createHashRouter([
     errorElement: <RouteErrorBoundary />,
     children: [
       { path: routes.root, element: <StartupGate /> },
+      // Secondary camera view opened by mobile phone browser via QR code
+      { path: 'mobile-camera', element: <MobileCameraPage /> },
+      { path: '/mobile-camera', element: <MobileCameraPage /> },
 
       // Entry screens — an authenticated user is redirected to their dashboard.
       {

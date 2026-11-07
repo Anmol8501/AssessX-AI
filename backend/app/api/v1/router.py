@@ -6,6 +6,7 @@ from app.api.v1 import (
     admin_monitoring,
     admin_reviews,
     admin_security,
+    ai_assistant,
     assessments,
     attempts,
     auth,
@@ -20,6 +21,7 @@ from app.api.v1 import (
     proctoring,
     realtime,
     runner,
+    secondary_camera,
     users,
     ws,
     ws_calls,
@@ -36,6 +38,7 @@ api_v1.include_router(attempts.router)
 api_v1.include_router(candidate_coding.router)
 api_v1.include_router(candidate_coding.progress_router)
 api_v1.include_router(proctoring.router)
+api_v1.include_router(secondary_camera.router)
 api_v1.include_router(admin_monitoring.router)
 api_v1.include_router(admin_attempts.router)
 api_v1.include_router(admin_security.router)
@@ -52,3 +55,4 @@ api_v1.include_router(realtime.router)
 api_v1.include_router(runner.router)
 api_v1.include_router(ws.router)
 api_v1.include_router(ws_calls.router)
+api_v1.include_router(ai_assistant.router)

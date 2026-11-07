@@ -27,6 +27,10 @@ class AssessmentSettings(BaseModel):
     #: proctoring session. Deliberately one switch — the detailed secure-exam configuration
     #: (fullscreen, shortcuts, clipboard) belongs to Phase 4B.
     proctoring_required: bool = False
+    secondary_camera_enabled: bool = False
+    secondary_camera_mandatory: bool = False
+    secondary_camera_orientation: str = "LANDSCAPE"
+    secondary_camera_grace_period_seconds: int = Field(default=60, ge=10, le=600)
     availability_start: datetime | None = None
     availability_end: datetime | None = None
     #: Coding assessments: candidates may run their code on their own input (otherwise samples only).
@@ -83,6 +87,10 @@ class AssessmentUpdate(BaseModel):
     show_results: bool | None = None
     question_navigation: QuestionNavigation | None = None
     proctoring_required: bool | None = None
+    secondary_camera_enabled: bool | None = None
+    secondary_camera_mandatory: bool | None = None
+    secondary_camera_orientation: str | None = None
+    secondary_camera_grace_period_seconds: int | None = Field(default=None, ge=10, le=600)
     availability_start: datetime | None = None
     availability_end: datetime | None = None
     coding_allow_custom_input: bool | None = None
