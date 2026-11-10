@@ -11,3 +11,13 @@ bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_monitoring.py:generi
 bcb193c19bdce406a67ad0ff0ea79bb8d14bd55d:backend/tests/test_proctoring.py:generic-api-key:79
 c977827f4a584bb13520be13cd72184fa6901973:backend/tests/test_attempts.py:generic-api-key:278
 487dac9cea3591da2c914aca1b7926a11b789bae:tools/devscope/test_devscope.py:generic-api-key:480
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_authorization_lifecycle.py:generic-api-key:108
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_authorization_lifecycle.py:generic-api-key:126
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_authorization_lifecycle.py:generic-api-key:139
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_authorization_lifecycle.py:generic-api-key:213
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_submission_closure.py:generic-api-key:179
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_session_continuity.py:generic-api-key:29
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_session_continuity.py:generic-api-key:35
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_session_continuity.py:generic-api-key:43
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_session_continuity.py:generic-api-key:56
+ff9348204b1814657d91d2bbd22fc65ccdd284a0:backend/tests/test_session_continuity.py:generic-api-key:199
