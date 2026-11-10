@@ -45,6 +45,10 @@ export class ApiError extends Error {
 export const API_BASE_URL: string = (() => {
   const configured = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
   if (configured) return configured
+  // In a browser development environment (outside Tauri), use same-origin relative paths to leverage Vite proxy
+  if (import.meta.env.DEV && typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window)) {
+    return ''
+  }
   if (import.meta.env.DEV || import.meta.env.MODE === 'test' || import.meta.env.VITE_ALLOW_LOCAL_API === '1') return 'http://127.0.0.1:8000'
   throw new Error('This build of AssessX has no API address configured.')
 })()

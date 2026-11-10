@@ -10,11 +10,17 @@ exactly what a session looks like.
 """
 
 import uuid
+from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.attempt import AssessmentAttempt
-from app.models.proctoring import DeviceState, ProctoringSession
+from app.models.assessment import Assessment
+from app.models.assignment import AssessmentAssignment
+from app.models.attempt import ACTIVE_ATTEMPT_STATUSES, AssessmentAttempt, AttemptStatus
+from app.models.base import utcnow
+from app.models.monitoring_audit import MonitoringAuditAction, MonitoringAuditEvent
+from app.models.proctoring import DeviceState, ProctoringSession, ProctoringSessionStatus
 from app.models.proctoring_event import ProctoringEvent, ProctoringEventType
 from app.realtime.hub import hub
 from app.realtime.messages import MessageType, message
@@ -23,8 +29,12 @@ from app.schemas.monitoring import (
     ActiveSessions,
     AIActiveObservation,
     AIMonitoringState,
+    MonitoringAuditList,
+    MonitoringAuditOut,
     MonitoringDetail,
     MonitoringEvent,
+    MonitoringExamList,
+    MonitoringExamSummary,
     MonitoringSession,
     MonitoringSummary,
 )
@@ -45,19 +55,132 @@ class MonitoringService:
 
     # -- REST ----------------------------------------------------------------------------
 
-    def active(self) -> ActiveSessions:
-        sessions = [self._tile(s) for s in self.repo.active_sessions()]
+    def active(self, assessment_id: uuid.UUID | None = None) -> ActiveSessions:
+        sessions = [self._tile(s) for s in self.repo.active_sessions(assessment_id=assessment_id)]
         cameras_ready = sum(1 for s in sessions if s.camera_state is DeviceState.READY)
         camera_issues = sum(1 for s in sessions if s.camera_state is not DeviceState.READY)
         mic_issues = sum(1 for s in sessions if s.microphone_state is not DeviceState.READY)
+        on_hold_count = sum(1 for s in sessions if s.on_hold or s.interruption_count > 0)
         return ActiveSessions(
             summary=MonitoringSummary(
                 active_sessions=len(sessions),
                 cameras_ready=cameras_ready,
                 camera_issues=camera_issues,
                 microphone_issues=mic_issues,
+                on_hold_count=on_hold_count,
             ),
             sessions=sessions,
+        )
+
+    def exams_summary(self) -> MonitoringExamList:
+        """Returns operational counts across published/proctored examinations for selector (Phase 4C)."""
+        assessments = list(
+            self.db.scalars(select(Assessment).order_by(Assessment.created_at.desc()).limit(100))
+        )
+        exams: list[MonitoringExamSummary] = []
+        for a in assessments:
+            total_assigned = (
+                self.db.scalar(
+                    select(func.count(AssessmentAssignment.id)).where(
+                        AssessmentAssignment.assessment_id == a.id
+                    )
+                )
+                or 0
+            )
+            active_sessions = (
+                self.db.scalar(
+                    select(func.count(ProctoringSession.id))
+                    .join(AssessmentAttempt, AssessmentAttempt.id == ProctoringSession.attempt_id)
+                    .where(
+                        AssessmentAttempt.assessment_id == a.id,
+                        ProctoringSession.status == ProctoringSessionStatus.ACTIVE,
+                        AssessmentAttempt.status.in_(ACTIVE_ATTEMPT_STATUSES),
+                    )
+                )
+                or 0
+            )
+            submitted_count = (
+                self.db.scalar(
+                    select(func.count(AssessmentAttempt.id)).where(
+                        AssessmentAttempt.assessment_id == a.id,
+                        AssessmentAttempt.status.in_((AttemptStatus.SUBMITTED, AttemptStatus.TIME_EXPIRED)),
+                    )
+                )
+                or 0
+            )
+            interrupted_count = (
+                self.db.scalar(
+                    select(func.count(ProctoringSession.id))
+                    .join(AssessmentAttempt, AssessmentAttempt.id == ProctoringSession.attempt_id)
+                    .where(
+                        AssessmentAttempt.assessment_id == a.id,
+                        ProctoringSession.status == ProctoringSessionStatus.ACTIVE,
+                        (ProctoringSession.interruption_count > 0) | AssessmentAttempt.is_on_hold.is_(True),
+                    )
+                )
+                or 0
+            )
+            exams.append(
+                MonitoringExamSummary(
+                    assessment_id=a.id,
+                    title=a.title,
+                    status=a.status.value,
+                    scheduled_start=a.scheduled_start,
+                    scheduled_end=a.scheduled_end,
+                    total_assigned=total_assigned,
+                    active_sessions=active_sessions,
+                    submitted_count=submitted_count,
+                    interrupted_count=interrupted_count,
+                    proctoring_enabled=bool(getattr(a, "proctoring_required", True)),
+                )
+            )
+        return MonitoringExamList(exams=exams)
+
+    def record_audit(
+        self,
+        administrator_id: uuid.UUID,
+        action: MonitoringAuditAction,
+        *,
+        assessment_id: uuid.UUID | None = None,
+        attempt_id: uuid.UUID | None = None,
+        proctoring_session_id: uuid.UUID | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> MonitoringAuditEvent:
+        """Persists an append-only monitoring access audit record."""
+        event = MonitoringAuditEvent(
+            administrator_id=administrator_id,
+            assessment_id=assessment_id,
+            attempt_id=attempt_id,
+            proctoring_session_id=proctoring_session_id,
+            action=action,
+            details=details or {},
+            created_at=utcnow(),
+        )
+        self.db.add(event)
+        self.db.flush()
+        return event
+
+    def audit_logs(
+        self,
+        attempt_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> MonitoringAuditList:
+        """Returns paginated monitoring audit history."""
+        query = select(MonitoringAuditEvent)
+        if attempt_id is not None:
+            query = query.where(MonitoringAuditEvent.attempt_id == attempt_id)
+        total = self.db.scalar(select(func.count()).select_from(query.subquery())) or 0
+        rows = list(
+            self.db.scalars(
+                query.order_by(MonitoringAuditEvent.created_at.desc()).offset(offset).limit(limit)
+            )
+        )
+        return MonitoringAuditList(
+            total=total,
+            limit=limit,
+            offset=offset,
+            items=[MonitoringAuditOut.model_validate(r) for r in rows],
         )
 
     def detail(self, attempt_id: uuid.UUID) -> MonitoringDetail | None:
@@ -115,6 +238,10 @@ class MonitoringService:
             ai=derive_ai_state(self.repo.ai_events(session.id)),
             candidate_connected=candidate_connected,
             candidate_presence_changed_at=presence_changed_at,
+            interruption_count=session.interruption_count,
+            readiness_state=session.readiness_state,
+            selected_camera_label=session.selected_camera_label,
+            selected_microphone_label=session.selected_microphone_label,
             **self._control(attempt),
         )
 

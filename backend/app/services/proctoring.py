@@ -39,7 +39,7 @@ from app.models.proctoring import DeviceState, ProctoringSession, ProctoringSess
 from app.models.proctoring_event import ProctoringEvent, ProctoringEventType
 from app.realtime import notify
 from app.repositories.proctoring import ProctoringRepository
-from app.schemas.proctoring import DeviceReport, ProctoringEventIn
+from app.schemas.proctoring import DeviceReport, ProctoringEventIn, ProctoringInterruptionIn
 from app.services.proctoring_events import ProctoringEventRecorder
 
 log = logging.getLogger("assessx.proctoring")
@@ -246,12 +246,92 @@ class ProctoringService:
                     AttemptControlService(self.db).focus_returned(attempt, away, event.details.get("left_to"))
         return event, created
 
+    def record_readiness(self, attempt: AssessmentAttempt, report: DeviceReport) -> ProctoringSession:
+        """Records candidate pre-flight device readiness audit results (Phase 4A)."""
+        self._require_open(attempt)
+        session = self.session_of(attempt)
+        now = utcnow()
+        self._record(session, report, now)
+        log.info(
+            "Proctoring readiness audit recorded",
+            extra={**self._context(attempt, session), "readiness": report.readiness_state},
+        )
+        notify.session_changed(self.db, attempt.id)
+        return session
+
+    def record_interruption(
+        self, attempt: AssessmentAttempt, payload: ProctoringInterruptionIn
+    ) -> ProctoringSession:
+        """Records an unexpected hardware disconnection/revocation event during active proctoring."""
+        self._require_open(attempt)
+        session = self.session_of(attempt)
+        session.interruption_count += 1
+        session.device_failure_reason = (
+            payload.message or f"{payload.device_type} interrupted ({payload.reason})"
+        )
+        session.readiness_state = "DEVICE_DISCONNECTED"
+        if payload.device_type == "camera":
+            session.camera_state = DeviceState.UNAVAILABLE
+        else:
+            session.microphone_state = DeviceState.UNAVAILABLE
+        now = utcnow()
+        session.devices_reported_at = now
+        self.db.flush()
+
+        event_type = (
+            ProctoringEventType.CAMERA_DISCONNECTED
+            if payload.device_type == "camera"
+            else ProctoringEventType.MIC_DISCONNECTED
+        )
+        self.events.record_server(
+            session,
+            event_type,
+            {"device": payload.device_type, "reason": payload.reason, "message": payload.message},
+            at=now,
+        )
+        log.warning(
+            "Proctoring hardware interruption recorded",
+            extra={
+                **self._context(attempt, session),
+                "device": payload.device_type,
+                "reason": payload.reason,
+                "interruption_count": session.interruption_count,
+            },
+        )
+        notify.session_changed(self.db, attempt.id)
+        return session
+
+    def stop_session(self, attempt: AssessmentAttempt) -> ProctoringSession:
+        """Stops proctoring session after an attempt finalizes (idempotent).
+
+        Active sittings cannot stop proctoring directly so a candidate cannot drop
+        proctoring while continuing to answer.
+        """
+        if not attempt.is_finalized:
+            raise Conflict("Cannot stop proctoring while the examination attempt is active.")
+        session = self.session_of(attempt)
+        if not session.is_ended:
+            self.end_for(attempt)
+        return session
+
     # -- internals ------------------------------------------------------------------------
 
     def _record(self, session: ProctoringSession, report: DeviceReport, now: datetime) -> None:
         session.camera_state = report.camera
         session.microphone_state = report.microphone
         session.devices_reported_at = now
+        if report.selected_camera_id is not None:
+            session.selected_camera_id = report.selected_camera_id
+        if report.selected_camera_label is not None:
+            session.selected_camera_label = report.selected_camera_label
+        if report.selected_microphone_id is not None:
+            session.selected_microphone_id = report.selected_microphone_id
+        if report.selected_microphone_label is not None:
+            session.selected_microphone_label = report.selected_microphone_label
+        if report.readiness_state is not None:
+            session.readiness_state = report.readiness_state
+        if report.device_failure_reason is not None:
+            session.device_failure_reason = report.device_failure_reason
         self.db.flush()
 
     @staticmethod

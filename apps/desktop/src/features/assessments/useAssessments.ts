@@ -23,6 +23,14 @@ export function describeError(error: unknown, fallback: string): string {
       if (details?.length) return details.map((d) => d.message).filter(Boolean).join(' ')
       return 'Please check the values you entered.'
     }
+    if (error.code === 'ai_assistant_unavailable') {
+      return 'The AI Assistant is not configured on this server. Please set GEMINI_API_KEY in your backend server environment.'
+    }
+    // Cleanly unwrap stringified Python dicts/JSON error messages if present
+    if (error.message.includes("'message':") || error.message.includes('"message":')) {
+      const match = error.message.match(/['"]message['"]:\s*['"]([^'"]+)['"]/)
+      if (match?.[1]) return match[1]
+    }
     return error.message
   }
   return fallback

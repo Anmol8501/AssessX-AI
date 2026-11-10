@@ -20,14 +20,18 @@ import re
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.models.attempt import AssessmentAttempt
+from app.models.base import utcnow
+from app.models.monitoring_audit import MonitoringStreamGrant
 from app.models.proctoring import ProctoringSessionStatus
 from app.models.user import User, UserRole
 from app.realtime.hub import hub
@@ -117,9 +121,10 @@ async def admin_monitoring(ws: WebSocket) -> None:
     await hub.add_admin(ws)
     await ws.send_json(message(MessageType.CONNECTION_READY, role="admin"))
     guard = SocketGuard(ws, session_id, user.id)
+    watch_grants: dict[uuid.UUID, tuple[uuid.UUID | None, datetime]] = {}
     try:
         while (data := await guard.receive()) is not None:
-            await _handle_admin_message(ws, data)
+            await _handle_admin_message(ws, user.id, data, watch_grants)
     except WebSocketDisconnect:
         pass
     except Exception:  # noqa: BLE001
@@ -136,7 +141,12 @@ def _watched_attempts(ws: WebSocket) -> list[uuid.UUID]:
     return [aid for aid, admins in hub._watchers.items() if ws in admins]  # noqa: SLF001 — same package
 
 
-async def _handle_admin_message(ws: WebSocket, data: dict) -> None:
+async def _handle_admin_message(
+    ws: WebSocket,
+    admin_id: uuid.UUID,
+    data: dict,
+    watch_grants: dict[uuid.UUID, tuple[uuid.UUID | None, datetime]],
+) -> None:
     kind = data.get("type")
     attempt_id = _as_uuid(data.get("attempt_id"))
 
@@ -146,6 +156,23 @@ async def _handle_admin_message(ws: WebSocket, data: dict) -> None:
                 message(MessageType.ERROR, error="not_monitorable", attempt_id=str(attempt_id))
             )
             return
+
+        raw_grant_id = data.get("stream_grant_id")
+        grant_id = _as_uuid(raw_grant_id)
+        if raw_grant_id is not None and grant_id is None:
+            await ws.send_json(
+                message(MessageType.ERROR, error="stream_grant_invalid", attempt_id=str(attempt_id))
+            )
+            return
+
+        allowed, expires_at = _validate_watch_grant(admin_id, attempt_id, grant_id)
+        if not allowed or expires_at is None:
+            await ws.send_json(
+                message(MessageType.ERROR, error="stream_grant_expired", attempt_id=str(attempt_id))
+            )
+            return
+
+        watch_grants[attempt_id] = (grant_id, expires_at)
         publishing = hub.watch(attempt_id, ws)
         # Ask the candidate (if connected) to (re)send an offer for this new watcher.
         await hub.send_to_candidate(attempt_id, message(MessageType.WATCH, attempt_id=str(attempt_id)))
@@ -154,14 +181,28 @@ async def _handle_admin_message(ws: WebSocket, data: dict) -> None:
         )
 
     elif kind == MessageType.UNWATCH.value and attempt_id is not None:
+        watch_grants.pop(attempt_id, None)
         await _stop_watch(ws, attempt_id)
 
     elif (
         kind in {MessageType.WEBRTC_ANSWER.value, MessageType.ICE_CANDIDATE.value} and attempt_id is not None
     ):
-        # Relayed to the candidate only if this admin is actually watching that attempt.
+        # Relayed to the candidate only if this admin is watching that attempt with an active grant.
         if not hub.is_watching(attempt_id, ws):
             return
+        grant_info = watch_grants.get(attempt_id)
+        if grant_info is not None:
+            grant_id, exp = grant_info
+            grant_invalid = exp <= utcnow() or (
+                grant_id is not None and not _validate_watch_grant(admin_id, attempt_id, grant_id)[0]
+            )
+            if grant_invalid:
+                watch_grants.pop(attempt_id, None)
+                await _stop_watch(ws, attempt_id)
+                await ws.send_json(
+                    message(MessageType.ERROR, error="stream_grant_expired", attempt_id=str(attempt_id))
+                )
+                return
         payload = data.get("sdp") if kind == MessageType.WEBRTC_ANSWER.value else data.get("candidate")
         if not _clean(payload):
             return
@@ -267,6 +308,55 @@ def _is_active_monitorable(attempt_id: uuid.UUID) -> bool:
         if attempt is None or not attempt.is_active or attempt.proctoring_session is None:
             return False
         return attempt.proctoring_session.status is ProctoringSessionStatus.ACTIVE
+
+
+def _validate_watch_grant(
+    admin_id: uuid.UUID, attempt_id: uuid.UUID, grant_id: uuid.UUID | None
+) -> tuple[bool, datetime | None]:
+    """Verifies optional/issued StreamAuthorizationGrant ownership, revocation, and expiry."""
+    now = utcnow()
+    with _session() as db:
+        return check_stream_grant_valid(db, admin_id, attempt_id, grant_id, now=now)
+
+
+def check_stream_grant_valid(
+    db: Session,
+    admin_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    grant_id: uuid.UUID | None,
+    *,
+    now: datetime | None = None,
+) -> tuple[bool, datetime | None]:
+    """Pure DB grant validation helper (also directly unit-testable)."""
+    current = now or utcnow()
+    if grant_id is not None:
+        grant = db.get(MonitoringStreamGrant, grant_id)
+        if (
+            grant is None
+            or grant.administrator_id != admin_id
+            or grant.attempt_id != attempt_id
+            or grant.revoked_at is not None
+            or grant.expires_at <= current
+        ):
+            return False, None
+        return True, grant.expires_at
+
+    # Legacy/no-grant-id path: check if an active grant exists, else ensure most recent wasn't revoked
+    latest = db.scalar(
+        select(MonitoringStreamGrant)
+        .where(
+            MonitoringStreamGrant.administrator_id == admin_id,
+            MonitoringStreamGrant.attempt_id == attempt_id,
+        )
+        .order_by(desc(MonitoringStreamGrant.created_at))
+        .limit(1)
+    )
+    if latest is not None:
+        if latest.revoked_at is not None or latest.expires_at <= current:
+            return False, None
+        return True, latest.expires_at
+
+    return True, current + timedelta(minutes=15)
 
 
 def _owned_active_session(user_id: uuid.UUID, attempt_id: uuid.UUID) -> bool:

@@ -24,6 +24,33 @@ class DeviceReport(BaseModel):
     microphone: DeviceState
     #: On activation: whether this app can record evidence clips (FR-017). Ignored on later reports.
     evidence_recorder: bool = False
+    #: Selected hardware device identifiers and labels (Phase 4A)
+    selected_camera_id: str | None = Field(default=None, max_length=128)
+    selected_camera_label: str | None = Field(default=None, max_length=255)
+    selected_microphone_id: str | None = Field(default=None, max_length=128)
+    selected_microphone_label: str | None = Field(default=None, max_length=255)
+    readiness_state: str | None = Field(default=None, max_length=64)
+    device_failure_reason: str | None = Field(default=None, max_length=255)
+
+
+class ProctoringInterruptionIn(BaseModel):
+    """Report from candidate app when camera or microphone is unexpectedly disconnected or revoked."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    device_type: Literal["camera", "microphone"]
+    reason: str = Field(default="DISCONNECTED", max_length=64)
+    message: str | None = Field(default=None, max_length=255)
+
+
+class ProctoringStopOut(BaseModel):
+    """Acknowledgement of proctoring session teardown during exam closure."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    attempt_id: uuid.UUID
+    status: str
+    stopped_at: datetime
 
 
 class EvidencePolicyOut(BaseModel):
@@ -70,11 +97,41 @@ class ProctoringSessionOut(BaseModel):
     status: ProctoringSessionStatus
     camera_state: DeviceState
     microphone_state: DeviceState
+    selected_camera_id: str | None = None
+    selected_camera_label: str | None = None
+    selected_microphone_id: str | None = None
+    selected_microphone_label: str | None = None
+    readiness_state: str | None = "NOT_CHECKED"
+    device_failure_reason: str | None = None
+    interruption_count: int = 0
     started_at: datetime | None
     ended_at: datetime | None
     devices_reported_at: datetime | None
     #: Evidence clips (FR-017): what the app may record, and nothing beyond it.
     recording: EvidencePolicyOut = Field(default_factory=current_evidence_policy)
+
+
+class AdminProctoringDetail(BaseModel):
+    """Administrator view of candidate proctoring session readiness and connectivity."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    attempt_id: uuid.UUID
+    candidate_id: uuid.UUID
+    status: ProctoringSessionStatus
+    camera_state: DeviceState
+    microphone_state: DeviceState
+    selected_camera_id: str | None = None
+    selected_camera_label: str | None = None
+    selected_microphone_id: str | None = None
+    selected_microphone_label: str | None = None
+    readiness_state: str | None = None
+    device_failure_reason: str | None = None
+    interruption_count: int = 0
+    started_at: datetime | None
+    ended_at: datetime | None
+    devices_reported_at: datetime | None
 
 
 class ProctoringEventIn(BaseModel):
@@ -98,11 +155,12 @@ class ProctoringEventIn(BaseModel):
 
 
 class ProctoringEventOut(BaseModel):
-    """An event as recorded. `category` and `source` are the server's, not the client's."""
+    """An event as recorded. `category`, `severity` and `source` are the server's, not the client's."""
 
     id: uuid.UUID
     event_type: ProctoringEventType
     category: ProctoringEventCategory
+    severity: str = "INFO"
     source: ProctoringEventSource
     metadata: dict[str, Any]
     recorded_at: datetime
@@ -110,6 +168,28 @@ class ProctoringEventOut(BaseModel):
     #: Set when the server created (or linked this event to) an evidence clip. `upload` is true only
     #: for a new clip: the app then sends the recording it captured around this event.
     clip_request: "EvidenceRequestOut | None" = None
+
+
+class ProctoringEventsStatusOut(BaseModel):
+    """Factual telemetry summary of candidate proctoring event synchronization state."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    attempt_id: uuid.UUID
+    session_id: uuid.UUID
+    total_events: int
+    last_event_recorded_at: datetime | None
+    session_status: str
+
+
+class AdminProctoringEventListOut(BaseModel):
+    """Paginated list of proctoring environment events for administrative inspection."""
+
+    attempt_id: uuid.UUID
+    total: int
+    limit: int
+    offset: int
+    items: list[ProctoringEventOut]
 
 
 class EvidenceRequestOut(BaseModel):

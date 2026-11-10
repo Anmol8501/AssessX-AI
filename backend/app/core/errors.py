@@ -268,6 +268,24 @@ class RateLimited(AppError):
     message = "Too many requests. Please wait a while and try again."
 
 
+class AiAssistantUnavailable(AppError):
+    """Raised when the AI Assistant is requested but GEMINI_API_KEY is not configured on the server."""
+
+    status_code = 503
+    code = "ai_assistant_unavailable"
+    message = (
+        "The AI Assistant is not configured on this server. Set GEMINI_API_KEY in your server environment."
+    )
+
+
+class AiAssistantProviderError(AppError):
+    """Raised when the upstream Gemini API returns an error or times out."""
+
+    status_code = 502
+    code = "ai_provider_error"
+    message = "The AI service is temporarily unavailable. Please try again shortly."
+
+
 class EvidenceNotReady(Conflict):
     """The clip has no video to show (still being captured, or the capture failed)."""
 
@@ -365,6 +383,13 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:
         codes = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed"}
+        if isinstance(exc.detail, dict) and "error" in exc.detail and isinstance(exc.detail["error"], dict):
+            err = exc.detail["error"]
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=_payload(err.get("code", "http_error"), err.get("message", "Something went wrong.")),
+                headers=exc.headers,
+            )
         return JSONResponse(
             status_code=exc.status_code,
             content=_payload(codes.get(exc.status_code, "http_error"), str(exc.detail)),

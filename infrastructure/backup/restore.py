@@ -69,6 +69,11 @@ def main() -> int:
         metavar="ENV_NAME",
         help="env var holding the source URL to compare row counts with",
     )
+    parser.add_argument(
+        "--clean-after",
+        action="store_true",
+        help="safely clean up (empty) the disposable drill/restore database after successful verification",
+    )
     options = parser.parse_args()
 
     target = Conn.from_url(require_env("RESTORE_DATABASE_URL"))
@@ -164,6 +169,9 @@ def main() -> int:
             return 1
 
     counts = row_counts(target)
+    if not counts:
+        print("ERROR: No tables were restored from the backup.", file=sys.stderr)
+        return 1
     print(f"Restored {len(counts)} tables, {sum(counts.values()):,} rows.")
     if options.compare_with_env:
         source = Conn.from_url(require_env(options.compare_with_env))
@@ -179,6 +187,18 @@ def main() -> int:
                 print(f"  {table}: {pair}")
             return 1
         print(f"Row counts match the source for all {len(counts)} tables.")
+
+    if options.clean_after:
+        if not ("restore" in target.dbname.lower() or "drill" in target.dbname.lower()):
+            print(
+                f"Refusing to clean up '{target.dbname}': database name must contain 'restore' or 'drill'.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"Cleaning up disposable database {target.describe()} ...")
+        _psql(target, "drop schema public cascade; create schema public;")
+        print(f"Cleaned up disposable database {target.describe()} safely.")
+
     return 0
 
 

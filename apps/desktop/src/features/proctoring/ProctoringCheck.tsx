@@ -137,6 +137,8 @@ const STATUS_LABEL: Record<LocalDeviceStatus, string> = {
 }
 
 function DeviceRow({ icon, device, extra }: { icon: ReactNode; device: MediaDevice; extra?: ReactNode }) {
+  const hasMultiple = device.availableDevices.length > 1
+
   return (
     <CheckRow
       icon={icon}
@@ -144,7 +146,35 @@ function DeviceRow({ icon, device, extra }: { icon: ReactNode; device: MediaDevi
       state={rowStateOf(device.status)}
       stateLabel={STATUS_LABEL[device.status]}
       detail={device.message}
-      extra={extra}
+      extra={
+        <div className="space-y-1.5">
+          {extra}
+          {device.status === 'READY' && device.selectedLabel && !hasMultiple && (
+            <p className="text-ink-subtle text-[11.5px] truncate">
+              Using: <span className="text-ink font-medium">{device.selectedLabel}</span>
+            </p>
+          )}
+          {hasMultiple && (
+            <div className="mt-1 flex items-center gap-2">
+              <label htmlFor={`${device.kind}-select`} className="text-ink-subtle text-[11.5px]">
+                Device:
+              </label>
+              <select
+                id={`${device.kind}-select`}
+                value={device.selectedDeviceId || ''}
+                onChange={(e) => device.selectDevice(e.target.value)}
+                className="border-line bg-card text-ink text-[12px] max-w-[220px] truncate rounded border px-2 py-0.5 outline-none focus:border-primary"
+              >
+                {device.availableDevices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      }
     />
   )
 }

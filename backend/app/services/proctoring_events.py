@@ -73,11 +73,16 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.CAMERA_RECONNECTED: C.DEVICE,
     E.MIC_DISCONNECTED: C.DEVICE,
     E.MIC_RECONNECTED: C.DEVICE,
+    E.MEDIA_INITIALIZATION_FAILED: C.DEVICE,
     E.FULLSCREEN_ENTER: C.WINDOW,
     E.FULLSCREEN_EXIT: C.WINDOW,
     E.FULLSCREEN_RESTORED: C.WINDOW,
+    E.FULLSCREEN_REQUEST_FAILED: C.WINDOW,
     E.FOCUS_LOST: C.WINDOW,
     E.FOCUS_REGAINED: C.WINDOW,
+    E.WINDOW_MINIMIZED: C.WINDOW,
+    E.WINDOW_RESTORED: C.WINDOW,
+    E.WINDOW_CLOSED_UNEXPECTEDLY: C.WINDOW,
     E.EXAM_CLOSE_ATTEMPT: C.WINDOW,
     E.COPY_ATTEMPT: C.INPUT,
     E.CUT_ATTEMPT: C.INPUT,
@@ -92,6 +97,14 @@ CATEGORY: dict[ProctoringEventType, ProctoringEventCategory] = {
     E.DISPLAY_CONFIGURATION_CHANGED: C.DISPLAY,
     E.REMOTE_SESSION_DETECTED: C.SYSTEM,
     E.ENFORCEMENT_STATUS: C.SYSTEM,
+    E.SECURITY_AGENT_DISCONNECTED: C.SYSTEM,
+    E.SECURITY_AGENT_RECONNECTED: C.SYSTEM,
+    E.APPLICATION_POLICY_EVENT: C.SYSTEM,
+    E.RESTRICTED_APPLICATION_DETECTED: C.SYSTEM,
+    E.POLICY_ENFORCEMENT_FAILURE: C.SYSTEM,
+    E.ENVIRONMENT_RECOVERY_STARTED: C.RECOVERY,
+    E.ENVIRONMENT_RECOVERY_SUCCEEDED: C.RECOVERY,
+    E.ENVIRONMENT_RECOVERY_FAILED: C.RECOVERY,
     E.DEVICE_CHECK_STARTED: C.SYSTEM,
     E.PROHIBITED_APP_DETECTED: C.SYSTEM,
     E.APP_CLOSE_REQUESTED: C.SYSTEM,
@@ -228,8 +241,26 @@ _FIELDS: dict[str, Callable[[Any], bool]] = {
     "previous_state": _one_of(*_WINDOW_STATE),
     "current_state": _one_of(*_WINDOW_STATE),
     "reason": _one_of(
-        "minimized", "deactivated", "resized", "user", "focus-regained", "exam-start", "unknown"
+        "minimized",
+        "deactivated",
+        "resized",
+        "user",
+        "focus-regained",
+        "exam-start",
+        "unknown",
+        "disconnected",
+        "error",
+        "closed",
+        "crash",
+        "timeout",
+        "rejected",
     ),
+    "target_state": _one_of("fullscreen", "window_focus", "device", "security_agent", "unknown"),
+    "trigger_event": lambda v: isinstance(v, str) and len(v) <= 50,
+    "agent_version": lambda v: isinstance(v, str) and len(v) <= 32,
+    "guard_name": _one_of("keyboard_hook", "system_shortcuts", "window_lockdown", "security_agent", "kiosk"),
+    "error_code": lambda v: isinstance(v, str) and len(v) <= 32,
+    "device_type": _one_of("camera", "microphone"),
     "display_count": _int_between(0, 32),
     "previous_display_count": _int_between(0, 32),
     "capabilities": _capabilities,
@@ -310,11 +341,16 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.CAMERA_RECONNECTED: frozenset({"state"}),
     E.MIC_DISCONNECTED: frozenset({"state"}),
     E.MIC_RECONNECTED: frozenset({"state"}),
+    E.MEDIA_INITIALIZATION_FAILED: frozenset({"device_type", "reason"}),
     E.FULLSCREEN_ENTER: frozenset({"reason"}),
     E.FULLSCREEN_EXIT: frozenset({"previous_state", "current_state", "reason"}),
     E.FULLSCREEN_RESTORED: frozenset({"reason"}),
+    E.FULLSCREEN_REQUEST_FAILED: frozenset({"reason"}),
     E.FOCUS_LOST: frozenset({"reason", "left_to"}),
     E.FOCUS_REGAINED: frozenset({"duration_ms", "left_to"}),
+    E.WINDOW_MINIMIZED: frozenset({"reason", "left_to"}),
+    E.WINDOW_RESTORED: frozenset({"duration_ms"}),
+    E.WINDOW_CLOSED_UNEXPECTEDLY: frozenset({"reason"}),
     E.EXAM_CLOSE_ATTEMPT: frozenset({"blocked"}),
     E.COPY_ATTEMPT: _INPUT_FIELDS,
     E.CUT_ATTEMPT: _INPUT_FIELDS,
@@ -328,6 +364,14 @@ _TYPE_FIELDS: dict[ProctoringEventType, frozenset[str]] = {
     E.MULTIPLE_MONITORS_DETECTED: frozenset({"display_count"}),
     E.DISPLAY_CONFIGURATION_CHANGED: frozenset({"display_count", "previous_display_count"}),
     E.ENFORCEMENT_STATUS: frozenset({"capabilities", "environment", "security_mode"}),
+    E.SECURITY_AGENT_DISCONNECTED: frozenset({"reason"}),
+    E.SECURITY_AGENT_RECONNECTED: frozenset({"agent_version"}),
+    E.APPLICATION_POLICY_EVENT: frozenset({"app", "app_category", "reason"}),
+    E.RESTRICTED_APPLICATION_DETECTED: frozenset({"app", "app_category"}),
+    E.POLICY_ENFORCEMENT_FAILURE: frozenset({"guard_name", "error_code", "reason"}),
+    E.ENVIRONMENT_RECOVERY_STARTED: frozenset({"target_state", "trigger_event"}),
+    E.ENVIRONMENT_RECOVERY_SUCCEEDED: frozenset({"target_state", "duration_ms"}),
+    E.ENVIRONMENT_RECOVERY_FAILED: frozenset({"target_state", "reason"}),
     E.DEVICE_CHECK_STARTED: frozenset(),
     E.PROHIBITED_APP_DETECTED: frozenset({"app", "app_category"}),
     E.APP_CLOSE_REQUESTED: frozenset({"app"}),
@@ -370,6 +414,56 @@ def validate_details(event_type: ProctoringEventType, details: dict[str, Any]) -
     if problems:
         raise ValidationFailed("The event metadata is invalid.", details=problems)
     return dict(details)
+
+
+#: Canonical event-type sets by severity level, shared between response serialization and SQL queries.
+SEVERITY_EVENT_TYPES: dict[str, tuple[ProctoringEventType, ...]] = {
+    "CRITICAL": (
+        E.REMOTE_SESSION_DETECTED,
+        E.SECURITY_AGENT_DISCONNECTED,
+    ),
+    "HIGH": (
+        E.EXAM_CLOSE_ATTEMPT,
+        E.DEVTOOLS_ATTEMPT,
+        E.SCREEN_CAPTURE_ATTEMPT,
+        E.MULTIPLE_MONITORS_DETECTED,
+        E.CAMERA_DISCONNECTED,
+        E.MIC_DISCONNECTED,
+        E.MEDIA_INITIALIZATION_FAILED,
+        E.RESTRICTED_APPLICATION_DETECTED,
+        E.POLICY_ENFORCEMENT_FAILURE,
+        E.ENVIRONMENT_RECOVERY_FAILED,
+        E.WINDOW_CLOSED_UNEXPECTEDLY,
+    ),
+    "MEDIUM": (
+        E.FULLSCREEN_EXIT,
+        E.FULLSCREEN_REQUEST_FAILED,
+        E.WINDOW_MINIMIZED,
+        E.PRINT_ATTEMPT,
+        E.KEYBOARD_RESTRICTION_ATTEMPT,
+        E.DISPLAY_CONFIGURATION_CHANGED,
+        E.PROHIBITED_APP_DETECTED,
+        E.APPLICATION_POLICY_EVENT,
+    ),
+    "LOW": (
+        E.FOCUS_LOST,
+        E.COPY_ATTEMPT,
+        E.CUT_ATTEMPT,
+        E.PASTE_ATTEMPT,
+        E.CLIPBOARD_ACCESS_ATTEMPT,
+    ),
+}
+ALL_CLASSIFIED_SEVERITY_EVENTS: tuple[ProctoringEventType, ...] = tuple(
+    etype for group in SEVERITY_EVENT_TYPES.values() for etype in group
+)
+
+
+def calculate_severity(event_type: ProctoringEventType, details: dict[str, Any] | None = None) -> str:
+    """Computes event severity for monitoring and audit without implying misconduct (Phase 4B)."""
+    for level in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
+        if event_type in SEVERITY_EVENT_TYPES[level]:
+            return level
+    return "INFO"
 
 
 class ProctoringEventRecorder:

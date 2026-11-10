@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     Enum,
@@ -186,6 +187,26 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         passive_deletes=True,
         uselist=False,
     )
+    #: Phase 3B Session Continuity: periodic heartbeat and client telemetry
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeat_device_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    heartbeat_network_quality: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    pending_sync_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_synced_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    recovery_token_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    #: Phase 3C Secure Submission, Exit Authorization & Examination Closure
+    submission_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, unique=True, index=True)
+    #: "MANUAL" | "AUTOMATIC_TIMEOUT"
+    submission_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    receipt_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)  #: SHA-256 canonical digest
+    answer_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)  #: Canonical answer snapshot
+    exit_authorization_token_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    closure_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )  #: "ACTIVE", "SUBMITTED", "CLOSURE_AUTHORIZED", "RESTORING", "CLOSED", "RESTORATION_FAILED"
+    closure_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def is_active(self) -> bool:
@@ -240,6 +261,12 @@ class AttemptAnswer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     question_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    #: Phase 3B Session Continuity: revision sequencing, idempotency deduplication, and sync timestamp
+    client_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    server_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     attempt: Mapped[AssessmentAttempt] = relationship(back_populates="answers")
     question: Mapped["Question"] = relationship()
     selections: Mapped[list["AttemptAnswerOption"]] = relationship(

@@ -71,6 +71,16 @@ RULES: dict[ProctoringEventType, SignalRule] = {
         "MEDIUM", 6, 0, 6, "A restricted shortcut was attempted (blocked)."
     ),
     E.SCREEN_CAPTURE_ATTEMPT: _rule("MEDIUM", 6, 0, 6, "A screenshot was attempted."),
+    E.RESTRICTED_APPLICATION_DETECTED: _rule(
+        "MEDIUM", 10, 0, 10, "A restricted application was detected running during the exam."
+    ),
+    E.WINDOW_MINIMIZED: _rule("MEDIUM", 6, 0.3, 20, "The exam window was minimized."),
+    E.WINDOW_CLOSED_UNEXPECTEDLY: _rule(
+        "MEDIUM", 8, 0, 8, "The exam window closed unexpectedly during the exam."
+    ),
+    E.SECURITY_AGENT_DISCONNECTED: _rule(
+        "HIGH", 15, 0.5, 30, "The local security agent lost connection during the exam."
+    ),
     # --- LOW: posture and environment — common and usually innocent ---------------------------
     E.HEAD_ORIENTATION_CHANGED: _rule(
         "LOW", 3, 0.2, 12, "The head was turned away from the candidate's own neutral position."
@@ -81,14 +91,17 @@ RULES: dict[ProctoringEventType, SignalRule] = {
     E.MIC_DISCONNECTED: _rule("LOW", 3, 0.1, 10, "The microphone was disconnected during the exam."),
     E.DISPLAY_CONFIGURATION_CHANGED: _rule("LOW", 3, 0, 3, "The display configuration changed."),
     E.CONTEXT_MENU_ATTEMPT: _rule("LOW", 1, 0, 1, "The right-click menu was attempted (blocked)."),
+    E.FULLSCREEN_REQUEST_FAILED: _rule("LOW", 2, 0, 2, "Fullscreen could not be entered cleanly."),
 }
 
 #: The event that ends each paired (duration) signal. End markers never contribute on their own.
 PAIR_ENDS: dict[ProctoringEventType, frozenset[ProctoringEventType]] = {
     E.FOCUS_LOST: frozenset({E.FOCUS_REGAINED}),
     E.FULLSCREEN_EXIT: frozenset({E.FULLSCREEN_RESTORED, E.FULLSCREEN_ENTER}),
+    E.WINDOW_MINIMIZED: frozenset({E.WINDOW_RESTORED}),
     E.CAMERA_DISCONNECTED: frozenset({E.CAMERA_RECONNECTED}),
     E.MIC_DISCONNECTED: frozenset({E.MIC_RECONNECTED}),
+    E.SECURITY_AGENT_DISCONNECTED: frozenset({E.SECURITY_AGENT_RECONNECTED}),
 }
 END_MARKERS: frozenset[ProctoringEventType] = frozenset().union(*PAIR_ENDS.values())
 
@@ -105,6 +118,18 @@ EXCLUDED: dict[ProctoringEventType, str] = {
     E.SESSION_RESUMED: "Session lifecycle.",
     E.SESSION_ENDED: "Session lifecycle.",
     E.ENFORCEMENT_STATUS: "Which protections were available — diagnostics, not candidate behaviour.",
+    E.MEDIA_INITIALIZATION_FAILED: (
+        "Media initialization failure — hardware diagnostics, not candidate behaviour."
+    ),
+    E.POLICY_ENFORCEMENT_FAILURE: (
+        "Native host policy failure — environment diagnostics, not candidate behaviour."
+    ),
+    E.APPLICATION_POLICY_EVENT: "Application control lifecycle observation — logged for audit, not scored.",
+    E.ENVIRONMENT_RECOVERY_STARTED: "Environment recovery transition — logged on timeline, not scored.",
+    E.ENVIRONMENT_RECOVERY_SUCCEEDED: "Environment recovery completed — logged on timeline, not scored.",
+    E.ENVIRONMENT_RECOVERY_FAILED: (
+        "Environment recovery failed — surfaced on timeline for review, not scored."
+    ),
     E.DEVICE_CHECK_STARTED: _READINESS,
     E.PROHIBITED_APP_DETECTED: _READINESS,
     E.APP_CLOSE_REQUESTED: _READINESS,

@@ -88,6 +88,8 @@ class MyAssessment(BaseModel):
     #: Whether a new attempt at this exam will be proctored (Phase 4A). An attempt already under
     #: way answers that for itself through `AttemptDetail.proctoring`.
     proctoring_required: bool
+    #: Whether an admin-approved registered desktop workstation is required to begin.
+    require_registered_device: bool = False
     secondary_camera_enabled: bool = False
     secondary_camera_mandatory: bool = False
     secondary_camera_orientation: str = "LANDSCAPE"
@@ -129,6 +131,7 @@ class MyAssessment(BaseModel):
             question_count=question_count,
             max_attempts=assessment.max_attempts,
             proctoring_required=assessment.proctoring_required,
+            require_registered_device=getattr(assessment, "require_registered_device", False),
             secondary_camera_enabled=getattr(assessment, "secondary_camera_enabled", False),
             secondary_camera_mandatory=getattr(assessment, "secondary_camera_mandatory", False),
             secondary_camera_orientation=getattr(assessment, "secondary_camera_orientation", "LANDSCAPE"),

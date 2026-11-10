@@ -41,6 +41,10 @@ export interface MonitoringSession {
   onHold: boolean
   holdReason: 'TAB_SWITCH_LIMIT' | 'ADMIN' | null
   heldAt: string | null
+  interruptionCount?: number
+  readinessState?: string | null
+  selectedCameraLabel?: string | null
+  selectedMicrophoneLabel?: string | null
 }
 
 export type AIStatus = 'INITIALIZING' | 'RUNNING' | 'DEGRADED' | 'ERROR' | 'STOPPED'
@@ -111,18 +115,52 @@ export interface MonitoringSummary {
   camerasReady: number
   cameraIssues: number
   microphoneIssues: number
+  onHoldCount: number
 }
 
 export interface MonitoringEvent {
   id: string
   eventType: string
   category: string
+  severity?: string
   metadata: Record<string, unknown>
   recordedAt: string
 }
 
 export interface MonitoringDetail extends MonitoringSession {
   recentEvents: MonitoringEvent[]
+}
+
+export interface MonitoringExamSummary {
+  assessmentId: string
+  title: string
+  status: string
+  scheduledStart: string | null
+  scheduledEnd: string | null
+  totalAssigned: number
+  activeSessions: number
+  submittedCount: number
+  interruptedCount: number
+  proctoringEnabled: boolean
+}
+
+export interface MonitoringAuditEntry {
+  id: string
+  administratorId: string
+  assessmentId: string | null
+  attemptId: string | null
+  proctoringSessionId: string | null
+  action: string
+  details: Record<string, unknown>
+  createdAt: string
+}
+
+export interface StreamAuthorizationGrant {
+  streamGrantId: string
+  attemptId: string
+  proctoringSessionId: string
+  expiresAt: string
+  icePolicy: string
 }
 
 /** The backend serialises snake_case; these map it to the camelCase shapes above. */
@@ -150,6 +188,10 @@ export function toSession(raw: Record<string, unknown>): MonitoringSession {
     onHold: raw.on_hold === true,
     holdReason: (raw.hold_reason as MonitoringSession['holdReason'] | undefined) ?? null,
     heldAt: (raw.held_at as string | null | undefined) ?? null,
+    interruptionCount: (raw.interruption_count as number | undefined) ?? 0,
+    readinessState: (raw.readiness_state as string | null | undefined) ?? null,
+    selectedCameraLabel: (raw.selected_camera_label as string | null | undefined) ?? null,
+    selectedMicrophoneLabel: (raw.selected_microphone_label as string | null | undefined) ?? null,
   }
 }
 
@@ -158,7 +200,36 @@ export function toEvent(raw: Record<string, unknown>): MonitoringEvent {
     id: raw.id as string,
     eventType: raw.event_type as string,
     category: raw.category as string,
+    severity: (raw.severity as string | undefined) ?? undefined,
     metadata: (raw.metadata as Record<string, unknown>) ?? {},
     recordedAt: raw.recorded_at as string,
+  }
+}
+
+export function toExamSummary(raw: Record<string, unknown>): MonitoringExamSummary {
+  return {
+    assessmentId: raw.assessment_id as string,
+    title: raw.title as string,
+    status: raw.status as string,
+    scheduledStart: (raw.scheduled_start as string | null) ?? null,
+    scheduledEnd: (raw.scheduled_end as string | null) ?? null,
+    totalAssigned: (raw.total_assigned as number | undefined) ?? 0,
+    activeSessions: (raw.active_sessions as number | undefined) ?? 0,
+    submittedCount: (raw.submitted_count as number | undefined) ?? 0,
+    interruptedCount: (raw.interrupted_count as number | undefined) ?? 0,
+    proctoringEnabled: raw.proctoring_enabled !== false,
+  }
+}
+
+export function toAuditEntry(raw: Record<string, unknown>): MonitoringAuditEntry {
+  return {
+    id: raw.id as string,
+    administratorId: raw.administrator_id as string,
+    assessmentId: (raw.assessment_id as string | null) ?? null,
+    attemptId: (raw.attempt_id as string | null) ?? null,
+    proctoringSessionId: (raw.proctoring_session_id as string | null) ?? null,
+    action: raw.action as string,
+    details: (raw.details as Record<string, unknown>) ?? {},
+    createdAt: raw.created_at as string,
   }
 }

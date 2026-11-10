@@ -27,7 +27,15 @@ const NOTICE: Record<string, string> = {
   DEVTOOLS_ATTEMPT: 'Developer tools are disabled during this assessment.',
   KEYBOARD_RESTRICTION_ATTEMPT: 'Keyboard shortcuts (Ctrl, Alt and the Windows key) are not allowed during this exam.',
   SCREEN_CAPTURE_ATTEMPT: 'Screenshots are disabled during this assessment.',
+  FOCUS_LOST: 'The examination window has lost focus. Please return to AssessX.',
   FOCUS_REGAINED: 'AssessX must remain the active application during the exam.',
+  FULLSCREEN_EXIT: 'You have exited fullscreen mode. Please return to the examination window.',
+  FULLSCREEN_REQUEST_FAILED: 'Could not restore fullscreen mode. Please click Return to Fullscreen.',
+  WINDOW_MINIMIZED: 'The examination window was minimized. Please restore AssessX.',
+  CAMERA_DISCONNECTED: 'Your camera connection was interrupted. Please check your camera.',
+  MIC_DISCONNECTED: 'Your microphone connection was interrupted.',
+  SECURITY_AGENT_DISCONNECTED: 'AssessX detected an interruption in the secure examination environment.',
+  RESTRICTED_APPLICATION_DETECTED: 'A prohibited application was detected. Please close it to continue.',
   MULTIPLE_MONITORS_DETECTED: 'More than one display is connected. This has been noted for your exam.',
   REMOTE_SESSION_DETECTED: 'This exam is running in a remote desktop session. This has been noted for your exam.',
 }
@@ -62,15 +70,21 @@ function capabilitiesOf(status: LockdownStatus, native: boolean): Record<string,
  *
  * Returns the notices to show and whether the candidate must return to fullscreen.
  */
+export type FullscreenPolicy = 'REQUIRED' | 'OPTIONAL' | 'DISABLED'
+
 export interface EnforcementOptions {
   /** Copy, cut and paste are allowed inside the code editor (the assessment's coding setting). */
   editorClipboard?: boolean
+  /** Fullscreen enforcement policy for this assessment. Defaults to 'REQUIRED'. */
+  fullscreenPolicy?: FullscreenPolicy
 }
 
 export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge = desktopBridge(), options: EnforcementOptions = {}) {
   const editorClipboard = useRef(Boolean(options.editorClipboard))
+  const fullscreenPolicy = useRef<FullscreenPolicy>(options.fullscreenPolicy ?? 'REQUIRED')
   useEffect(() => {
     editorClipboard.current = Boolean(options.editorClipboard)
+    fullscreenPolicy.current = options.fullscreenPolicy ?? 'REQUIRED'
   })
   const [notices, setNotices] = useState<Notice[]>([])
   const [fullscreenRequired, setFullscreenRequired] = useState(false)
@@ -107,6 +121,7 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
   const focusLostAt = useRef<number | null>(null)
   /** Where focus went on the current departure (desktop app), reported with the return. */
   const leftTo = useRef<WindowSnapshot['leftTo']>(null)
+  const wasMinimized = useRef(false)
   const displayCount = useRef(0)
   const everFullscreen = useRef(false)
   /** One automatic fullscreen restore per departure — never a loop of retries. */
@@ -123,7 +138,12 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
       focusLostAt.current = Date.now()
       leftTo.current = target ?? null
       autoRestoreArmed.current = true
-      emit('FOCUS_LOST', target ? { reason, left_to: target } : { reason }, false)
+      if (reason === 'minimized') {
+        wasMinimized.current = true
+        emit('WINDOW_MINIMIZED', target ? { reason, left_to: target } : { reason }, true)
+      } else {
+        emit('FOCUS_LOST', target ? { reason, left_to: target } : { reason }, true)
+      }
     },
     [emit],
   )
@@ -132,21 +152,29 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
     if (focusLostAt.current === null) return
     const duration = Date.now() - focusLostAt.current
     const target = leftTo.current
+    const hadMinimized = wasMinimized.current
     focusLostAt.current = null
     leftTo.current = null
-    emit('FOCUS_REGAINED', target ? { duration_ms: duration, left_to: target } : { duration_ms: duration })
+    wasMinimized.current = false
+    if (hadMinimized) {
+      emit('WINDOW_RESTORED', { duration_ms: duration }, false)
+    }
+    emit('FOCUS_REGAINED', target ? { duration_ms: duration, left_to: target } : { duration_ms: duration }, true)
   }, [emit])
 
   const leaveFullscreen = useCallback(
     (reason: 'minimized' | 'resized' | 'user', minimized: boolean) => {
+      if (fullscreenPolicy.current === 'DISABLED') return
       if (!inFullscreen.current) return
       inFullscreen.current = false
       autoRestoreArmed.current = true
-      setFullscreenRequired(true)
+      if (fullscreenPolicy.current === 'REQUIRED') {
+        setFullscreenRequired(true)
+      }
       emit(
         'FULLSCREEN_EXIT',
         { previous_state: 'fullscreen', current_state: minimized ? 'minimized' : 'windowed', reason },
-        false,
+        true,
       )
     },
     [emit],
@@ -154,19 +182,23 @@ export function useEnvironmentEnforcement(report: Report, bridge: DesktopBridge 
 
   const restoreFullscreen = useCallback(
     async (reason: 'user' | 'focus-regained') => {
-      // Read before awaiting: entering fullscreen fires a window change that sets it.
+      if (fullscreenPolicy.current === 'DISABLED') return true
       const entering = !everFullscreen.current
+      emit('ENVIRONMENT_RECOVERY_STARTED', { target_state: 'fullscreen', trigger_event: reason }, false)
       const restored = await bridge.restoreFullscreen().catch(() => false)
       if (restored) {
         inFullscreen.current = true
         setFullscreenRequired(false)
-        // The first time is entering, not restoring (a browser needs a click before it can).
         emit(entering ? 'FULLSCREEN_ENTER' : 'FULLSCREEN_RESTORED', { reason }, false)
+        emit('ENVIRONMENT_RECOVERY_SUCCEEDED', { target_state: 'fullscreen', duration_ms: 0 }, false)
         everFullscreen.current = true
-      } else if (reason === 'user') {
-        // Asked for and refused: stop insisting rather than trap the candidate behind the prompt.
-        setFullscreenAvailable(false)
-        setFullscreenRequired(false)
+      } else {
+        emit('FULLSCREEN_REQUEST_FAILED', { reason }, true)
+        emit('ENVIRONMENT_RECOVERY_FAILED', { target_state: 'fullscreen', reason: 'rejected' }, false)
+        if (reason === 'user') {
+          setFullscreenAvailable(false)
+          setFullscreenRequired(false)
+        }
       }
       return restored
     },

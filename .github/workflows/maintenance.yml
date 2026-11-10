@@ -26,10 +26,15 @@ jobs:
     steps:
       - name: Run maintenance
         env:
-          API: ${{ vars.ASSESSX_API_URL }}
+          API: ${{ vars.ASSESSX_API_URL || vars.API_URL || 'https://assessx-backend-0nw6.onrender.com' }}
           TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
         run: |
+          API_BASE="${API%/}"
+          if [ -z "$API_BASE" ]; then
+            echo "::error::No API base URL configured. Set ASSESSX_API_URL repository variable."
+            exit 1
+          fi
           # A sleeping instance takes up to a minute to start; retry before calling it a failure.
           curl -fsS --retry 5 --retry-delay 30 --retry-all-errors --max-time 120 -X POST \
-            "$API/api/v1/internal/maintenance" -H "Authorization: Bearer $TOKEN" -o result.json
+            "$API_BASE/api/v1/internal/maintenance" -H "Authorization: Bearer $TOKEN" -o result.json
           python3 -c "import json; r = json.load(open('result.json')); print(r); raise SystemExit(0 if r.get('audit_chain_verified') else 1)"

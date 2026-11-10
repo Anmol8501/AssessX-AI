@@ -10,10 +10,12 @@ from app.api.v1 import (
     assessments,
     attempts,
     auth,
+    authorizations,
     candidate_coding,
     candidate_interviews,
     candidates,
     coding_problems,
+    devices,
     health,
     interview_calls,
     interview_reports,
@@ -56,3 +58,5 @@ api_v1.include_router(runner.router)
 api_v1.include_router(ws.router)
 api_v1.include_router(ws_calls.router)
 api_v1.include_router(ai_assistant.router)
+api_v1.include_router(devices.router)
+api_v1.include_router(authorizations.router)

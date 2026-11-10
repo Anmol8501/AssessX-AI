@@ -30,12 +30,17 @@ class ProctoringEventType(enum.StrEnum):
     CAMERA_RECONNECTED = "CAMERA_RECONNECTED"
     MIC_DISCONNECTED = "MIC_DISCONNECTED"
     MIC_RECONNECTED = "MIC_RECONNECTED"
+    MEDIA_INITIALIZATION_FAILED = "MEDIA_INITIALIZATION_FAILED"
     # the exam window
     FULLSCREEN_ENTER = "FULLSCREEN_ENTER"
     FULLSCREEN_EXIT = "FULLSCREEN_EXIT"
     FULLSCREEN_RESTORED = "FULLSCREEN_RESTORED"
+    FULLSCREEN_REQUEST_FAILED = "FULLSCREEN_REQUEST_FAILED"
     FOCUS_LOST = "FOCUS_LOST"
     FOCUS_REGAINED = "FOCUS_REGAINED"
+    WINDOW_MINIMIZED = "WINDOW_MINIMIZED"
+    WINDOW_RESTORED = "WINDOW_RESTORED"
+    WINDOW_CLOSED_UNEXPECTEDLY = "WINDOW_CLOSED_UNEXPECTEDLY"
     # input that the exam environment restricts
     COPY_ATTEMPT = "COPY_ATTEMPT"
     CUT_ATTEMPT = "CUT_ATTEMPT"
@@ -64,6 +69,16 @@ class ProctoringEventType(enum.StrEnum):
     EXAM_CLOSE_ATTEMPT = "EXAM_CLOSE_ATTEMPT"
     DEVICE_CHECK_PASSED = "DEVICE_CHECK_PASSED"
     DEVICE_CHECK_FAILED = "DEVICE_CHECK_FAILED"
+    # security agent and policy enforcement (Phase 4B)
+    SECURITY_AGENT_DISCONNECTED = "SECURITY_AGENT_DISCONNECTED"
+    SECURITY_AGENT_RECONNECTED = "SECURITY_AGENT_RECONNECTED"
+    APPLICATION_POLICY_EVENT = "APPLICATION_POLICY_EVENT"
+    RESTRICTED_APPLICATION_DETECTED = "RESTRICTED_APPLICATION_DETECTED"
+    POLICY_ENFORCEMENT_FAILURE = "POLICY_ENFORCEMENT_FAILURE"
+    # environment recovery (Phase 4B)
+    ENVIRONMENT_RECOVERY_STARTED = "ENVIRONMENT_RECOVERY_STARTED"
+    ENVIRONMENT_RECOVERY_SUCCEEDED = "ENVIRONMENT_RECOVERY_SUCCEEDED"
+    ENVIRONMENT_RECOVERY_FAILED = "ENVIRONMENT_RECOVERY_FAILED"
     # AI observations (Phase 5C) — factual, temporally stabilised conditions reported by the
     # candidate's on-device AI, each recorded as an episode: a `started` row and a `resolved` row
     # (same `episode_id`; the server computes the duration). They say what a detector observed,
@@ -113,6 +128,8 @@ class ProctoringEventCategory(enum.StrEnum):
     AI_HEALTH = "AI_HEALTH"
     #: Coding activity (stage C4).
     CODING = "CODING"
+    #: Environment recovery events (Phase 4B).
+    RECOVERY = "RECOVERY"
 
 
 class ProctoringEventSource(enum.StrEnum):
@@ -154,7 +171,7 @@ class ProctoringEvent(UUIDPrimaryKeyMixin, Base):
         ),
         CheckConstraint(
             "category IN ('SESSION', 'DEVICE', 'WINDOW', 'INPUT', 'DISPLAY', 'SYSTEM', "
-            "'AI_OBSERVATION', 'AI_HEALTH', 'CODING')",
+            "'AI_OBSERVATION', 'AI_HEALTH', 'CODING', 'RECOVERY')",
             name="ck_proctoring_events_category",
         ),
     )
@@ -167,7 +184,7 @@ class ProctoringEvent(UUIDPrimaryKeyMixin, Base):
             ProctoringEventType,
             name="proctoring_event_type",
             native_enum=False,
-            length=40,
+            length=50,
             validate_strings=True,
         ),
         nullable=False,

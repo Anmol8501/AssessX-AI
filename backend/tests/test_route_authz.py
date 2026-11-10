@@ -42,6 +42,18 @@ ANY_SIGNED_IN = {
     ("GET", "/api/v1/auth/mfa"),
     ("GET", "/api/v1/realtime/ice-servers"),
     ("POST", "/api/v1/realtime/ws-ticket"),
+    # Device workstation client registration, telemetry reports & policy reads (any signed-in user)
+    ("POST", "/api/v1/devices/register"),
+    ("GET", "/api/v1/devices/{device_identifier}"),
+    ("POST", "/api/v1/devices/{device_identifier}/events"),
+    ("POST", "/api/v1/devices/{device_identifier}/applications/inventory"),
+    ("GET", "/api/v1/devices/{device_identifier}/applications/allowlist"),
+    ("POST", "/api/v1/devices/{device_identifier}/utilities/report"),
+    ("GET", "/api/v1/devices/{device_identifier}/utilities/policy"),
+    ("POST", "/api/v1/devices/{device_identifier}/navigation/report"),
+    ("GET", "/api/v1/devices/{device_identifier}/navigation/policy"),
+    ("POST", "/api/v1/devices/{device_identifier}/peripherals/report"),
+    ("GET", "/api/v1/devices/{device_identifier}/peripherals/policy"),
 }
 
 
@@ -86,7 +98,13 @@ def test_role_guards_on_every_route(client, helpers, users):
     for method, path in ROUTES:
         if (method, path) in PUBLIC or (method, path) in ANY_SIGNED_IN:
             continue
-        if path.startswith(("/api/v1/candidates/me", "/api/v1/proctoring/secondary-camera/attempts")):
+        if path.startswith(
+            (
+                "/api/v1/candidates/me",
+                "/api/v1/examinations/",
+                "/api/v1/proctoring/secondary-camera/attempts",
+            )
+        ):
             status = _call(client, method, path, admin).status_code
             if status != 403:
                 leaks.append(f"admin → {method} {path}: {status}")

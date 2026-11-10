@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { describeError } from '@/features/assessments/useAssessments'
 import { useApi } from '@/features/session'
 import { ApiError } from '@/lib/api'
+import { getAllLocalAnswers, SessionSyncManager, type SyncState } from './sessionContinuity'
 import type { AnswerState, AttemptAnswer, AttemptDetail, ExamDetail, SaveState } from './types'
 import { TERMINAL_ATTEMPT_STATUSES } from './types'
 
@@ -174,88 +175,74 @@ export function useAttempt(attemptId: string | null) {
  * state rather than leaving them answering an exam that has already closed.
  */
 export function useAnswers(attemptId: string, initial: AttemptAnswer[], onLocked?: () => void) {
-  const api = useApi()
   const [answers, setAnswers] = useState<Record<string, AnswerState>>(() => fromWire(initial))
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({})
-
-  const pending = useRef<Record<string, string[] | undefined>>({})
-  const inFlight = useRef<Record<string, boolean>>({})
   const mounted = useRef(true)
-  // Held in a ref so changing the callback does not tear down the in-flight queue.
   const onLockedRef = useRef(onLocked)
+
   useEffect(() => {
     onLockedRef.current = onLocked
   }, [onLocked])
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
+
+  const handleSyncStateChange = useCallback((questionId: string, state: SyncState) => {
+    setSaveStates((current) => ({ ...current, [questionId]: state }))
   }, [])
 
-  const flush = useCallback(
-    async (questionId: string): Promise<void> => {
-      if (inFlight.current[questionId]) return // whatever is queued is drained by the loop below
-      inFlight.current[questionId] = true
-      const base = `${ME}/attempts/${attemptId}/answers/${questionId}`
-      try {
-        // Drains anything queued while a request was in flight, so clicking quickly collapses to
-        // the latest value instead of racing several requests against each other.
-        while (pending.current[questionId] !== undefined) {
-          const selected = pending.current[questionId] as string[]
-          pending.current[questionId] = undefined
-          setSaveStates((s) => ({ ...s, [questionId]: 'saving' }))
-          try {
-            await api<AttemptAnswer>(base, { method: 'PUT', body: { selected_option_ids: selected } })
-            if (mounted.current) setSaveStates((s) => ({ ...s, [questionId]: 'saved' }))
-          } catch (caught) {
-            if (caught instanceof ApiError && caught.code === 'attempt_on_hold') {
-              // The exam is locked (on hold): the answer stays on screen as unsaved, and the lock is
-              // shown at once. Retry re-sends it after the administrator releases the exam.
-              window.dispatchEvent(new Event('assessx:attempt-control-refresh'))
+  const syncManager = useMemo(
+    () => new SessionSyncManager(attemptId, {}, handleSyncStateChange),
+    [attemptId, handleSyncStateChange],
+  )
+
+  useEffect(() => {
+    mounted.current = true
+
+    // Load any offline answers stored locally on startup
+    void getAllLocalAnswers(attemptId).then((localRecords) => {
+      if (!mounted.current || !localRecords.length) return
+      setAnswers((current) => {
+        const updated = { ...current }
+        let hasChanges = false
+        for (const record of localRecords) {
+          if (!updated[record.questionId] || !record.isSynced) {
+            updated[record.questionId] = record.selectedOptionIds
+            hasChanges = true
+            if (!record.isSynced) {
+              setSaveStates((s) => ({ ...s, [record.questionId]: 'offline_saved' }))
             }
-            if (caught instanceof ApiError && caught.code === 'attempt_locked') {
-              // Not a save failure: the exam ended. Retrying would be pointless and misleading.
-              pending.current[questionId] = undefined
-              if (mounted.current) setSaveStates((s) => ({ ...s, [questionId]: 'idle' }))
-              onLockedRef.current?.()
-              break
-            }
-            // The local answer is deliberately left alone: it is what the candidate chose, and it
-            // is shown as unconfirmed rather than thrown away. `retry` re-sends what is on screen.
-            if (mounted.current) setSaveStates((s) => ({ ...s, [questionId]: 'error' }))
-            break
           }
         }
-      } finally {
-        inFlight.current[questionId] = false
-      }
-    },
-    [api, attemptId],
-  )
+        return hasChanges ? updated : current
+      })
+    })
+
+    return () => {
+      mounted.current = false
+      syncManager.destroy()
+    }
+  }, [attemptId, syncManager])
 
   const setSelection = useCallback(
     (questionId: string, selected: string[]) => {
       setAnswers((current) => ({ ...current, [questionId]: selected }))
-      pending.current[questionId] = selected
-      void flush(questionId)
+      void syncManager.recordAnswerChange(questionId, selected)
     },
-    [flush],
+    [syncManager],
   )
 
   /** Re-sends what is on screen after a failure. */
   const retry = useCallback(
     (questionId: string) => {
-      setAnswers((current) => {
-        pending.current[questionId] = current[questionId] ?? []
-        return current
-      })
-      void flush(questionId)
+      const currentSelected = answers[questionId] ?? []
+      void syncManager.recordAnswerChange(questionId, currentSelected)
     },
-    [flush],
+    [answers, syncManager],
   )
 
-  return { answers, saveStates, setSelection, retry }
+  const getPendingCount = useCallback(() => syncManager.getPendingCount(), [syncManager])
+  const currentRevision = useCallback(() => syncManager.currentRevision(), [syncManager])
+  const flushAll = useCallback((timeoutMs?: number) => syncManager.flushAll(timeoutMs), [syncManager])
+
+  return { answers, saveStates, setSelection, retry, getPendingCount, currentRevision, flushAll }
 }
 
 function fromWire(answers: AttemptAnswer[]): Record<string, AnswerState> {

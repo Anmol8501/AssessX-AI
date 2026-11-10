@@ -12,6 +12,7 @@ from app.models.attempt import (
 from app.models.attempt_message import AttemptMessage
 from app.models.audit_log import AuditAction, AuditLog
 from app.models.auth_session import AuthSession
+from app.models.authorization import ConsumedActivationToken
 from app.models.base import Base
 from app.models.code_execution import CodeExecution, ExecutionKind, ExecutionStatus, Verdict
 from app.models.coding import (
@@ -23,6 +24,7 @@ from app.models.coding import (
     TestCaseVisibility,
 )
 from app.models.coding_draft import CodingDraft
+from app.models.device import Device
 from app.models.evidence_clip import EvidenceClip, EvidenceClipEvent, EvidenceClipStatus, EvidenceSource
 from app.models.interview import (
     CompletionReason,
@@ -53,6 +55,11 @@ from app.models.interview_review import (
     InterviewReviewStatus,
 )
 from app.models.login_challenge import LoginChallenge
+from app.models.monitoring_audit import (
+    MonitoringAuditAction,
+    MonitoringAuditEvent,
+    MonitoringStreamGrant,
+)
 from app.models.proctoring import DeviceState, ProctoringSession, ProctoringSessionStatus
 from app.models.proctoring_event import (
     ProctoringEvent,
@@ -118,9 +125,11 @@ __all__ = [
     "AuditAction",
     "AuditLog",
     "AuthSession",
+    "ConsumedActivationToken",
     "Base",
     "CallStatus",
     "CompletionReason",
+    "Device",
     "DeviceState",
     "EvaluationFailure",
     "EvaluationStatus",
@@ -148,6 +157,9 @@ __all__ = [
     "InterviewType",
     "ItemState",
     "LoginChallenge",
+    "MonitoringAuditAction",
+    "MonitoringAuditEvent",
+    "MonitoringStreamGrant",
     "ProctoringEvent",
     "ProctoringEventCategory",
     "ProctoringEventSource",

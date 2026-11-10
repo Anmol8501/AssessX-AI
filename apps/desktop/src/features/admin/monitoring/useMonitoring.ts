@@ -3,7 +3,7 @@ import { useApi } from '@/features/session'
 import { tokenStorage } from '@/features/session'
 import { API_BASE_URL } from '@/lib/api'
 import type { ConnectionState } from './status'
-import { toSession, type MonitoringSession, type MonitoringSummary } from './types'
+import { toExamSummary, toSession, type MonitoringExamSummary, type MonitoringSession, type MonitoringSummary } from './types'
 import { socketBase, socketTicket } from '@/lib/wsTicket'
 
 const RECONNECT_MAX_MS = 8000
@@ -28,6 +28,7 @@ export interface Monitoring {
   status: Loadable
   error: string | null
   sessions: MonitoringSession[]
+  exams: MonitoringExamSummary[]
   summary: MonitoringSummary
   connection: ConnectionState
   reload(): void
@@ -48,6 +49,7 @@ function summarise(sessions: MonitoringSession[]): MonitoringSummary {
     camerasReady: sessions.filter((s) => s.cameraState === 'READY').length,
     cameraIssues: sessions.filter((s) => s.cameraState !== 'READY').length,
     microphoneIssues: sessions.filter((s) => s.microphoneState !== 'READY').length,
+    onHoldCount: sessions.filter((s) => s.onHold || (s.interruptionCount ?? 0) > 0).length,
   }
 }
 
@@ -64,11 +66,12 @@ function summarise(sessions: MonitoringSession[]): MonitoringSummary {
  * While the WebSocket is down, the wall is refetched every `FALLBACK_POLL_MS` so an admin still sees
  * each candidate's state within seconds instead of a frozen wall.
  */
-export function useMonitoring(): Monitoring {
+export function useMonitoring(assessmentId?: string | null): Monitoring {
   const api = useApi()
   const [status, setStatus] = useState<Loadable>('loading')
   const [error, setError] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Map<string, MonitoringSession>>(new Map())
+  const [exams, setExams] = useState<MonitoringExamSummary[]>([])
   const [connection, setConnection] = useState<ConnectionState>('reconnecting')
 
   const socket = useRef<WebSocket | null>(null)
@@ -79,12 +82,17 @@ export function useMonitoring(): Monitoring {
   const handlers = useRef<Map<string, Set<(m: Signal) => void>>>(new Map())
 
   const fetchActive = useCallback(async () => {
-    const raw = await api<{ summary: unknown; sessions: Record<string, unknown>[] }>('/api/v1/admin/monitoring/sessions')
+    const query = assessmentId ? `?assessment_id=${encodeURIComponent(assessmentId)}` : ''
+    const [raw, examsRaw] = await Promise.all([
+      api<{ summary: unknown; sessions: Record<string, unknown>[] }>(`/api/v1/admin/monitoring/sessions${query}`),
+      api<{ exams: Record<string, unknown>[] }>('/api/v1/admin/monitoring/exams').catch(() => ({ exams: [] })),
+    ])
     const list = raw.sessions.map(toSession)
     setSessions(new Map(list.map((s) => [s.attemptId, s])))
+    setExams(examsRaw.exams.map(toExamSummary))
     setStatus('ready')
     setError(null)
-  }, [api])
+  }, [api, assessmentId])
 
   const dispatchSignal = useCallback((message: Signal) => {
     const subs = handlers.current.get(message.attempt_id)
@@ -208,6 +216,8 @@ export function useMonitoring(): Monitoring {
   }, [])
   const signaling = useMemo<MonitoringSignaling>(() => ({ send, subscribe }), [send, subscribe])
 
-  const list = [...sessions.values()]
-  return { status, error, sessions: list, summary: summarise(list), connection, reload, signaling }
+  const list = assessmentId
+    ? [...sessions.values()].filter((s) => s.assessmentId === assessmentId)
+    : [...sessions.values()]
+  return { status, error, sessions: list, exams, summary: summarise(list), connection, reload, signaling }
 }

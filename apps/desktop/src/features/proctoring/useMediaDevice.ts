@@ -3,15 +3,27 @@ import {
   classifyMediaError,
   constraintsFor,
   disconnectedCheck,
+  enumerateMediaDevices,
+  getPersistedDeviceId,
+  persistDeviceId,
   unsupportedCheck,
   type DeviceCheck,
   type DeviceKind,
+  type MediaDeviceInfoOption,
 } from './devices'
 
 export interface MediaDevice extends DeviceCheck {
   kind: DeviceKind
   /** The open stream while the device is `READY`; `null` otherwise. Local only — never uploaded. */
   stream: MediaStream | null
+  /** Available devices discovered through enumeration. */
+  availableDevices: MediaDeviceInfoOption[]
+  /** Currently active device ID. */
+  selectedDeviceId: string | null
+  /** Human-readable device name/label. */
+  selectedLabel: string | null
+  /** Switches to a specific device. */
+  selectDevice(deviceId: string): void
   /** Opens (or re-opens) the device. Safe to call repeatedly; only the latest call wins. */
   check(): void
 }
@@ -33,14 +45,24 @@ const UNSUPPORTED = Symbol('media-unsupported')
  *   (React StrictMode does this in development) keeps the request already in flight rather than
  *   stopping it and opening the same device again. Stopping a device while a second request for it
  *   is pending can leave Chromium's capture stack handing back an already-ended track.
+ * * **Device Selection & Enumeration.** Discovers available hardware, remembers chosen devices,
+ *   and provides readable hardware labels for proctoring audit trails.
  */
 export function useMediaDevice(kind: DeviceKind): MediaDevice {
   // The device is opened as soon as the owner mounts, so it starts out being checked.
   const [state, setState] = useState<DeviceCheck>({ status: 'CHECKING', message: null })
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfoOption[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(() => getPersistedDeviceId(kind))
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null)
+
   const streamRef = useRef<MediaStream | null>(null)
   const request = useRef(0)
   const pendingRelease = useRef<number | null>(null)
+  const selectedDeviceRef = useRef<string | null>(selectedDeviceId)
+  useEffect(() => {
+    selectedDeviceRef.current = selectedDeviceId
+  }, [selectedDeviceId])
 
   const stopCurrent = useCallback(() => {
     const current = streamRef.current
@@ -51,11 +73,18 @@ export function useMediaDevice(kind: DeviceKind): MediaDevice {
     })
   }, [])
 
+  const refreshDeviceList = useCallback(async () => {
+    const list = await enumerateMediaDevices(kind)
+    setAvailableDevices(list)
+    return list
+  }, [kind])
+
   /** Requests the device. Every state change happens in the promise handlers, never synchronously. */
   const open = useCallback(
-    (id: number) => {
+    (id: number, targetDeviceId?: string | null) => {
+      const devId = targetDeviceId !== undefined ? targetDeviceId : selectedDeviceRef.current
       const pending = navigator.mediaDevices?.getUserMedia
-        ? navigator.mediaDevices.getUserMedia(constraintsFor(kind))
+        ? navigator.mediaDevices.getUserMedia(constraintsFor(kind, devId))
         : Promise.reject(UNSUPPORTED)
 
       pending.then(
@@ -84,7 +113,19 @@ export function useMediaDevice(kind: DeviceKind): MediaDevice {
           }
           streamRef.current = opened
           setStream(opened)
+
+          const settings = track.getSettings()
+          const resolvedId = settings.deviceId || devId || null
+          const resolvedLabel = track.label || null
+          if (resolvedId) {
+            setSelectedDeviceId(resolvedId)
+            persistDeviceId(kind, resolvedId)
+          }
+          setSelectedLabel(resolvedLabel)
           setState({ status: 'READY', message: null })
+
+          // Enumerate to get readable labels after permission grant
+          void refreshDeviceList()
         },
         (error: unknown) => {
           if (id !== request.current) return
@@ -92,7 +133,7 @@ export function useMediaDevice(kind: DeviceKind): MediaDevice {
         },
       )
     },
-    [kind, stopCurrent],
+    [kind, stopCurrent, refreshDeviceList],
   )
 
   const check = useCallback(() => {
@@ -101,6 +142,18 @@ export function useMediaDevice(kind: DeviceKind): MediaDevice {
     setState({ status: 'CHECKING', message: null })
     open(++request.current)
   }, [open, stopCurrent])
+
+  const selectDevice = useCallback(
+    (deviceId: string) => {
+      stopCurrent()
+      setStream(null)
+      setSelectedDeviceId(deviceId)
+      persistDeviceId(kind, deviceId)
+      setState({ status: 'CHECKING', message: null })
+      open(++request.current, deviceId)
+    },
+    [kind, open, stopCurrent],
+  )
 
   useEffect(() => {
     if (pendingRelease.current !== null) {
@@ -120,16 +173,35 @@ export function useMediaDevice(kind: DeviceKind): MediaDevice {
     }
   }, [open, stopCurrent])
 
-  // A device plugged in after being reported missing is picked up without a click. Only for the
-  // "missing" case: a device that was blocked stays blocked until the candidate chooses to retry.
-  const status = state.status
+  // Listen for hardware changes (device plugged in or unplugged)
   useEffect(() => {
     const devices = navigator.mediaDevices
-    if (!devices?.addEventListener || status !== 'UNAVAILABLE') return
-    const onChange = () => check()
+    if (!devices?.addEventListener) return
+    const onChange = async () => {
+      const list = await refreshDeviceList()
+      // If a missing device is now connected or active device disconnected
+      if (state.status === 'UNAVAILABLE') {
+        check()
+      } else if (state.status === 'READY' && selectedDeviceId) {
+        const stillPresent = list.some((d) => d.deviceId === selectedDeviceId)
+        if (!stillPresent && list.length > 0) {
+          // Fall back to first available or recheck
+          check()
+        }
+      }
+    }
     devices.addEventListener('devicechange', onChange)
     return () => devices.removeEventListener('devicechange', onChange)
-  }, [status, check])
+  }, [state.status, selectedDeviceId, refreshDeviceList, check])
 
-  return { kind, ...state, stream, check }
+  return {
+    kind,
+    ...state,
+    stream,
+    availableDevices,
+    selectedDeviceId,
+    selectedLabel,
+    selectDevice,
+    check,
+  }
 }

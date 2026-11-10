@@ -138,6 +138,13 @@ export interface ProctoringSession {
   status: ProctoringSessionStatus
   camera_state: DeviceState
   microphone_state: DeviceState
+  selected_camera_id?: string | null
+  selected_camera_label?: string | null
+  selected_microphone_id?: string | null
+  selected_microphone_label?: string | null
+  readiness_state?: string | null
+  device_failure_reason?: string | null
+  interruption_count?: number
   started_at: string | null
   ended_at: string | null
   devices_reported_at: string | null
@@ -154,8 +161,8 @@ export interface ExamDetail extends MyAssessment {
   latest_attempt_id: string | null
 }
 
-/** Whether the server has confirmed the answer currently shown for a question. */
-export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+/** Whether the server or local encrypted buffer has confirmed the answer currently shown for a question. */
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error' | 'offline_saved'
 
 /** The option ids the candidate has selected for one question. */
 export type AnswerState = string[]

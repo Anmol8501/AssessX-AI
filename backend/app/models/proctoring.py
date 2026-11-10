@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Uuid, false
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -140,6 +140,14 @@ class ProctoringSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     evidence_recorder: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    #: Selected hardware device identifiers and labels (Phase 4A)
+    selected_camera_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    selected_camera_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    selected_microphone_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    selected_microphone_label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    readiness_state: Mapped[str | None] = mapped_column(String(64), nullable=True, default="NOT_CHECKED")
+    device_failure_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    interruption_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     attempt: Mapped["AssessmentAttempt"] = relationship(back_populates="proctoring_session")
     #: Phase 4B observations, oldest first. Append-only; see `ProctoringEvent`.

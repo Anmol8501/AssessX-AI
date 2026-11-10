@@ -9,9 +9,10 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.models.attempt import AttemptStatus
+from app.models.monitoring_audit import MonitoringAuditAction
 from app.models.proctoring import DeviceState, ProctoringSessionStatus
 from app.models.proctoring_event import ProctoringEventCategory, ProctoringEventType
 
@@ -82,6 +83,10 @@ class MonitoringSession(BaseModel):
     on_hold: bool = False
     hold_reason: str | None = None
     held_at: datetime | None = None
+    interruption_count: int = 0
+    readiness_state: str | None = None
+    selected_camera_label: str | None = None
+    selected_microphone_label: str | None = None
 
 
 class MonitoringSummary(BaseModel):
@@ -91,6 +96,7 @@ class MonitoringSummary(BaseModel):
     cameras_ready: int
     camera_issues: int
     microphone_issues: int
+    on_hold_count: int = 0
 
 
 class ActiveSessions(BaseModel):
@@ -112,3 +118,54 @@ class MonitoringDetail(MonitoringSession):
     """The candidate detail view: the tile data plus recent factual events."""
 
     recent_events: list[MonitoringEvent]
+
+
+class MonitoringExamSummary(BaseModel):
+    """Operational metrics for one monitorable examination (Phase 4C)."""
+
+    assessment_id: uuid.UUID
+    title: str
+    status: str
+    scheduled_start: datetime | None = None
+    scheduled_end: datetime | None = None
+    total_assigned: int = 0
+    active_sessions: int = 0
+    submitted_count: int = 0
+    interrupted_count: int = 0
+    proctoring_enabled: bool = True
+
+
+class MonitoringExamList(BaseModel):
+    exams: list[MonitoringExamSummary]
+
+
+class StreamAuthorizationGrant(BaseModel):
+    """Short-lived stream viewing authorization issued after audit validation (Phase 4C)."""
+
+    stream_grant_id: uuid.UUID
+    attempt_id: uuid.UUID
+    proctoring_session_id: uuid.UUID
+    expires_at: datetime
+    ice_policy: str = "stun_turn_relay"
+
+
+class MonitoringAuditOut(BaseModel):
+    """Serialized administrator monitoring audit log record."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    administrator_id: uuid.UUID
+    assessment_id: uuid.UUID | None = None
+    attempt_id: uuid.UUID | None = None
+    proctoring_session_id: uuid.UUID | None = None
+    action: MonitoringAuditAction
+    details: dict[str, Any]
+    created_at: datetime
+
+
+class MonitoringAuditList(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[MonitoringAuditOut]

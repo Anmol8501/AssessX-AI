@@ -145,6 +145,12 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     proctoring_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    #: Whether a candidate must take the exam from a pre-registered, admin-approved desktop
+    #: workstation (`devices` table, Phase 1/3A). Off by default so existing browser-mode and
+    #: standard proctored exams preserve their workflow without workstation provisioning.
+    require_registered_device: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     #: Secondary Camera Proctoring (mobile phone connected via QR code).
     secondary_camera_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"

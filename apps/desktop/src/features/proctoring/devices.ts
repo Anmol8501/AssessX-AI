@@ -28,6 +28,87 @@ export interface DeviceCheck {
 
 export const DEVICE_LABEL: Record<DeviceKind, string> = { camera: 'Camera', microphone: 'Microphone' }
 
+export interface MediaDeviceInfoOption {
+  deviceId: string
+  label: string
+  groupId?: string
+}
+
+const STORAGE_PREFIX = 'assessx_proctoring_selected_'
+
+export function getPersistedDeviceId(kind: DeviceKind): string | null {
+  try {
+    return localStorage.getItem(`${STORAGE_PREFIX}${kind}`)
+  } catch {
+    return null
+  }
+}
+
+export function persistDeviceId(kind: DeviceKind, deviceId: string): void {
+  try {
+    localStorage.setItem(`${STORAGE_PREFIX}${kind}`, deviceId)
+  } catch {
+    // Ignore storage errors (private mode / restricted sandbox)
+  }
+}
+
+export async function enumerateMediaDevices(kind: DeviceKind): Promise<MediaDeviceInfoOption[]> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+    return []
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const targetKind = kind === 'camera' ? 'videoinput' : 'audioinput'
+    const matching = devices.filter((d) => d.kind === targetKind)
+    return matching.map((d, index) => ({
+      deviceId: d.deviceId,
+      label: d.label || `${DEVICE_LABEL[kind]} ${index + 1}`,
+      groupId: d.groupId,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export type ProctoringReadinessState =
+  | 'NOT_INITIALIZED'
+  | 'CHECKING'
+  | 'READY'
+  | 'FAILED'
+  | 'DEGRADED'
+
+export function calculateOverallReadiness(
+  cameraStatus: LocalDeviceStatus,
+  micStatus: LocalDeviceStatus,
+  policy?: { requireCamera?: boolean; requireMic?: boolean },
+): ProctoringReadinessState {
+  const reqCam = policy?.requireCamera ?? true
+  const reqMic = policy?.requireMic ?? true
+
+  if ((reqCam && cameraStatus === 'CHECKING') || (reqMic && micStatus === 'CHECKING')) {
+    return 'CHECKING'
+  }
+  if ((reqCam && cameraStatus === 'NOT_CHECKED') || (reqMic && micStatus === 'NOT_CHECKED')) {
+    return 'NOT_INITIALIZED'
+  }
+
+  const camOk = !reqCam || cameraStatus === 'READY'
+  const micOk = !reqMic || micStatus === 'READY'
+
+  if (camOk && micOk) {
+    return 'READY'
+  }
+
+  const camDeniedOrUnavailable = cameraStatus === 'DENIED' || cameraStatus === 'UNAVAILABLE'
+  const micDeniedOrUnavailable = micStatus === 'DENIED' || micStatus === 'UNAVAILABLE'
+
+  if ((reqCam && camDeniedOrUnavailable) || (reqMic && micDeniedOrUnavailable)) {
+    return 'FAILED'
+  }
+
+  return 'DEGRADED'
+}
+
 /** The only thing the server is told. `CHECKING`, `NOT_CHECKED` and `ERROR` are all "not ready". */
 export function toServerState(status: LocalDeviceStatus): DeviceState {
   switch (status) {
@@ -93,11 +174,22 @@ export function classifyMediaError(kind: DeviceKind, error: unknown): DeviceChec
   }
 }
 
-export function constraintsFor(kind: DeviceKind): MediaStreamConstraints {
+export function constraintsFor(kind: DeviceKind, deviceId?: string | null): MediaStreamConstraints {
   // 1280×720 where the camera offers it (was 640×360): the on-device object detector needs the
   // detail to see a small or distant phone. The live view to the administrator is still sent at
   // about 640 wide (see useMediaPublisher), and nothing is recorded.
-  return kind === 'camera'
-    ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }
-    : { audio: true, video: false }
+  if (kind === 'camera') {
+    return {
+      video: {
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    }
+  }
+  return {
+    audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+    video: false,
+  }
 }

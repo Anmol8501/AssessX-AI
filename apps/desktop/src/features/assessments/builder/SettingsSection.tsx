@@ -40,6 +40,9 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
   const [showResults, setShowResults] = useState(settings.show_results)
   const [navigation, setNavigation] = useState<QuestionNavigation>(settings.question_navigation)
   const [proctoring, setProctoring] = useState(settings.proctoring_required)
+  const [requireRegisteredDevice, setRequireRegisteredDevice] = useState(
+    settings.require_registered_device ?? false,
+  )
   const [secondaryCameraEnabled, setSecondaryCameraEnabled] = useState(settings.secondary_camera_enabled ?? false)
   const [secondaryCameraMandatory, setSecondaryCameraMandatory] = useState(settings.secondary_camera_mandatory ?? false)
   const [secondaryCameraOrientation, setSecondaryCameraOrientation] = useState<'LANDSCAPE' | 'PORTRAIT' | 'ANY'>(
@@ -76,6 +79,7 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
       show_results: showResults,
       question_navigation: navigation,
       proctoring_required: proctoring,
+      require_registered_device: requireRegisteredDevice,
       secondary_camera_enabled: proctoring && secondaryCameraEnabled,
       secondary_camera_mandatory: proctoring && secondaryCameraEnabled && secondaryCameraMandatory,
       secondary_camera_orientation: secondaryCameraOrientation,
@@ -154,6 +158,12 @@ export function SettingsSection({ assessment, saving, error, saved, locked = fal
               setProctoring(val)
               if (!val) setSecondaryCameraEnabled(false)
             }}
+            disabled={saving}
+          />
+          <Toggle
+            label="Require admin-approved registered desktop workstation"
+            checked={requireRegisteredDevice}
+            onChange={setRequireRegisteredDevice}
             disabled={saving}
           />
 

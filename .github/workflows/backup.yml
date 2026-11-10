@@ -19,9 +19,9 @@ on:
   workflow_dispatch:
     inputs:
       drill:
-        description: "Also run a restore drill"
+        description: "Run restore drill verification"
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -47,6 +47,7 @@ jobs:
     env:
       BACKUP_DIR: /tmp/assessx-backups
       BACKUP_KEEP: "1"
+      ASSESSX_API_URL: ${{ vars.ASSESSX_API_URL || vars.API_URL || 'https://assessx-backend-0nw6.onrender.com' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,29 +72,68 @@ jobs:
           retention-days: 30
           if-no-files-found: error
       - name: Restore drill into a throwaway database
-        if: ${{ inputs.drill == true || github.event.schedule == '47 3 1 * *' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.drill != false }}
         env:
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
           RESTORE_DATABASE_URL: postgresql://drill:drill-only-throwaway@localhost:5432/assessx_restore_drill
           SOURCE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
         run: |
           latest=$(find "$BACKUP_DIR" -name 'assessx-*.dump.gpg' | sort | tail -1)
-          python3 infrastructure/backup/restore.py "$latest" --compare-with-env SOURCE_URL
+          if [ -z "$latest" ] || [ ! -f "$latest" ]; then
+            echo "::error::No backup file found in $BACKUP_DIR to run restore drill."
+            exit 1
+          fi
+          echo "Verifying throwaway database container readiness..."
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U drill; then
+              echo "Throwaway PostgreSQL service is ready."
+              break
+            fi
+            echo "Waiting for throwaway database service ($i/30)..."
+            sleep 1
+          done
+          if ! pg_isready -h localhost -p 5432 -U drill; then
+            echo "::error::Disposable PostgreSQL database service on localhost:5432 could not be reached."
+            exit 1
+          fi
+          echo "Executing restore drill against throwaway database..."
+          python3 infrastructure/backup/restore.py "$latest" --compare-with-env SOURCE_URL --clean-after
+      - name: Report restore drill skipped notice
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.drill == false }}
+        run: |
+          echo "::warning::Restore drill was explicitly bypassed by manual workflow_dispatch input (drill=false). Backup artifact is NOT fully verified."
       - name: Report success
         env:
-          API: ${{ vars.ASSESSX_API_URL }}
+          API: ${{ vars.ASSESSX_API_URL || vars.API_URL || 'https://assessx-backend-0nw6.onrender.com' }}
           TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
         run: |
-          size=$(stat -c %s "$(find "$BACKUP_DIR" -name 'assessx-*.dump.gpg' | sort | tail -1)")
-          curl -fsS --retry 3 --retry-delay 20 -X POST "$API/api/v1/internal/maintenance/backup-heartbeat" \
+          API_BASE="${API%/}"
+          if [ -z "$API_BASE" ]; then
+            echo "::error::No API base URL configured. Set ASSESSX_API_URL repository variable."
+            exit 1
+          fi
+          latest=$(find "$BACKUP_DIR" -name 'assessx-*.dump.gpg' | sort | tail -1)
+          if [ -z "$latest" ] || [ ! -f "$latest" ]; then
+            echo "::error::Backup file not found in $BACKUP_DIR"
+            exit 1
+          fi
+          size=$(stat -c %s "$latest")
+          echo "Reporting successful backup to $API_BASE/api/v1/internal/maintenance/backup-heartbeat (size: $size bytes)"
+          curl -fsS --retry 3 --retry-delay 20 -X POST "$API_BASE/api/v1/internal/maintenance/backup-heartbeat" \
             -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
             -d "{\"status\":\"success\",\"size_bytes\":$size}"
       - name: Report failure
         if: ${{ failure() }}
         env:
-          API: ${{ vars.ASSESSX_API_URL }}
+          API: ${{ vars.ASSESSX_API_URL || vars.API_URL || 'https://assessx-backend-0nw6.onrender.com' }}
           TOKEN: ${{ secrets.MAINTENANCE_TOKEN }}
         run: |
-          curl -sS --retry 3 --retry-delay 20 -X POST "$API/api/v1/internal/maintenance/backup-heartbeat" \
+          API_BASE="${API%/}"
+          if [ -z "$API_BASE" ]; then
+            echo "::warning::No API base URL configured. Cannot report backup failure heartbeat."
+            exit 0
+          fi
+          echo "Reporting backup failure to $API_BASE/api/v1/internal/maintenance/backup-heartbeat"
+          curl -sS --retry 3 --retry-delay 20 -X POST "$API_BASE/api/v1/internal/maintenance/backup-heartbeat" \
             -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
             -d '{"status":"failure","note":"backup workflow failed"}' || true

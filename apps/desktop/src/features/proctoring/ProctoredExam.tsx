@@ -65,7 +65,7 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
   const camera = useMediaDevice('camera')
   const microphone = useMediaDevice('microphone')
   const readiness = useDeviceReadiness()
-  const { startAttempt, activate, reportDevices } = useProctoringApi()
+  const { startAttempt, activate, reportDevices, reportInterruption, stopProctoring } = useProctoringApi()
 
   const [entered, setEntered] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -83,8 +83,14 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
   const report: DeviceReport = {
     camera: toServerState(camera.status),
     microphone: toServerState(microphone.status),
+    selected_camera_id: camera.selectedDeviceId,
+    selected_camera_label: camera.selectedLabel,
+    selected_microphone_id: microphone.selectedDeviceId,
+    selected_microphone_label: microphone.selectedLabel,
+    readiness_state: camera.status === 'READY' && microphone.status === 'READY' ? 'READY' : 'DEGRADED',
+    device_failure_reason: camera.message || microphone.message || null,
   }
-  const reportKey = `${report.camera}/${report.microphone}`
+  const reportKey = `${report.camera}/${report.microphone}/${camera.selectedDeviceId || ''}/${microphone.selectedDeviceId || ''}`
 
   async function enter(explicitAttempt?: AttemptDetail | null) {
     setBusy(true)
@@ -142,13 +148,53 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
     if (!entered || !attemptId || !proctored) return
     if (camera.status === 'CHECKING' || microphone.status === 'CHECKING') return
     if (lastReported.current === reportKey) return
-    const [cameraState, microphoneState] = reportKey.split('/') as [DeviceReport['camera'], DeviceReport['microphone']]
+    const cameraState = toServerState(camera.status)
+    const microphoneState = toServerState(microphone.status)
     lastReported.current = reportKey
-    reportDevices(attemptId, { camera: cameraState, microphone: microphoneState }).catch((caught: unknown) => {
+    reportDevices(attemptId, {
+      camera: cameraState,
+      microphone: microphoneState,
+      selected_camera_id: camera.selectedDeviceId,
+      selected_camera_label: camera.selectedLabel,
+      selected_microphone_id: microphone.selectedDeviceId,
+      selected_microphone_label: microphone.selectedLabel,
+      readiness_state: cameraState === 'READY' && microphoneState === 'READY' ? 'READY' : 'DEGRADED',
+      device_failure_reason: camera.message || microphone.message || null,
+    }).catch((caught: unknown) => {
       if (caught instanceof ApiError && caught.code === 'attempt_locked') onStale()
       else lastReported.current = null // not recorded; the next change (or retry) sends it again
     })
-  }, [entered, attemptId, proctored, reportKey, camera.status, microphone.status, reportDevices, onStale])
+
+    if (camera.status === 'UNAVAILABLE') {
+      void reportInterruption(attemptId, {
+        device_type: 'camera',
+        reason: 'DISCONNECTED',
+        message: camera.message || 'Camera disconnected during examination',
+      }).catch(() => {})
+    } else if (microphone.status === 'UNAVAILABLE') {
+      void reportInterruption(attemptId, {
+        device_type: 'microphone',
+        reason: 'DISCONNECTED',
+        message: microphone.message || 'Microphone disconnected during examination',
+      }).catch(() => {})
+    }
+  }, [
+    entered,
+    attemptId,
+    proctored,
+    reportKey,
+    camera.status,
+    camera.selectedDeviceId,
+    camera.selectedLabel,
+    camera.message,
+    microphone.status,
+    microphone.selectedDeviceId,
+    microphone.selectedLabel,
+    microphone.message,
+    reportDevices,
+    reportInterruption,
+    onStale,
+  ])
 
   // The device-readiness check comes first, before the camera/microphone check and before the
   // attempt is started, so a machine with prohibited apps open never begins the exam. It is skipped
@@ -216,9 +262,16 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
     )
   }
 
+  const handleFinished = (finalAttempt: AttemptDetail) => {
+    if (finalAttempt.id && finalAttempt.proctoring) {
+      void stopProctoring(finalAttempt.id).catch(() => {})
+    }
+    onFinished(finalAttempt)
+  }
+
   const effectiveAttempt = stagedAttempt ?? attempt
   if (!proctored || !effectiveAttempt) {
-    return <ExamRunner attempt={effectiveAttempt!} onFinished={onFinished} onStale={onStale} />
+    return <ExamRunner attempt={effectiveAttempt!} onFinished={handleFinished} onStale={onStale} />
   }
 
   return (
@@ -227,7 +280,7 @@ export function ProctoredExam({ exam, attempt, onAttempt, onFinished, onStale }:
       initialEvents={readinessEvents ?? []}
       camera={camera}
       microphone={microphone}
-      onFinished={onFinished}
+      onFinished={handleFinished}
       onStale={onStale}
     >
       <ProctoringStatus

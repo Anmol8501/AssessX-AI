@@ -90,18 +90,23 @@ export function MobileCameraPage({ sessionId: propSessionId, token: propToken }:
           body: payload,
         }).catch(() => null)
 
-        if (!res || !res.ok) {
+        // Only try direct port fallback if same-origin request had a network failure (res === null)
+        if (!res) {
           const directUrl = `${window.location.protocol}//${window.location.hostname}:8000/api/v1/proctoring/secondary-camera/pair`
           res = await fetch(directUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: payload,
-          })
+          }).catch(() => null)
+        }
+
+        if (!res) {
+          throw new Error('Unable to connect to the backend server. Please verify the backend is running and accessible on the local network.')
         }
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
-          throw new Error(err.detail || err.message || 'Failed to pair device. QR code may be expired.')
+          throw new Error(err.detail || err.message || `Pairing failed (${res.status}). The QR code may have expired.`)
         }
 
         const data = await res.json()
@@ -186,7 +191,7 @@ export function MobileCameraPage({ sessionId: propSessionId, token: propToken }:
     ws.onopen = async () => {
       // Fetch ICE servers
       let iceRes = await fetch(`/api/v1/proctoring/secondary-camera/${sessionId}/ice-servers`).catch(() => null)
-      if (!iceRes || !iceRes.ok) {
+      if (!iceRes) {
         const directIce = `${window.location.protocol}//${window.location.hostname}:8000/api/v1/proctoring/secondary-camera/${sessionId}/ice-servers`
         iceRes = await fetch(directIce).catch(() => null)
       }

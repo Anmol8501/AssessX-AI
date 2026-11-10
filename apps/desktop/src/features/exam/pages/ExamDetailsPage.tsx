@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { routes } from '@/app/routes'
 import { ArrowLeftIcon, ClockIcon, InfoIcon, LockIcon } from '@/components/icons'
@@ -14,6 +15,8 @@ import {
 import { AttemptBadge } from '@/features/exam/AttemptBadge'
 import { formatWindow } from '@/features/exam/format'
 import { useExamDetail, useStartExam } from '@/features/exam/useExam'
+import { PreFlightReadinessModal } from '@/features/exam/PreFlightReadinessModal'
+import { resolveExamStartAction } from '@/features/exam/sessionActivation'
 
 /**
  * What the exam is, what the rules are, and the way in.
@@ -26,14 +29,26 @@ export function ExamDetailsPage() {
   const navigate = useNavigate()
   const { state, reload } = useExamDetail(assessmentId)
   const { start, busy, error } = useStartExam()
+  const [readinessModalOpen, setReadinessModalOpen] = useState(false)
 
-  async function beginExam(proctored: boolean) {
-    // A proctored exam is started from its proctoring check, after the camera and microphone are
-    // confirmed, so the clock does not run while the candidate sorts out a device.
-    if (proctored) {
+  async function beginExam(proctored: boolean, requireRegisteredDevice: boolean) {
+    const action = resolveExamStartAction({
+      resuming,
+      proctoringRequired: proctored,
+      requireRegisteredDevice,
+    })
+
+    if (action === 'PREFLIGHT_MODAL') {
+      setReadinessModalOpen(true)
+      return
+    }
+
+    if (action === 'RESUME_PROCTORED' || action === 'START_PROCTORED') {
+      // ProctoringCheck runs first; attempt clock starts after camera/mic verification.
       navigate(routes.candidate.attempt(assessmentId))
       return
     }
+
     const attempt = await start(assessmentId)
     if (attempt) navigate(routes.candidate.attempt(assessmentId))
   }
@@ -174,7 +189,9 @@ export function ExamDetailsPage() {
               </ButtonLink>
             ) : (
               <Button
-                onClick={() => void beginExam(exam.proctoring_required && !resuming)}
+                onClick={() =>
+                  void beginExam(exam.proctoring_required, Boolean(exam.require_registered_device))
+                }
                 loading={busy}
                 disabled={!resuming && !exam.can_start}
               >
@@ -184,6 +201,18 @@ export function ExamDetailsPage() {
           </CardBody>
         </Card>
       </div>
+
+      <PreFlightReadinessModal
+        open={readinessModalOpen}
+        examId={exam.assessment_id}
+        examTitle={exam.title}
+        proctored={exam.proctoring_required}
+        onClose={() => setReadinessModalOpen(false)}
+        onAuthorized={() => {
+          setReadinessModalOpen(false)
+          navigate(routes.candidate.attempt(exam.assessment_id))
+        }}
+      />
     </>
   )
 }

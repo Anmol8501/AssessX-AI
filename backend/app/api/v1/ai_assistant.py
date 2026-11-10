@@ -16,10 +16,10 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.api.deps import AdminUser, AppSettings, DbSession
-from app.core.errors import BadRequest, NotFound
+from app.core.errors import AiAssistantProviderError, AiAssistantUnavailable, BadRequest, NotFound
 from app.models.ai_conversation import AiConversation, AiMessage
 from app.schemas.ai_assistant import (
     ChatIn,
@@ -66,18 +66,7 @@ def _get_provider(settings: AppSettings) -> Any:
     if settings.llm_provider == "stub" and not settings.is_production:
         return _StubGeminiProvider()
 
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "error": {
-                "code": "ai_assistant_unavailable",
-                "message": (
-                    "The AI Assistant is not configured on this server. "
-                    "Set GEMINI_API_KEY in your environment."
-                ),
-            }
-        },
-    )
+    raise AiAssistantUnavailable()
 
 
 def _conversation_to_out(conv: AiConversation, db: DbSession) -> ConversationOut:
@@ -126,15 +115,7 @@ def chat(
         reply, create_payload = service.send_message(conv, body.message)
     except AssistantProviderError as error:
         log.warning("AI provider error for admin %s: %s", admin.id, error)
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": {
-                    "code": "ai_provider_error",
-                    "message": f"The AI service is temporarily unavailable: {error}",
-                }
-            },
-        ) from error
+        raise AiAssistantProviderError(f"The AI service is temporarily unavailable: {error}") from error
 
     db.commit()
 

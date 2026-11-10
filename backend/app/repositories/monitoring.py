@@ -19,26 +19,26 @@ class MonitoringRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def active_sessions(self) -> list[ProctoringSession]:
+    def active_sessions(self, assessment_id: uuid.UUID | None = None) -> list[ProctoringSession]:
         """Every active proctoring session whose attempt is still open, newest first.
 
         Eager-loads the attempt, its candidate and its assessment so the wall renders in one query.
         """
-        return list(
-            self.db.scalars(
-                select(ProctoringSession)
-                .join(AssessmentAttempt, AssessmentAttempt.id == ProctoringSession.attempt_id)
-                .options(
-                    joinedload(ProctoringSession.attempt).joinedload(AssessmentAttempt.candidate),
-                    joinedload(ProctoringSession.attempt).joinedload(AssessmentAttempt.assessment),
-                )
-                .where(
-                    ProctoringSession.status == ProctoringSessionStatus.ACTIVE,
-                    AssessmentAttempt.status.in_(ACTIVE_ATTEMPT_STATUSES),
-                )
-                .order_by(ProctoringSession.started_at.desc())
-            ).unique()
+        stmt = (
+            select(ProctoringSession)
+            .join(AssessmentAttempt, AssessmentAttempt.id == ProctoringSession.attempt_id)
+            .options(
+                joinedload(ProctoringSession.attempt).joinedload(AssessmentAttempt.candidate),
+                joinedload(ProctoringSession.attempt).joinedload(AssessmentAttempt.assessment),
+            )
+            .where(
+                ProctoringSession.status == ProctoringSessionStatus.ACTIVE,
+                AssessmentAttempt.status.in_(ACTIVE_ATTEMPT_STATUSES),
+            )
         )
+        if assessment_id is not None:
+            stmt = stmt.where(AssessmentAttempt.assessment_id == assessment_id)
+        return list(self.db.scalars(stmt.order_by(ProctoringSession.started_at.desc())).unique())
 
     def session_for_attempt(self, attempt_id: uuid.UUID) -> ProctoringSession | None:
         """One attempt's proctoring session (any status), for the detail view."""

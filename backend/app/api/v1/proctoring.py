@@ -28,11 +28,15 @@ from app.schemas.proctoring import (
     EvidenceUploadOut,
     ProctoringEventIn,
     ProctoringEventOut,
+    ProctoringEventsStatusOut,
+    ProctoringInterruptionIn,
     ProctoringSessionOut,
+    ProctoringStopOut,
 )
 from app.services.attempts import AttemptService
 from app.services.evidence_clips.service import ClipRequest, EvidenceClipService
 from app.services.proctoring import ProctoringService
+from app.services.proctoring_events import calculate_severity
 
 router = APIRouter(prefix="/candidates/me", tags=["proctoring"])
 
@@ -43,6 +47,7 @@ def _event(event: ProctoringEvent, clip: ClipRequest | None = None) -> Proctorin
         id=event.id,
         event_type=event.event_type,
         category=event.category,
+        severity=calculate_severity(event.event_type, event.details),
         source=event.source,
         metadata=event.details,
         recorded_at=event.recorded_at,
@@ -83,6 +88,38 @@ def report_devices(
     return ProctoringSessionOut.model_validate(ProctoringService(db).report_devices(attempt, payload))
 
 
+@router.post("/attempts/{attempt_id}/proctoring/readiness", response_model=ProctoringSessionOut)
+def report_proctoring_readiness(
+    attempt_id: uuid.UUID, payload: DeviceReport, user: CandidateUser, db: DbSession
+) -> ProctoringSessionOut:
+    """Records candidate device readiness evaluation before starting proctored examination (Phase 4A)."""
+    attempt = AttemptService(db).get_attempt_for_update(user, attempt_id)
+    return ProctoringSessionOut.model_validate(ProctoringService(db).record_readiness(attempt, payload))
+
+
+@router.post("/attempts/{attempt_id}/proctoring/interruption", response_model=ProctoringSessionOut)
+def report_proctoring_interruption(
+    attempt_id: uuid.UUID, payload: ProctoringInterruptionIn, user: CandidateUser, db: DbSession
+) -> ProctoringSessionOut:
+    """Records an unexpected hardware disconnection or permission revocation during active proctoring."""
+    attempt = AttemptService(db).get_attempt_for_update(user, attempt_id)
+    return ProctoringSessionOut.model_validate(ProctoringService(db).record_interruption(attempt, payload))
+
+
+@router.post("/attempts/{attempt_id}/proctoring/stop", response_model=ProctoringStopOut)
+def stop_proctoring(attempt_id: uuid.UUID, user: CandidateUser, db: DbSession) -> ProctoringStopOut:
+    """Idempotently stops proctoring and finalizes session state during examination closure (Phase 4A)."""
+    attempt = AttemptService(db).get_attempt_for_update(user, attempt_id)
+    session = ProctoringService(db).stop_session(attempt)
+    from app.models.base import utcnow
+
+    return ProctoringStopOut(
+        attempt_id=attempt.id,
+        status=session.status.value,
+        stopped_at=session.ended_at or utcnow(),
+    )
+
+
 @router.post(
     "/attempts/{attempt_id}/proctoring/events",
     response_model=ProctoringEventOut,
@@ -110,6 +147,35 @@ def report_event(
     if not created:
         response.status_code = status.HTTP_200_OK
     return _event(event, clip)
+
+
+@router.get(
+    "/attempts/{attempt_id}/proctoring/events/status",
+    response_model=ProctoringEventsStatusOut,
+)
+def proctoring_events_status(
+    attempt_id: uuid.UUID,
+    user: CandidateUser,
+    db: DbSession,
+) -> ProctoringEventsStatusOut:
+    """Summary of recorded proctoring environment events and synchronization state (Phase 4B)."""
+    from sqlalchemy import func, select
+
+    attempt = AttemptService(db).get_attempt(user, attempt_id)
+    session = ProctoringService(db).session_of(attempt)
+    total = (
+        db.scalar(select(func.count(ProctoringEvent.id)).where(ProctoringEvent.session_id == session.id)) or 0
+    )
+    last_event_time = db.scalar(
+        select(func.max(ProctoringEvent.recorded_at)).where(ProctoringEvent.session_id == session.id)
+    )
+    return ProctoringEventsStatusOut(
+        attempt_id=attempt.id,
+        session_id=session.id,
+        total_events=total,
+        last_event_recorded_at=last_event_time,
+        session_status=session.status.value,
+    )
 
 
 async def _clip_body(request: Request) -> bytes:

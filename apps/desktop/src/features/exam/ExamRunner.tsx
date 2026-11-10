@@ -11,9 +11,24 @@ import { QuestionNavigator } from '@/features/exam/QuestionNavigator'
 import { useCloseGuard } from '@/features/exam/useCloseGuard'
 import { useApi } from '@/features/session'
 import { QuestionView } from '@/features/exam/QuestionView'
-import { useAnswers, useSubmitExam } from '@/features/exam/useExam'
+import { OfflineAlertBanner } from '@/features/exam/OfflineAlertBanner'
+import { SyncStatusBadge } from '@/features/exam/SyncStatusBadge'
+import { getWorkstationDeviceIdentifier } from '@/features/exam/sessionActivation'
+import { clearLocalAnswers, startHeartbeatMonitor } from '@/features/exam/sessionContinuity'
+import { useAnswers } from '@/features/exam/useExam'
 import { useExamClock } from '@/features/exam/useExamClock'
 import type { AnswerState, AttemptDetail } from '@/features/exam/types'
+import {
+  confirmExaminationSubmission,
+  getSubmissionReceipt,
+  requestExitAuthorization,
+  authorizeNativeExitAndRestore,
+  completeClosureAcknowledgement,
+  type SubmissionReceiptResponse,
+  type ClosureRestorationReport,
+} from '@/features/exam/submissionClosure'
+import { SubmissionReviewModal } from '@/features/exam/SubmissionReviewModal'
+import { ExaminationCompletedPage } from '@/features/exam/ExaminationCompletedPage'
 
 /**
  * The exam paper: questions, answers, the countdown and submission (Phase 3).
@@ -33,19 +48,50 @@ interface ExamRunnerProps {
 
 export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRunnerProps) {
   const [index, setIndex] = useState(0)
-  const [confirmingSubmit, setConfirmingSubmit] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submissionReceipt, setSubmissionReceipt] = useState<SubmissionReceiptResponse | null>(null)
+  const [restorationReport, setRestorationReport] = useState<ClosureRestorationReport | null>(null)
+
   // AssessX cannot be closed while this exam is open: a refused close asks the candidate to submit first.
   const closeGuard = useCloseGuard()
 
   const clock = useExamClock(attempt)
-  const { submit, busy: submitting, error: submitError } = useSubmitExam()
   // A save refused because the exam closed is not a save failure — reload and show the outcome.
   const handleLocked = useCallback(() => onStale(), [onStale])
-  const { answers, saveStates, setSelection, retry } = useAnswers(
+  const { answers, saveStates, setSelection, retry, getPendingCount, flushAll } = useAnswers(
     attempt.id,
     attempt.answers,
     handleLocked,
   )
+
+  // Periodic heartbeat telemetry & session continuity monitor (Phase 3B)
+  useEffect(() => {
+    let active = true
+    let stopHeartbeat: (() => void) | null = null
+
+    void getWorkstationDeviceIdentifier().then((deviceId) => {
+      if (!active) return
+      stopHeartbeat = startHeartbeatMonitor({
+        attemptId: attempt.id,
+        deviceId,
+        getPendingCount,
+        onActionRequired: (action) => {
+          if (action === 'TERMINATE') {
+            onStale()
+          } else if (action === 'REFRESH_SESSION') {
+            window.dispatchEvent(new Event('assessx:attempt-control-refresh'))
+          }
+        },
+      })
+    })
+
+    return () => {
+      active = false
+      stopHeartbeat?.()
+    }
+  }, [attempt.id, getPendingCount, onStale])
 
   const questions = attempt.questions
   const question = questions[index]
@@ -61,11 +107,75 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
   }, [api, attempt.id])
   const answeredCount = questions.filter((q) => isAnswered(q, answers, coding)).length
 
-  // The server ended the attempt while this screen was open — re-read it and show the outcome
-  // rather than letting the candidate carry on answering a closed exam.
+  const handlePhase3CSubmit = useCallback(async (isTimeout = false) => {
+    setSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const submissionType = isTimeout ? 'AUTOMATIC_TIMEOUT' : 'MANUAL'
+      const deviceId = await getWorkstationDeviceIdentifier()
+
+      // Drain queued answer batches before committing authoritative submission
+      const flushResult = await flushAll()
+      if (!flushResult.flushed && !isTimeout) {
+        throw new Error(
+          `${flushResult.pendingRemaining} answer(s) are still pending synchronization. Please check your network and retry.`,
+        )
+      }
+
+      await confirmExaminationSubmission(attempt.id, deviceId, submissionType)
+
+      const receipt = await getSubmissionReceipt(attempt.id)
+
+      let restoration: ClosureRestorationReport | null = null
+      try {
+        const exitAuth = await requestExitAuthorization(attempt.id, deviceId)
+        restoration = await authorizeNativeExitAndRestore(
+          attempt.id,
+          exitAuth.exit_token,
+          deviceId,
+        )
+        const closureStatus = (restoration?.closureStatus as 'RESTORED' | 'PARTIAL_FAILURE' | 'FAILED') || 'RESTORED'
+        await completeClosureAcknowledgement(
+          attempt.id,
+          exitAuth.exit_token,
+          closureStatus,
+          restoration?.restoredSubsystems ?? [],
+          deviceId,
+        )
+      } catch (restorationErr) {
+        console.warn('[ExamRunner] Policy restoration notice:', restorationErr)
+      }
+
+      await clearLocalAnswers(attempt.id)
+      setSubmissionReceipt(receipt)
+      setRestorationReport(restoration)
+      setReviewOpen(false)
+    } catch (err: unknown) {
+      console.error('[ExamRunner] Final submission failed:', err)
+      const message = err instanceof Error ? err.message : 'Could not finalize submission. Please try again.'
+      setSubmitError(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }, [attempt.id, flushAll])
+
+  // Automatic submission when examination deadline expires
   useEffect(() => {
-    if (clock.finished) onStale()
-  }, [clock.finished, onStale])
+    if (clock.finished && !submitting && !submissionReceipt) {
+      void handlePhase3CSubmit(true)
+    }
+  }, [clock.finished, submitting, submissionReceipt, handlePhase3CSubmit])
+
+  if (submissionReceipt) {
+    return (
+      <ExaminationCompletedPage
+        receipt={submissionReceipt}
+        restorationReport={restorationReport}
+        onExit={() => onFinished(attempt)}
+      />
+    )
+  }
 
   if (!question) {
     return (
@@ -76,14 +186,6 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
         />
       </Centred>
     )
-  }
-
-  async function handleSubmit() {
-    const finalized = await submit(attempt.id)
-    setConfirmingSubmit(false)
-    // A null result means the server finished the attempt first; reloading shows which way.
-    if (finalized) onFinished(finalized)
-    else onStale()
   }
 
   const answer: AnswerState = answers[question.id] ?? []
@@ -105,14 +207,17 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
               ? `${labels[index]} · ${index + 1} of ${questions.length}`
               : `Question ${index + 1} of ${questions.length}`}
           </span>
+          <SyncStatusBadge status={saveState} />
           <ExamTimer clock={clock} />
           {/* No way out but finishing: once an exam starts it runs to submission or to the
               deadline. */}
-          <Button size="sm" onClick={() => setConfirmingSubmit(true)}>
+          <Button size="sm" onClick={() => setReviewOpen(true)}>
             Submit Exam
           </Button>
         </div>
       </header>
+
+      <OfflineAlertBanner />
 
       {question.type === 'CODING' ? (
         <div className="flex min-h-0 w-full flex-1 flex-col gap-3 p-3">
@@ -204,29 +309,27 @@ export function ExamRunner({ attempt, headerExtra, onFinished, onStale }: ExamRu
       )}
 
       <ConfirmDialog
-        open={closeGuard.blocked && !confirmingSubmit}
+        open={closeGuard.blocked && !reviewOpen}
         title="Submit your exam before closing"
         description="AssessX can't be closed while your exam is in progress. Submit the exam first; your answers are saved."
-        confirmLabel="Submit Exam"
+        confirmLabel="Review & Submit Exam"
         cancelLabel="Continue Exam"
         onConfirm={() => {
           closeGuard.dismiss()
-          setConfirmingSubmit(true)
+          setReviewOpen(true)
         }}
         onCancel={closeGuard.dismiss}
       />
 
-      <ConfirmDialog
-        open={confirmingSubmit}
-        title="Submit Exam?"
-        description={`You have answered ${answeredCount} of ${questions.length} question${
-          questions.length === 1 ? '' : 's'
-        }. Once submitted, you cannot change your answers.`}
-        confirmLabel="Submit Exam"
-        cancelLabel="Continue Exam"
-        busy={submitting}
-        onConfirm={() => void handleSubmit()}
-        onCancel={() => setConfirmingSubmit(false)}
+      <SubmissionReviewModal
+        open={reviewOpen}
+        totalQuestions={questions.length}
+        answeredQuestions={answeredCount}
+        isTimeout={clock.finished}
+        isSubmitting={submitting}
+        submitError={submitError}
+        onConfirm={() => void handlePhase3CSubmit(clock.finished)}
+        onCancel={() => setReviewOpen(false)}
       />
 
     </div>

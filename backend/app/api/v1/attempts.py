@@ -32,9 +32,29 @@ from app.schemas.attempt import (
 )
 from app.schemas.proctoring import ProctoringSessionOut
 from app.schemas.result import CandidateResult, QuestionResult, ResultSummary
+from app.schemas.session_continuity import (
+    AnswerSyncBatchRequest,
+    AnswerSyncBatchResponse,
+    SessionHeartbeatRequest,
+    SessionHeartbeatResponse,
+    SessionRecoveryRequest,
+    SessionRecoveryResponse,
+)
+from app.schemas.submission_closure import (
+    ClosureCompleteRequest,
+    ClosureCompleteResponse,
+    ExitAuthorizationRequest,
+    ExitAuthorizationResponse,
+    SubmissionConfirmRequest,
+    SubmissionConfirmResponse,
+    SubmissionPrepareResponse,
+    SubmissionReceiptResponse,
+)
+from app.services.answer_sync import SessionContinuityService
 from app.services.attempts import AttemptService
 from app.services.coding.drafts import DraftService
 from app.services.results import ResultService
+from app.services.submission_closure import SubmissionClosureService
 
 router = APIRouter(prefix="/candidates/me", tags=["exam attempt"])
 
@@ -330,3 +350,95 @@ def save_answer(
     """
     answer = AttemptService(db).save_answer(user, attempt_id, question_id, payload.selected_option_ids)
     return _answer(answer)
+
+
+@router.post("/attempts/{attempt_id}/answers/sync", response_model=AnswerSyncBatchResponse)
+def sync_answers(
+    attempt_id: uuid.UUID,
+    payload: AnswerSyncBatchRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> AnswerSyncBatchResponse:
+    """Synchronizes candidate answers with monotonic revisions and idempotency deduplication."""
+    if payload.attempt_id != attempt_id:
+        payload.attempt_id = attempt_id
+    return SessionContinuityService(db).sync_answers(user, payload)
+
+
+@router.post("/attempts/{attempt_id}/heartbeat", response_model=SessionHeartbeatResponse)
+def session_heartbeat(
+    attempt_id: uuid.UUID,
+    payload: SessionHeartbeatRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> SessionHeartbeatResponse:
+    """Emits periodic telemetry to refresh candidate connection and check server attempt state."""
+    if payload.attempt_id != attempt_id:
+        payload.attempt_id = attempt_id
+    return SessionContinuityService(db).process_heartbeat(user, payload)
+
+
+@router.post("/attempts/{attempt_id}/recover", response_model=SessionRecoveryResponse)
+def recover_session(
+    attempt_id: uuid.UUID,
+    payload: SessionRecoveryRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> SessionRecoveryResponse:
+    """Performs crash recovery and session reconnection handshake to restore latest server state."""
+    if payload.attempt_id != attempt_id:
+        payload.attempt_id = attempt_id
+    return SessionContinuityService(db).recover_session(user, payload)
+
+
+@router.post("/attempts/{attempt_id}/submission/prepare", response_model=SubmissionPrepareResponse)
+def prepare_submission(
+    attempt_id: uuid.UUID,
+    user: CandidateUser,
+    db: DbSession,
+) -> SubmissionPrepareResponse:
+    """Evaluates question progress and verifies candidate attempt eligibility for final submission."""
+    return SubmissionClosureService(db).prepare_submission(user, attempt_id)
+
+
+@router.post("/attempts/{attempt_id}/submission/confirm", response_model=SubmissionConfirmResponse)
+def confirm_submission(
+    attempt_id: uuid.UUID,
+    payload: SubmissionConfirmRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> SubmissionConfirmResponse:
+    """Atomically commits final exam submission, seals canonical answer snapshot, and issues receipt."""
+    return SubmissionClosureService(db).confirm_submission(user, attempt_id, payload)
+
+
+@router.get("/attempts/{attempt_id}/submission/receipt", response_model=SubmissionReceiptResponse)
+def submission_receipt(
+    attempt_id: uuid.UUID,
+    user: CandidateUser,
+    db: DbSession,
+) -> SubmissionReceiptResponse:
+    """Retrieves authoritative, tamper-evident submission receipt for a finalized examination."""
+    return SubmissionClosureService(db).get_receipt(user, attempt_id)
+
+
+@router.post("/attempts/{attempt_id}/closure/authorize", response_model=ExitAuthorizationResponse)
+def authorize_closure(
+    attempt_id: uuid.UUID,
+    payload: ExitAuthorizationRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> ExitAuthorizationResponse:
+    """Issues signed cryptographic exit token authorizing native Windows security policy restoration."""
+    return SubmissionClosureService(db).authorize_closure(user, attempt_id, payload)
+
+
+@router.post("/attempts/{attempt_id}/closure/complete", response_model=ClosureCompleteResponse)
+def complete_closure(
+    attempt_id: uuid.UUID,
+    payload: ClosureCompleteRequest,
+    user: CandidateUser,
+    db: DbSession,
+) -> ClosureCompleteResponse:
+    """Acknowledges successful native restoration and marks the examination attempt permanently closed."""
+    return SubmissionClosureService(db).complete_closure(user, attempt_id, payload)

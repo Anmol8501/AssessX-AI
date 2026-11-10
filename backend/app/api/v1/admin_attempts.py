@@ -13,12 +13,19 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
-from sqlalchemy import select
+from sqlalchemy import false, func, select
 
 from app.api.deps import AdminUser, DbSession
 from app.core.config import get_settings
+from app.core.errors import NotFound
+from app.models.attempt import AssessmentAttempt
 from app.models.base import utcnow
 from app.models.evidence_clip import EvidenceClip, EvidenceClipEvent
+from app.models.proctoring_event import (
+    ProctoringEvent,
+    ProctoringEventCategory,
+    ProctoringEventType,
+)
 from app.schemas.evidence import (
     EvidenceDetail,
     EvidenceEpisodeOut,
@@ -33,10 +40,25 @@ from app.schemas.evidence_clips import (
     EvidenceDeleteIn,
     EvidenceIntegrityOut,
 )
+from app.schemas.proctoring import (
+    AdminProctoringDetail,
+    AdminProctoringEventListOut,
+    ProctoringEventOut,
+)
 from app.schemas.risk import AttemptRisk
+from app.schemas.session_continuity import AttemptContinuitySummary
+from app.schemas.submission_closure import AdminSubmissionDetail
+from app.services.answer_sync import SessionContinuityService
 from app.services.evidence_clips.service import EvidenceClipService
+from app.services.proctoring import ProctoringService
+from app.services.proctoring_events import (
+    ALL_CLASSIFIED_SEVERITY_EVENTS,
+    SEVERITY_EVENT_TYPES,
+    calculate_severity,
+)
 from app.services.risk.evidence import DEFAULT_LIMIT, MAX_LIMIT
 from app.services.risk.service import RiskService
+from app.services.submission_closure import SubmissionClosureService
 
 router = APIRouter(prefix="/admin/attempts", tags=["admin attempts"])
 #: Who read which attempt's evidence (ids only). A persistent audit table is open decision OQ-12.
@@ -202,3 +224,107 @@ def delete_evidence_clip(
 ) -> EvidenceClipOut:
     """Deletes the clip's video (the metadata and its audit trail remain, as DELETED). Needs a reason."""
     return EvidenceClipOut.of(EvidenceClipService(db).delete(attempt_id, clip_id, admin, payload.reason))
+
+
+@router.get("/{attempt_id}/continuity", response_model=AttemptContinuitySummary)
+def attempt_continuity(attempt_id: uuid.UUID, _: AdminUser, db: DbSession) -> AttemptContinuitySummary:
+    """Factual telemetry summary of candidate session continuity and pending sync status."""
+    return SessionContinuityService(db).get_continuity_summary(attempt_id)
+
+
+@router.get("/{attempt_id}/submission", response_model=AdminSubmissionDetail)
+def attempt_submission(attempt_id: uuid.UUID, _: AdminUser, db: DbSession) -> AdminSubmissionDetail:
+    """Administrative audit record of final attempt submission, snapshot hash, and closure records."""
+    return SubmissionClosureService(db).get_admin_submission_detail(attempt_id)
+
+
+@router.get("/{attempt_id}/proctoring", response_model=AdminProctoringDetail)
+def attempt_proctoring(attempt_id: uuid.UUID, _: AdminUser, db: DbSession) -> AdminProctoringDetail:
+    """Administrative audit record of proctoring session, readiness and lifecycle (Phase 4A)."""
+    attempt = db.get(AssessmentAttempt, attempt_id)
+    if attempt is None:
+        raise NotFound("Attempt not found")
+    session = ProctoringService(db).session_of(attempt)
+    return AdminProctoringDetail(
+        id=session.id,
+        attempt_id=attempt.id,
+        candidate_id=attempt.candidate_id,
+        status=session.status,
+        camera_state=session.camera_state,
+        microphone_state=session.microphone_state,
+        selected_camera_id=session.selected_camera_id,
+        selected_camera_label=session.selected_camera_label,
+        selected_microphone_id=session.selected_microphone_id,
+        selected_microphone_label=session.selected_microphone_label,
+        readiness_state=session.readiness_state,
+        device_failure_reason=session.device_failure_reason,
+        interruption_count=session.interruption_count,
+        started_at=session.started_at,
+        ended_at=session.ended_at,
+        devices_reported_at=session.devices_reported_at,
+    )
+
+
+@router.get("/{attempt_id}/proctoring/events", response_model=AdminProctoringEventListOut)
+def list_attempt_proctoring_events(
+    attempt_id: uuid.UUID,
+    _: AdminUser,
+    db: DbSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    category: ProctoringEventCategory | None = None,
+    event_type: ProctoringEventType | None = None,
+    severity: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> AdminProctoringEventListOut:
+    """Administrative query for proctoring environment and lifecycle events (Phase 4B)."""
+    attempt = db.get(AssessmentAttempt, attempt_id)
+    if attempt is None:
+        raise NotFound("Attempt not found")
+    session = ProctoringService(db).session_of(attempt)
+
+    query = select(ProctoringEvent).where(ProctoringEvent.session_id == session.id)
+    if category is not None:
+        query = query.where(ProctoringEvent.category == category)
+    if event_type is not None:
+        query = query.where(ProctoringEvent.event_type == event_type)
+    if since is not None:
+        query = query.where(ProctoringEvent.recorded_at >= since)
+    if until is not None:
+        query = query.where(ProctoringEvent.recorded_at <= until)
+    if severity is not None:
+        sev = severity.upper()
+        if sev == "INFO":
+            query = query.where(ProctoringEvent.event_type.notin_(ALL_CLASSIFIED_SEVERITY_EVENTS))
+        elif sev in SEVERITY_EVENT_TYPES:
+            query = query.where(ProctoringEvent.event_type.in_(SEVERITY_EVENT_TYPES[sev]))
+        else:
+            query = query.where(false())
+
+    total_query = select(func.count()).select_from(query.subquery())
+    total = db.scalar(total_query) or 0
+
+    events = db.scalars(query.order_by(ProctoringEvent.recorded_at.desc()).offset(offset).limit(limit)).all()
+
+    items = [
+        ProctoringEventOut(
+            id=e.id,
+            event_type=e.event_type,
+            category=e.category,
+            severity=calculate_severity(e.event_type, e.details),
+            source=e.source,
+            metadata=e.details,
+            recorded_at=e.recorded_at,
+            client_reported_at=e.client_reported_at,
+        )
+        for e in events
+    ]
+
+    return AdminProctoringEventListOut(
+        attempt_id=attempt.id,
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=items,
+    )

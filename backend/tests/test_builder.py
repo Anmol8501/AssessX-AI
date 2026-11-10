@@ -29,6 +29,7 @@ def test_new_assessment_has_sensible_default_settings(client, helpers, users):
         "question_navigation": "FREE",
         # Phase 4A: off by default, so an assessment is unproctored unless an admin opts in.
         "proctoring_required": False,
+        "require_registered_device": False,
         "secondary_camera_enabled": False,
         "secondary_camera_mandatory": False,
         "secondary_camera_orientation": "LANDSCAPE",

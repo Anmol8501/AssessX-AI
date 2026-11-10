@@ -40,14 +40,22 @@ export function CandidateMonitoringTile({ session, connection, onOpen }: TilePro
           {status.label}
         </StatusBadge>
       </div>
-      <p className="text-ink-subtle truncate px-3 text-[12px]">{session.assessmentTitle}</p>
+      <p className="text-ink-subtle truncate px-3 text-[12px]">
+        {session.assessmentTitle}
+        {session.candidateRollNumber ? ` · ${session.candidateRollNumber}` : ''}
+      </p>
 
       {/* Video placeholder — the real stream is in the detail view (see the component doc). */}
-      <div className="bg-ink/90 mx-3 mt-2 flex aspect-video items-center justify-center rounded-md">
+      <div className="bg-ink/90 relative mx-3 mt-2 flex aspect-video items-center justify-center rounded-md">
         <span className="flex flex-col items-center gap-1 text-[11px] text-white/60">
           <MonitoringIcon className="text-[18px]" />
           Open to view video
         </span>
+        {(session.interruptionCount ?? 0) > 0 && (
+          <span className="bg-warn/90 absolute right-2 bottom-2 rounded px-1.5 py-0.5 text-[10px] font-medium text-white">
+            {session.interruptionCount} {session.interruptionCount === 1 ? 'interruption' : 'interruptions'}
+          </span>
+        )}
       </div>
 
       <dl className="text-ink-muted grid grid-cols-2 gap-x-2 gap-y-1 px-3 py-3 text-[11.5px]">

@@ -42,6 +42,8 @@ export interface AssessmentSettings {
   question_navigation: QuestionNavigation
   /** Phase 4A: candidates pass a camera/microphone check and sit the exam under a proctoring session. */
   proctoring_required: boolean
+  /** Phase 3A: require an admin-approved desktop workstation (`devices` table) to start. */
+  require_registered_device?: boolean
   /** Secondary Camera: require candidate to pair mobile phone camera as second angle. */
   secondary_camera_enabled: boolean
   secondary_camera_mandatory: boolean
@@ -240,6 +242,8 @@ export interface MyAssessment {
   max_attempts: number
   /** Whether a new attempt will be proctored. A running attempt answers for itself (`AttemptDetail.proctoring`). */
   proctoring_required: boolean
+  /** Whether the exam enforces a registered, admin-approved desktop workstation before starting. */
+  require_registered_device?: boolean
   secondary_camera_enabled?: boolean
   secondary_camera_mandatory?: boolean
   secondary_camera_orientation?: 'LANDSCAPE' | 'PORTRAIT' | 'ANY'

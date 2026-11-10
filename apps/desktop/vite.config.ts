@@ -88,8 +88,9 @@ export default defineConfig({
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_PROXY_TARGET || 'https://assessx-backend-0nw6.onrender.com',
         changeOrigin: true,
+        secure: false,
         ws: true,
       },
     },
