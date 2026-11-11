@@ -341,6 +341,7 @@ mod tests {
 
     #[test]
     fn test_apply_policy_approval_gate() {
+        let _guard = crate::provisioning::policy_snapshot::test_registry_and_policy_lock();
         // Unapproved should fail
         let unapproved = PolicyEngine::apply_policy(PolicyMode::AuditMode, false);
         assert!(!unapproved.success);
@@ -362,6 +363,7 @@ mod tests {
 
     #[test]
     fn test_honest_enforcement_downgrade_without_os_support() {
+        let _guard = crate::provisioning::policy_snapshot::test_registry_and_policy_lock();
         let _ = PolicyEngine::restore_baseline();
         let res = PolicyEngine::apply_policy(PolicyMode::EnforcementMode, true);
         assert!(res.success);

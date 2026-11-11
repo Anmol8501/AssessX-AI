@@ -400,7 +400,9 @@ mod tests {
 
     #[test]
     fn test_storage_policy_application() {
+        let _guard = crate::provisioning::policy_snapshot::test_registry_and_policy_lock();
         let res = StorageManager::apply_storage_policy(StoragePolicyMode::AuditOnly, None);
         assert!(res.is_ok());
+        let _ = StorageManager::restore_storage_policy(None);
     }
 }

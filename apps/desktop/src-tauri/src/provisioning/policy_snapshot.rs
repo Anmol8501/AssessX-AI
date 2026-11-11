@@ -19,6 +19,14 @@ use std::sync::Mutex;
 
 static SNAPSHOT_STORE_LOCK: Mutex<()> = Mutex::new(());
 
+#[cfg(test)]
+static TEST_POLICY_MUTATION_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(test)]
+pub fn test_registry_and_policy_lock() -> std::sync::MutexGuard<'static, ()> {
+    TEST_POLICY_MUTATION_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrySnapshotRecord {

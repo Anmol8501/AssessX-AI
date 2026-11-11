@@ -6,6 +6,9 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
+
+static DEVICE_ID_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +56,7 @@ fn get_system_hostname() -> String {
 }
 
 pub fn get_or_create_device_identity() -> DeviceIdentity {
+    let _guard = DEVICE_ID_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let path = get_storage_path();
     let temp_path = std::env::temp_dir().join("assessx_device_identity.json");
 
@@ -77,7 +81,11 @@ pub fn get_or_create_device_identity() -> DeviceIdentity {
     };
 
     if let Ok(json) = serde_json::to_string_pretty(&new_identity) {
-        if fs::write(&path, &json).is_err() {
+        let staging = path.with_extension("json.tmp");
+        let wrote = fs::write(&staging, &json).is_ok()
+            && (fs::rename(&staging, &path).is_ok() || fs::write(&path, &json).is_ok());
+        let _ = fs::remove_file(&staging);
+        if !wrote {
             let _ = fs::write(&temp_path, json);
         }
     }
@@ -86,6 +94,7 @@ pub fn get_or_create_device_identity() -> DeviceIdentity {
 }
 
 pub fn re_enroll_device_identity() -> DeviceIdentity {
+    let _guard = DEVICE_ID_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let path = get_storage_path();
     let new_identity = DeviceIdentity {
         device_id: generate_random_uuid(),

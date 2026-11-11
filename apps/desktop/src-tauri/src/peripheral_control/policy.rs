@@ -228,6 +228,7 @@ mod tests {
 
     #[test]
     fn test_apply_and_rollback() {
+        let _guard = crate::provisioning::policy_snapshot::test_registry_and_policy_lock();
         let applied = PeripheralPolicyEngine::apply_policy("SIG_VALID");
         assert!(applied.is_ok());
 

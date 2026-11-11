@@ -7,6 +7,9 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
+
+static JOURNAL_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +43,7 @@ fn get_journal_path() -> PathBuf {
     dir
 }
 
-pub fn load_journal() -> ChangeJournal {
+fn load_journal_unlocked() -> ChangeJournal {
     let path = get_journal_path();
     if let Ok(content) = fs::read_to_string(&path) {
         if let Ok(journal) = serde_json::from_str::<ChangeJournal>(&content) {
@@ -50,6 +53,11 @@ pub fn load_journal() -> ChangeJournal {
     ChangeJournal::default()
 }
 
+pub fn load_journal() -> ChangeJournal {
+    let _guard = JOURNAL_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    load_journal_unlocked()
+}
+
 pub fn record_planned_change(
     operation: &str,
     target_resource: &str,
@@ -57,7 +65,8 @@ pub fn record_planned_change(
     new_state: &str,
     rollback_command: Option<String>,
 ) -> JournalEntry {
-    let mut journal = load_journal();
+    let _guard = JOURNAL_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut journal = load_journal_unlocked();
     let entry = JournalEntry {
         entry_id: format!("JRN-{}", super::chrono_or_fallback_timestamp().replace(['.', 'Z', ':'], "-")),
         timestamp: super::chrono_or_fallback_timestamp(),
@@ -72,7 +81,16 @@ pub fn record_planned_change(
 
     journal.entries.push(entry.clone());
     if let Ok(json) = serde_json::to_string_pretty(&journal) {
-        let _ = fs::write(get_journal_path(), json);
+        let path = get_journal_path();
+        let staging = path.with_extension("json.tmp");
+        if fs::write(&staging, &json).is_ok() {
+            if fs::rename(&staging, &path).is_err() {
+                let _ = fs::write(&path, &json);
+            }
+            let _ = fs::remove_file(&staging);
+        } else {
+            let _ = fs::write(path, json);
+        }
     }
 
     entry

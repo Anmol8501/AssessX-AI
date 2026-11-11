@@ -193,6 +193,7 @@ mod tests {
 
     #[test]
     fn test_powershell_apply_policy() {
+        let _guard = crate::provisioning::policy_snapshot::test_registry_and_policy_lock();
         let result = PowerShellManager::apply_policy(PowerShellRestrictionMode::DetectionOnly, None);
         assert!(result.is_ok());
         let report = result.unwrap();
