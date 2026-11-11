@@ -33,8 +33,7 @@ pub struct KioskStatus {
 }
 
 #[cfg(windows)]
-fn windows_edition() -> String {
-    // Read-only: HKLM\...\CurrentVersion\ProductName (e.g. "Windows 11 Pro").
+fn read_reg_sz(subkey: &str, name: &str) -> Option<String> {
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
         RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ,
@@ -43,15 +42,15 @@ fn windows_edition() -> String {
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain(std::iter::once(0)).collect()
     }
-    let subkey = wide("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
-    let value = wide("ProductName");
+    let subkey_w = wide(subkey);
+    let value_w = wide(name);
     let mut buf = [0u16; 256];
     let mut size = (buf.len() * 2) as u32;
     let rc = unsafe {
         RegGetValueW(
             HKEY_LOCAL_MACHINE,
-            subkey.as_ptr(),
-            value.as_ptr(),
+            subkey_w.as_ptr(),
+            value_w.as_ptr(),
             RRF_RT_REG_SZ,
             std::ptr::null_mut(),
             buf.as_mut_ptr() as *mut _,
@@ -60,10 +59,19 @@ fn windows_edition() -> String {
     };
     if rc == ERROR_SUCCESS {
         let len = (size as usize / 2).saturating_sub(1);
-        String::from_utf16_lossy(&buf[..len])
+        let s = String::from_utf16_lossy(&buf[..len]).trim_matches('\0').trim().to_string();
+        if s.is_empty() { None } else { Some(s) }
     } else {
-        "Unknown".to_string()
+        None
     }
+}
+
+#[cfg(windows)]
+fn windows_edition() -> String {
+    const CURR_VER: &str = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+    let raw = read_reg_sz(CURR_VER, "ProductName").unwrap_or_else(|| "Unknown".to_string());
+    let build = read_reg_sz(CURR_VER, "CurrentBuildNumber").unwrap_or_else(|| "0".to_string());
+    crate::provisioning::windows_info::normalize_windows_edition(&raw, &build)
 }
 
 /// Assigned Access single-app kiosk is available on Windows Pro, Enterprise, Education and IoT —
@@ -95,7 +103,7 @@ pub fn kiosk_status() -> KioskStatus {
         } else if supported {
             "Standard Windows. This edition supports Secure Kiosk Mode; an administrator can provision it.".to_string()
         } else {
-            "Standard Windows. Secure Kiosk Mode is not available on this Windows edition.".to_string()
+            "Standard Windows. In-app Exam Lockdown activates automatically when an exam starts; Windows OS Assigned Access kiosk requires Pro/Enterprise/Education.".to_string()
         };
         KioskStatus {
             security_mode: if active { "SECURE_KIOSK" } else { "STANDARD" },

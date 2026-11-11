@@ -117,18 +117,28 @@ pub fn detect_architecture() -> String {
     }
 }
 
+pub fn normalize_windows_edition(product_name: &str, build_number: &str) -> String {
+    let trimmed = product_name.trim();
+    let build_num: u32 = build_number.trim().parse().unwrap_or(0);
+    if build_num >= 22000 && trimmed.starts_with("Windows 10") {
+        return trimmed.replacen("Windows 10", "Windows 11", 1);
+    }
+    trimmed.to_string()
+}
+
 pub fn detect_windows_compatibility() -> WindowsCompatibilityReport {
     #[cfg(windows)]
     {
         const CURR_VER: &str = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
-        let edition = read_reg_string(CURR_VER, "ProductName")
+        let raw_edition = read_reg_string(CURR_VER, "ProductName")
             .unwrap_or_else(|| "Windows (Unknown Edition)".to_string());
         let display_version = read_reg_string(CURR_VER, "DisplayVersion")
             .or_else(|| read_reg_string(CURR_VER, "ReleaseId"))
             .unwrap_or_else(|| "Unknown".to_string());
         let build_number = read_reg_string(CURR_VER, "CurrentBuildNumber")
             .unwrap_or_else(|| "0".to_string());
+        let edition = normalize_windows_edition(&raw_edition, &build_number);
         let ubr = read_reg_dword(CURR_VER, "UBR").unwrap_or(0);
         let architecture = detect_architecture();
 
@@ -157,11 +167,11 @@ pub fn detect_windows_compatibility() -> WindowsCompatibilityReport {
             // Windows Home or other edition without single-app Assigned Access kiosk mode
             compatibility = "WARNING";
             summary = format!(
-                "Compatible: {} (Build {}.{}). Note: Single-app Secure Kiosk mode requires Pro, Enterprise, or Education.",
-                edition, build_number, ubr
+                "Compatible: {} (Version {}, Build {}.{}). In-app Exam Lockdown activates automatically when an exam starts; OS-boot Assigned Access Kiosk requires Pro, Enterprise, or Education.",
+                edition, display_version, build_number, ubr
             );
             warnings.push(
-                "Windows Home edition detected. Standard Secure Exam Mode is available, but Assigned Access Kiosk provisioning is unavailable."
+                "Windows Home edition detected: Automatic In-App Exam Lockdown (fullscreen, shortcut guard, close guard, focus recovery) works during exams, while OS-boot Assigned Access Kiosk requires Pro/Enterprise/Education."
                     .to_string(),
             );
         } else {
@@ -216,6 +226,22 @@ mod tests {
             report.compatibility == "SUPPORTED"
                 || report.compatibility == "WARNING"
                 || report.compatibility == "UNSUPPORTED"
+        );
+    }
+
+    #[test]
+    fn test_normalize_windows_11_edition_from_build() {
+        assert_eq!(
+            normalize_windows_edition("Windows 10 Home Single Language", "26300"),
+            "Windows 11 Home Single Language"
+        );
+        assert_eq!(
+            normalize_windows_edition("Windows 10 Pro", "22631"),
+            "Windows 11 Pro"
+        );
+        assert_eq!(
+            normalize_windows_edition("Windows 10 Home", "19045"),
+            "Windows 10 Home"
         );
     }
 }

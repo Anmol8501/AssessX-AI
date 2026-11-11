@@ -114,6 +114,18 @@ impl NavigationPolicyEngine {
         }
     }
 
+    /// Validate and store a proposed navigation policy before administrator application.
+    pub fn set_policy(mut policy: NavigationControlPolicyConfig) -> Result<NavigationControlPolicyConfig, String> {
+        let preview = Self::validate_and_preview(&policy);
+        if !preview.is_valid {
+            return Err(preview.safety_summary);
+        }
+        policy.state = NavigationPolicyLifecycleState::Validated;
+        policy.updated_at = Self::timestamp_str();
+        *ACTIVE_NAV_POLICY.lock().unwrap() = Some(policy.clone());
+        Ok(policy)
+    }
+
     /// Validate a proposed navigation policy for accessibility conflicts and structural safety.
     pub fn validate_and_preview(policy: &NavigationControlPolicyConfig) -> NavigationPolicyPreview {
         let catalog = ShortcutInventory::get_standard_catalog();

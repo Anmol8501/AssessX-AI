@@ -247,7 +247,7 @@ export function SecondaryCameraPairing({
 
               <div className="mt-3 flex flex-col gap-2">
                 <a
-                  href={`#/mobile-camera?session_id=${sessionId}&token=${pairingToken}`}
+                  href={pairingUrl || `#/mobile-camera?session_id=${sessionId}&token=${pairingToken}`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-card hover:bg-card-muted px-3 py-1.5 text-[12px] font-medium text-accent shadow-sm transition-colors text-center"
@@ -255,7 +255,7 @@ export function SecondaryCameraPairing({
                   <span>↗ Open Mobile View in New Tab (Desktop Test)</span>
                 </a>
                 <p className="text-[10.5px] text-ink-subtle text-center">
-                  💡 <strong>Tip:</strong> Phone must be on the same WiFi network (<code>192.168.1.11</code>). Or click above to test right in your browser.
+                  💡 <strong>Tip:</strong> Scan the QR code with your phone camera, or use Desktop Test to preview from your browser.
                 </p>
               </div>
             </div>

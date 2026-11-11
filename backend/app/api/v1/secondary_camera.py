@@ -36,11 +36,9 @@ def get_or_create_session(
     request: Request,
 ) -> SecondaryCameraCreateResponse:
     """Create or refresh a short-lived pairing session and QR code URL for the candidate's attempt."""
-    # Use Host header from the request so mobile phone reaches the desktop server
-    host = request.headers.get("host") or "localhost:1420"
-    # If host is backend port 8000, swap to 1420 for Vite frontend unless configured
-    if ":8000" in host:
-        host = host.replace(":8000", ":1420")
+    # Use Host header from the request (and X-Forwarded-Host when behind Render/reverse proxy)
+    # so the mobile phone opens `/mobile-camera` directly on the same HTTPS/API origin.
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "localhost:8000"
 
     service = SecondaryCameraService(db)
     session, token, pairing_url = service.create_or_get_pairing_session(attempt_id, user, host=host)

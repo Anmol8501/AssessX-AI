@@ -1,3 +1,4 @@
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   AlertIcon,
@@ -57,6 +58,9 @@ export function SecureShellManagerCard() {
     setError(null)
     setActionMessage(null)
     try {
+      if (isTauri()) {
+        await invoke('secure_shell_heartbeat').catch(() => undefined)
+      }
       const [caps, startup, display, validation, crash, health, kPreview, rPreview] = await Promise.all([
         getKioskCapabilities(),
         inspectStartup('AssessXCandidate'),

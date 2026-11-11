@@ -131,7 +131,8 @@ class SecurityHeadersMiddleware:
         self.app = app
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
-        if scope["type"] != "http" or scope.get("path", "").startswith(("/docs", "/openapi.json")):
+        exempt = ("/docs", "/openapi.json", "/mobile-camera")
+        if scope["type"] != "http" or scope.get("path", "").startswith(exempt):
             await self.app(scope, receive, send)
             return
         production = get_settings().is_production

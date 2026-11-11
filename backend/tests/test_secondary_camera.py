@@ -112,10 +112,19 @@ def test_secondary_camera_pairing_and_heartbeat(client: TestClient, helpers: Hel
     data = pair_req.json()
     assert "pairing_token" in data
     assert "pairing_url" in data
+    assert "/mobile-camera?session_id=" in data["pairing_url"]
+    assert "/#/mobile-camera" not in data["pairing_url"]
     assert data["orientation"] == "LANDSCAPE"
     assert data["mandatory"] is True
     session_id = data["session"]["id"]
     token = data["pairing_token"]
+
+    # 1b. Hosted /mobile-camera page returns HTTPS-ready HTML shell
+    page = client.get(f"/mobile-camera?session_id={session_id}&token={token}")
+    assert page.status_code == 200
+    assert "text/html" in page.headers["content-type"]
+    assert "AssessX" in page.text
+    assert "/api/v1/proctoring/secondary-camera/pair" in page.text
 
     # 2. Mobile attempts invalid token -> 401
     bad_pair = client.post(

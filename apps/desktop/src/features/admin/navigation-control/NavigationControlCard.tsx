@@ -154,9 +154,26 @@ export function NavigationControlCard() {
     }
   }
 
+  const buildEditedPolicy = (): NavigationControlPolicyConfig | undefined => {
+    if (!policy) return undefined
+    return {
+      ...policy,
+      appSwitchingBlocked: appSwitching,
+      windowsKeysBlocked: windowsKeys,
+      taskViewBlocked: taskView,
+      screenCaptureBlocked: screenCapture,
+      browserShortcutsBlocked: browserShortcuts,
+      taskbarNavigationBlocked: taskbarNavigation,
+      runDialogBlocked: runDialog,
+      searchInterfaceBlocked: searchInterface,
+      desktopSurfaceBlocked: desktopSurface,
+      accessibilityAccommodationsAllowed: accessibilityAllowed,
+    }
+  }
+
   const handleApply = async () => {
     try {
-      const res = await applyNavigationPolicy('ADMIN_SIGNATURE_VERIFIED')
+      const res = await applyNavigationPolicy('ADMIN_SIGNATURE_VERIFIED', buildEditedPolicy())
       if (res.success) {
         setActionMessage('Navigation and keyboard policy actively applied and verified.')
         setConfirmApply(false)
@@ -201,7 +218,7 @@ export function NavigationControlCard() {
   })
 
   return (
-    <Card className="border border-slate-700 bg-slate-900/60 shadow-xl">
+    <Card>
       <CardHeader
         title="Navigation & Keyboard Shortcut Restrictions"
         description="Phase 2C — Advanced OS-level shortcut interception, Windows Explorer restriction policies, focus monitoring, and accessibility accommodations."
@@ -212,9 +229,8 @@ export function NavigationControlCard() {
               size="sm"
               onClick={() => void refreshAll()}
               disabled={loading}
-              className="gap-1 text-slate-300"
+              leadingIcon={<RefreshIcon className={loading ? 'animate-spin' : ''} />}
             >
-              <RefreshIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
@@ -223,11 +239,11 @@ export function NavigationControlCard() {
 
       <CardBody className="space-y-6">
         {actionMessage && (
-          <div className="flex items-center justify-between rounded-lg bg-blue-950/40 border border-blue-800/60 px-4 py-2.5 text-xs text-blue-200">
+          <div className="flex items-center justify-between rounded-lg border border-accent/30 bg-accent-soft px-4 py-2.5 text-xs text-ink">
             <span>{actionMessage}</span>
             <button
               onClick={() => setActionMessage(null)}
-              className="ml-3 font-semibold text-blue-400 hover:text-blue-200"
+              className="ml-3 font-semibold text-accent hover:opacity-80"
             >
               ✕
             </button>
@@ -236,8 +252,8 @@ export function NavigationControlCard() {
 
         {/* Global Security Status Banner */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div className="rounded-lg bg-slate-800/80 p-3.5 border border-slate-700/50">
-            <span className="text-xs text-slate-400 block mb-1">Policy State</span>
+          <div className="rounded-lg bg-card-muted/40 p-3.5 border border-line">
+            <span className="text-xs text-ink-subtle block mb-1">Policy State</span>
             <div className="flex items-center gap-2">
               <StatusBadge
                 tone={
@@ -253,8 +269,8 @@ export function NavigationControlCard() {
             </div>
           </div>
 
-          <div className="rounded-lg bg-slate-800/80 p-3.5 border border-slate-700/50">
-            <span className="text-xs text-slate-400 block mb-1">Windows Shell Restrictions</span>
+          <div className="rounded-lg bg-card-muted/40 p-3.5 border border-line">
+            <span className="text-xs text-ink-subtle block mb-1">Windows Shell Restrictions</span>
             <div className="flex items-center gap-2">
               <StatusBadge tone={navStatus?.allShellPoliciesEnforced ? 'ok' : 'warn'}>
                 {navStatus?.allShellPoliciesEnforced ? 'Enforced' : 'Baseline / Inactive'}
@@ -262,8 +278,8 @@ export function NavigationControlCard() {
             </div>
           </div>
 
-          <div className="rounded-lg bg-slate-800/80 p-3.5 border border-slate-700/50">
-            <span className="text-xs text-slate-400 block mb-1">Foreground Focus</span>
+          <div className="rounded-lg bg-card-muted/40 p-3.5 border border-line">
+            <span className="text-xs text-ink-subtle block mb-1">Foreground Focus</span>
             <div className="flex items-center gap-2">
               <StatusBadge tone={focusReport?.isExamWindowForeground ? 'ok' : 'warn'}>
                 {focusReport?.targetClass ?? 'Unknown'}
@@ -271,8 +287,8 @@ export function NavigationControlCard() {
             </div>
           </div>
 
-          <div className="rounded-lg bg-slate-800/80 p-3.5 border border-slate-700/50">
-            <span className="text-xs text-slate-400 block mb-1">Accommodations Active</span>
+          <div className="rounded-lg bg-card-muted/40 p-3.5 border border-line">
+            <span className="text-xs text-ink-subtle block mb-1">Accommodations Active</span>
             <div className="flex items-center gap-2">
               <StatusBadge
                 tone={
@@ -288,13 +304,13 @@ export function NavigationControlCard() {
         </div>
 
         {/* Tabs Bar */}
-        <div className="border-b border-slate-700 flex gap-4 text-sm font-medium">
+        <div className="border-b border-line flex flex-wrap gap-4 text-[13px] font-medium">
           <button
             onClick={() => setActiveTab('shortcuts')}
             className={`pb-2.5 px-1 border-b-2 transition-colors ${
               activeTab === 'shortcuts'
-                ? 'border-indigo-500 text-indigo-400 font-semibold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
           >
             Shortcut Catalog ({shortcuts.length})
@@ -303,31 +319,31 @@ export function NavigationControlCard() {
             onClick={() => setActiveTab('navigation')}
             className={`pb-2.5 px-1 border-b-2 transition-colors ${
               activeTab === 'navigation'
-                ? 'border-indigo-500 text-indigo-400 font-semibold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
           >
-            Shell & Navigation Policies
+            Shell &amp; Navigation Policies
           </button>
           <button
             onClick={() => setActiveTab('accessibility')}
             className={`pb-2.5 px-1 border-b-2 transition-colors ${
               activeTab === 'accessibility'
-                ? 'border-indigo-500 text-indigo-400 font-semibold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
           >
-            Accommodations & Policy Preview
+            Accommodations &amp; Policy Preview
           </button>
           <button
             onClick={() => setActiveTab('supervisor')}
             className={`pb-2.5 px-1 border-b-2 transition-colors ${
               activeTab === 'supervisor'
-                ? 'border-indigo-500 text-indigo-400 font-semibold'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
           >
-            Focus Supervisor & Violations
+            Focus Supervisor &amp; Violations
           </button>
         </div>
 
@@ -340,27 +356,27 @@ export function NavigationControlCard() {
                 placeholder="Search key combo, interface, description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-80 rounded-md bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                className="w-full sm:w-80 rounded-md bg-surface border border-line px-3 py-1.5 text-xs text-ink placeholder:text-ink-subtle focus:outline-none focus:border-accent"
               />
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full sm:w-auto rounded-md bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full sm:w-auto rounded-md bg-surface border border-line px-3 py-1.5 text-xs text-ink focus:outline-none focus:border-accent"
               >
                 <option value="ALL">All Categories</option>
                 <option value="ApplicationSwitching">Application Switching</option>
-                <option value="ShellAndDesktopNavigation">Shell & Desktop Navigation</option>
-                <option value="TaskAndSessionControl">Task & Session Control</option>
+                <option value="ShellAndDesktopNavigation">Shell &amp; Desktop Navigation</option>
+                <option value="TaskAndSessionControl">Task &amp; Session Control</option>
                 <option value="BrowserAndApplicationShortcuts">Browser / App Shortcuts</option>
-                <option value="ClipboardAndContent">Clipboard & Content</option>
-                <option value="PrintAndScreenCapture">Print & Screen Capture</option>
-                <option value="AccessibilityAndSpecialKeys">Accessibility & Special Keys</option>
+                <option value="ClipboardAndContent">Clipboard &amp; Content</option>
+                <option value="PrintAndScreenCapture">Print &amp; Screen Capture</option>
+                <option value="AccessibilityAndSpecialKeys">Accessibility &amp; Special Keys</option>
               </select>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-700">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-800 text-slate-400 uppercase tracking-wider">
+            <div className="overflow-x-auto rounded-lg border border-line">
+              <table className="w-full text-left text-xs text-ink-muted">
+                <thead className="bg-card-muted/60 text-ink-subtle uppercase tracking-wider border-b border-line">
                   <tr>
                     <th className="py-2.5 px-3">Combination</th>
                     <th className="py-2.5 px-3">Target Interface</th>
@@ -370,14 +386,14 @@ export function NavigationControlCard() {
                     <th className="py-2.5 px-3">Enforcement</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 bg-slate-900/40">
+                <tbody className="divide-y divide-line bg-surface">
                   {filteredShortcuts.map((sc) => (
-                    <tr key={sc.id} className="hover:bg-slate-800/50">
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-100">
+                    <tr key={sc.id} className="hover:bg-card-muted/40">
+                      <td className="py-2.5 px-3 font-mono font-bold text-ink">
                         {sc.keyCombination}
                       </td>
-                      <td className="py-2.5 px-3">{sc.targetInterface}</td>
-                      <td className="py-2.5 px-3 text-slate-400">{sc.category}</td>
+                      <td className="py-2.5 px-3 text-ink">{sc.targetInterface}</td>
+                      <td className="py-2.5 px-3 text-ink-subtle">{sc.category}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
                           tone={
@@ -394,24 +410,24 @@ export function NavigationControlCard() {
                         </StatusBadge>
                       </td>
                       <td className="py-2.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        <StatusBadge
+                          tone={
                             sc.defaultAction === 'Block'
-                              ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                              ? 'danger'
                               : sc.defaultAction === 'KernelRestricted'
-                                ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                                : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                          }`}
+                                ? 'warn'
+                                : 'ok'
+                          }
                         >
                           {sc.defaultAction}
-                        </span>
+                        </StatusBadge>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400">{sc.enforcementType}</td>
+                      <td className="py-2.5 px-3 text-ink-subtle">{sc.enforcementType}</td>
                     </tr>
                   ))}
                   {filteredShortcuts.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-slate-500">
+                      <td colSpan={6} className="py-6 text-center text-ink-subtle">
                         No shortcuts matched your search filters.
                       </td>
                     </tr>
@@ -420,8 +436,8 @@ export function NavigationControlCard() {
               </table>
             </div>
 
-            <p className="text-[11px] text-slate-500 italic">
-              Note: Key combinations classified as <strong className="text-amber-400">KernelRestricted</strong> (e.g. Ctrl+Alt+Del, Win+L)
+            <p className="text-[11px] text-ink-subtle italic">
+              Note: Key combinations classified as <strong className="text-amber-600 dark:text-amber-400">KernelRestricted</strong> (e.g. Ctrl+Alt+Del, Win+L)
               are processed by the Windows Winlogon kernel boundary and cannot be intercepted by userland hooks. AssessX monitors them via focus loss detection.
             </p>
           </div>
@@ -430,87 +446,87 @@ export function NavigationControlCard() {
         {/* TAB 2: SHELL & NAVIGATION POLICIES */}
         {activeTab === 'navigation' && (
           <div className="space-y-5">
-            <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700/60 space-y-4">
-              <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Registry & Shell Restriction Toggles
+            <div className="rounded-lg bg-card-muted/30 p-4 border border-line space-y-4">
+              <h4 className="text-xs font-semibold text-ink uppercase tracking-wider">
+                Registry &amp; Shell Restriction Toggles
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={windowsKeys}
                     onChange={(e) => setWindowsKeys(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Block Windows Keys (NoWinKeys)</span>
-                    <span className="text-[11px] text-slate-400">Suppresses all Win+ hotkeys at the Explorer shell</span>
+                    <span className="text-xs font-medium text-ink block">Block Windows Keys (NoWinKeys)</span>
+                    <span className="text-[11px] text-ink-subtle">Suppresses all Win+ hotkeys at the Explorer shell</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={runDialog}
                     onChange={(e) => setRunDialog(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Block Run Dialog (NoRun)</span>
-                    <span className="text-[11px] text-slate-400">Prevents execution prompts and Start menu run</span>
+                    <span className="text-xs font-medium text-ink block">Block Run Dialog (NoRun)</span>
+                    <span className="text-[11px] text-ink-subtle">Prevents execution prompts and Start menu run</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={searchInterface}
                     onChange={(e) => setSearchInterface(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Block Search Interface (NoFind)</span>
-                    <span className="text-[11px] text-slate-400">Disables Windows search and file indexing flyouts</span>
+                    <span className="text-xs font-medium text-ink block">Block Search Interface (NoFind)</span>
+                    <span className="text-[11px] text-ink-subtle">Disables Windows search and file indexing flyouts</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={desktopSurface}
                     onChange={(e) => setDesktopSurface(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Block Desktop Surface (NoDesktop)</span>
-                    <span className="text-[11px] text-slate-400">Hides desktop icons and disables desktop clicks</span>
+                    <span className="text-xs font-medium text-ink block">Block Desktop Surface (NoDesktop)</span>
+                    <span className="text-[11px] text-ink-subtle">Hides desktop icons and disables desktop clicks</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={taskbarNavigation}
                     onChange={(e) => setTaskbarNavigation(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Lock Taskbar & Tray Menu</span>
-                    <span className="text-[11px] text-slate-400">Sets NoTrayContextMenu and NoSetTaskbar</span>
+                    <span className="text-xs font-medium text-ink block">Lock Taskbar &amp; Tray Menu</span>
+                    <span className="text-[11px] text-ink-subtle">Sets NoTrayContextMenu and NoSetTaskbar</span>
                   </div>
                 </label>
 
-                <label className="flex items-center gap-3 p-2.5 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+                <label className="flex items-center gap-3 p-2.5 rounded bg-surface border border-line cursor-pointer">
                   <input
                     type="checkbox"
                     checked={appSwitching}
                     onChange={(e) => setAppSwitching(e.target.checked)}
-                    className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                    className="rounded border-line text-accent focus:ring-0"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Block App Switching (Alt+Tab)</span>
-                    <span className="text-[11px] text-slate-400">Suppresses task switcher and window cycling</span>
+                    <span className="text-xs font-medium text-ink block">Block App Switching (Alt+Tab)</span>
+                    <span className="text-[11px] text-ink-subtle">Suppresses task switcher and window cycling</span>
                   </div>
                 </label>
               </div>
@@ -520,22 +536,19 @@ export function NavigationControlCard() {
                   size="sm"
                   onClick={() => void handleSaveAndValidate()}
                   variant="secondary"
-                  className="text-xs text-slate-300"
                 >
                   Validate Policy
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => setConfirmApply(true)}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-xs text-white"
                 >
-                  Apply & Verify Restrictions
+                  Apply &amp; Verify Restrictions
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="danger"
                   onClick={() => void handleRollback()}
-                  className="text-rose-400 border-rose-800/60 hover:bg-rose-950/40 text-xs"
                 >
                   Rollback to Baseline
                 </Button>
@@ -543,11 +556,11 @@ export function NavigationControlCard() {
             </div>
 
             {confirmApply && (
-              <div className="rounded-lg bg-amber-950/40 border border-amber-800/80 p-4 space-y-3">
-                <h5 className="text-xs font-semibold text-amber-300 uppercase">
+              <div className="rounded-lg border border-warn/40 bg-warn/10 p-4 space-y-3">
+                <h5 className="text-xs font-semibold text-ink uppercase">
                   Administrator Approval Required
                 </h5>
-                <p className="text-xs text-amber-200">
+                <p className="text-xs text-ink-muted">
                   Applying these policies will write Windows Explorer restriction policies to the user registry.
                   Ensure you are scoped to candidate profiles during live examinations.
                 </p>
@@ -555,15 +568,13 @@ export function NavigationControlCard() {
                   <Button
                     size="sm"
                     onClick={() => void handleApply()}
-                    className="bg-amber-600 hover:bg-amber-500 text-xs text-slate-950 font-bold"
                   >
-                    Confirm & Apply
+                    Confirm &amp; Apply
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => setConfirmApply(false)}
-                    className="text-xs text-slate-400"
                   >
                     Cancel
                   </Button>
@@ -576,54 +587,54 @@ export function NavigationControlCard() {
         {/* TAB 3: ACCESSIBILITY & POLICY PREVIEW */}
         {activeTab === 'accessibility' && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700/60 space-y-3">
-              <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            <div className="rounded-lg bg-card-muted/30 p-4 border border-line space-y-3">
+              <h4 className="text-xs font-semibold text-ink uppercase tracking-wider">
                 Accessibility Accommodations
               </h4>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-ink-muted">
                 Institutional examination regulations mandate that accommodations (e.g. StickyKeys, FilterKeys, Screen Readers)
                 must be preserved for authorized candidates unless an institutional waiver is explicitly granted.
               </p>
 
-              <label className="flex items-center gap-3 p-3 rounded bg-slate-900/50 border border-slate-800 cursor-pointer">
+              <label className="flex items-center gap-3 p-3 rounded bg-surface border border-line cursor-pointer">
                 <input
                   type="checkbox"
                   checked={accessibilityAllowed}
                   onChange={(e) => setAccessibilityAllowed(e.target.checked)}
-                  className="rounded border-slate-700 text-indigo-600 focus:ring-0"
+                  className="rounded border-line text-accent focus:ring-0"
                 />
                 <div>
-                  <span className="text-xs font-semibold text-slate-200 block">
+                  <span className="text-xs font-semibold text-ink block">
                     Permit Approved Accessibility Accommodations
                   </span>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-ink-subtle">
                     Guarantees StickyKeys, FilterKeys, High Contrast, and Screen Reader shortcuts remain unblocked.
                   </span>
                 </div>
               </label>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs">
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Sticky Keys</span>
-                  <span className="font-semibold text-slate-200">
+                <div className="p-2.5 rounded bg-surface border border-line">
+                  <span className="text-ink-subtle block text-[11px]">Sticky Keys</span>
+                  <span className="font-semibold text-ink">
                     {accessibilityStatus?.stickyKeysDetected ? 'Enabled' : 'Disabled'}
                   </span>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Filter Keys</span>
-                  <span className="font-semibold text-slate-200">
+                <div className="p-2.5 rounded bg-surface border border-line">
+                  <span className="text-ink-subtle block text-[11px]">Filter Keys</span>
+                  <span className="font-semibold text-ink">
                     {accessibilityStatus?.filterKeysDetected ? 'Enabled' : 'Disabled'}
                   </span>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">High Contrast</span>
-                  <span className="font-semibold text-slate-200">
+                <div className="p-2.5 rounded bg-surface border border-line">
+                  <span className="text-ink-subtle block text-[11px]">High Contrast</span>
+                  <span className="font-semibold text-ink">
                     {accessibilityStatus?.highContrastDetected ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div className="p-2.5 rounded bg-slate-900/60 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Screen Reader</span>
-                  <span className="font-semibold text-slate-200">
+                <div className="p-2.5 rounded bg-surface border border-line">
+                  <span className="text-ink-subtle block text-[11px]">Screen Reader</span>
+                  <span className="font-semibold text-ink">
                     {accessibilityStatus?.screenReaderDetected ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -633,7 +644,6 @@ export function NavigationControlCard() {
                 <Button
                   size="sm"
                   onClick={() => void handlePreview()}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-xs text-white"
                 >
                   Generate Policy Impact Preview
                 </Button>
@@ -641,30 +651,30 @@ export function NavigationControlCard() {
             </div>
 
             {preview && (
-              <div className="rounded-lg bg-slate-800/80 p-4 border border-slate-700/80 space-y-3">
-                <h5 className="text-xs font-semibold text-slate-200 uppercase">Policy Impact Analysis</h5>
+              <div className="rounded-lg bg-card-muted/30 p-4 border border-line space-y-3">
+                <h5 className="text-xs font-semibold text-ink uppercase">Policy Impact Analysis</h5>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-400 text-[11px] block">Shortcuts Covered</span>
-                    <span className="font-bold text-slate-100">{preview.totalShortcutsCovered}</span>
+                  <div className="p-2 bg-surface border border-line rounded">
+                    <span className="text-ink-subtle text-[11px] block">Shortcuts Covered</span>
+                    <span className="font-bold text-ink">{preview.totalShortcutsCovered}</span>
                   </div>
-                  <div className="p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-400 text-[11px] block">Blocked</span>
-                    <span className="font-bold text-rose-400">{preview.blockedCount}</span>
+                  <div className="p-2 bg-surface border border-line rounded">
+                    <span className="text-ink-subtle text-[11px] block">Blocked</span>
+                    <span className="font-bold text-danger">{preview.blockedCount}</span>
                   </div>
-                  <div className="p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-400 text-[11px] block">Permitted</span>
-                    <span className="font-bold text-emerald-400">{preview.allowedCount}</span>
+                  <div className="p-2 bg-surface border border-line rounded">
+                    <span className="text-ink-subtle text-[11px] block">Permitted</span>
+                    <span className="font-bold text-ok">{preview.allowedCount}</span>
                   </div>
-                  <div className="p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-400 text-[11px] block">Kernel Restricted</span>
-                    <span className="font-bold text-amber-400">{preview.kernelRestrictedCount}</span>
+                  <div className="p-2 bg-surface border border-line rounded">
+                    <span className="text-ink-subtle text-[11px] block">Kernel Restricted</span>
+                    <span className="font-bold text-amber-600">{preview.kernelRestrictedCount}</span>
                   </div>
                 </div>
 
                 {preview.conflicts.length > 0 && (
-                  <div className="p-3 rounded bg-rose-950/40 border border-rose-800/80 text-xs text-rose-300">
-                    <strong className="block mb-1">Policy Conflicts Detected:</strong>
+                  <div className="p-3 rounded bg-danger/10 border border-danger/30 text-xs text-danger">
+                    <strong className="block mb-1">Policy Conflicts / Notices:</strong>
                     <ul className="list-disc pl-4 space-y-0.5">
                       {preview.conflicts.map((c, i) => (
                         <li key={i}>{c}</li>
@@ -680,42 +690,41 @@ export function NavigationControlCard() {
         {/* TAB 4: SUPERVISOR & VIOLATIONS */}
         {activeTab === 'supervisor' && (
           <div className="space-y-4">
-            <div className="rounded-lg bg-slate-800/60 p-4 border border-slate-700/60 space-y-3">
+            <div className="rounded-lg bg-card-muted/30 p-4 border border-line space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <h4 className="text-xs font-semibold text-ink uppercase tracking-wider">
                   Foreground Window Supervisor
                 </h4>
                 <Button
                   size="sm"
                   onClick={() => void handleScanViolations()}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-xs text-white"
                 >
                   Run Violation Scan
                 </Button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded bg-slate-900/60 border border-slate-800 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Active Window Title</span>
-                  <span className="font-mono text-slate-200 font-bold block truncate">
+                <div className="p-3 rounded bg-surface border border-line space-y-1">
+                  <span className="text-ink-subtle text-[11px] block">Active Window Title</span>
+                  <span className="font-mono text-ink font-bold block truncate">
                     {focusReport?.activeForegroundTitle || '(None)'}
                   </span>
                 </div>
-                <div className="p-3 rounded bg-slate-900/60 border border-slate-800 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Active Process</span>
-                  <span className="font-mono text-slate-200 font-bold block truncate">
+                <div className="p-3 rounded bg-surface border border-line space-y-1">
+                  <span className="text-ink-subtle text-[11px] block">Active Process</span>
+                  <span className="font-mono text-ink font-bold block truncate">
                     {focusReport?.activeForegroundProcess || '(Unknown)'}
                   </span>
                 </div>
-                <div className="p-3 rounded bg-slate-900/60 border border-slate-800 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Window Class</span>
-                  <span className="font-mono text-slate-200 block truncate">
+                <div className="p-3 rounded bg-surface border border-line space-y-1">
+                  <span className="text-ink-subtle text-[11px] block">Window Class</span>
+                  <span className="font-mono text-ink block truncate">
                     {focusReport?.activeForegroundClass || '(Unknown)'}
                   </span>
                 </div>
-                <div className="p-3 rounded bg-slate-900/60 border border-slate-800 space-y-1">
-                  <span className="text-slate-400 text-[11px] block">Cumulative Focus Losses</span>
-                  <span className="font-bold text-amber-400">
+                <div className="p-3 rounded bg-surface border border-line space-y-1">
+                  <span className="text-ink-subtle text-[11px] block">Cumulative Focus Losses</span>
+                  <span className="font-bold text-amber-600">
                     {focusReport?.lossOfFocusCount ?? 0} events
                   </span>
                 </div>
@@ -725,7 +734,7 @@ export function NavigationControlCard() {
             {scanSummary && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h5 className="text-xs font-semibold text-slate-200 uppercase">
+                  <h5 className="text-xs font-semibold text-ink uppercase">
                     Detected Violations ({scanSummary.violationsCount})
                   </h5>
                   <StatusBadge tone={scanSummary.isEnvironmentCompliant ? 'ok' : 'danger'}>
@@ -733,9 +742,9 @@ export function NavigationControlCard() {
                   </StatusBadge>
                 </div>
 
-                <div className="overflow-x-auto rounded-lg border border-slate-700">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-slate-800 text-slate-400 uppercase tracking-wider">
+                <div className="overflow-x-auto rounded-lg border border-line">
+                  <table className="w-full text-left text-xs text-ink-muted">
+                    <thead className="bg-card-muted/60 text-ink-subtle uppercase tracking-wider border-b border-line">
                       <tr>
                         <th className="py-2.5 px-3">Type</th>
                         <th className="py-2.5 px-3">Severity</th>
@@ -744,21 +753,21 @@ export function NavigationControlCard() {
                         <th className="py-2.5 px-3">Timestamp</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800 bg-slate-900/40">
+                    <tbody className="divide-y divide-line bg-surface">
                       {scanSummary.violations.map((v, i) => (
-                        <tr key={i} className="hover:bg-slate-800/50">
-                          <td className="py-2.5 px-3 font-semibold text-rose-300">{v.violationType}</td>
+                        <tr key={i} className="hover:bg-card-muted/40">
+                          <td className="py-2.5 px-3 font-semibold text-danger">{v.violationType}</td>
                           <td className="py-2.5 px-3">
                             <StatusBadge tone="danger">{v.severity}</StatusBadge>
                           </td>
                           <td className="py-2.5 px-3 font-mono">{v.targetComponent}</td>
-                          <td className="py-2.5 px-3">{v.description}</td>
-                          <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{v.timestamp}</td>
+                          <td className="py-2.5 px-3 text-ink">{v.description}</td>
+                          <td className="py-2.5 px-3 text-ink-subtle font-mono text-[11px]">{v.timestamp}</td>
                         </tr>
                       ))}
                       {scanSummary.violations.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="py-6 text-center text-emerald-400">
+                          <td colSpan={5} className="py-6 text-center text-ok">
                             No active navigation or focus violations detected.
                           </td>
                         </tr>

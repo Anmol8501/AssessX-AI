@@ -22,7 +22,38 @@ export function isTauriEnvironment(): boolean {
 }
 
 /** Query standard shortcut inventory catalog. */
-export function getShortcutCatalog(): Promise<ShortcutItem[]> {
+interface RawShortcutItem {
+  shortcutId: string
+  displayName: string
+  keyCombination: string
+  category: string
+  description: string
+  riskLevel: string
+  defaultAction: string
+  enforcementType: string
+  isAccessibilityKey: boolean
+  isSystemReserved: boolean
+}
+
+const CATEGORY_MAP: Record<string, ShortcutItem['category']> = {
+  AppSwitching: 'ApplicationSwitching',
+  ShellAndDesktop: 'ShellAndDesktopNavigation',
+  TaskAndSession: 'TaskAndSessionControl',
+  BrowserAndNav: 'BrowserAndApplicationShortcuts',
+  ClipboardTransfer: 'ClipboardAndContent',
+  PrintAndCapture: 'PrintAndScreenCapture',
+  Accessibility: 'AccessibilityAndSpecialKeys',
+}
+
+const RISK_MAP: Record<string, ShortcutItem['riskLevel']> = {
+  Critical: 'CriticalAttention',
+  High: 'HighRisk',
+  Medium: 'MediumRisk',
+  Low: 'LowRisk',
+  AccessibilityAccommodation: 'LowRisk',
+}
+
+export async function getShortcutCatalog(): Promise<ShortcutItem[]> {
   if (!isTauri()) {
     return Promise.resolve([
       {
@@ -104,7 +135,27 @@ export function getShortcutCatalog(): Promise<ShortcutItem[]> {
       },
     ])
   }
-  return invoke<ShortcutItem[]>('get_shortcut_catalog')
+  const items = await invoke<RawShortcutItem[]>('get_shortcut_inventory')
+  return items.map((item) => ({
+    id: item.shortcutId,
+    keyCombination: item.keyCombination,
+    description: item.description,
+    category: CATEGORY_MAP[item.category] ?? 'BrowserAndApplicationShortcuts',
+    riskLevel: RISK_MAP[item.riskLevel] ?? 'MediumRisk',
+    enforcementType:
+      item.enforcementType === 'WindowsNativePolicy'
+        ? 'RegistryExplorerPolicy'
+        : item.enforcementType === 'FrontendInterception'
+          ? 'ApplicationLevel'
+          : (item.enforcementType as ShortcutItem['enforcementType']),
+    defaultAction: item.isSystemReserved
+      ? 'KernelRestricted'
+      : ((item.defaultAction === 'Monitor' || item.defaultAction === 'Restrict'
+          ? 'WarnAndLog'
+          : item.defaultAction) as ShortcutItem['defaultAction']),
+    isKernelRestricted: item.isSystemReserved,
+    targetInterface: item.displayName,
+  }))
 }
 
 /** Get active navigation control policy. */
@@ -135,9 +186,9 @@ export function getNavigationPolicy(): Promise<NavigationControlPolicyConfig> {
 }
 
 /** Preview policy impact against shortcut catalog and accommodations. */
-export function previewNavigationPolicy(
+export async function previewNavigationPolicy(
   policy: NavigationControlPolicyConfig,
-  accommodations: AccessibilityAccommodationConfig,
+  _accommodations: AccessibilityAccommodationConfig,
 ): Promise<PolicyPreviewReport> {
   if (!isTauri()) {
     return Promise.resolve({
@@ -149,10 +200,22 @@ export function previewNavigationPolicy(
       conflicts: [],
     })
   }
-  return invoke<PolicyPreviewReport>('preview_navigation_policy', {
-    policy,
-    accommodations,
-  })
+  const raw = await invoke<{
+    totalShortcutsConfigured: number
+    totalBlocked: number
+    totalMonitored: number
+    accessibilityExceptionsActive: number
+    conflicts: { description: string }[]
+  }>('preview_navigation_policy', { policy })
+  const kernelCount = raw.conflicts.filter((c) => c.description.includes('Winlogon')).length
+  return {
+    totalShortcutsCovered: raw.totalShortcutsConfigured,
+    blockedCount: raw.totalBlocked,
+    allowedCount: Math.max(0, raw.totalShortcutsConfigured - raw.totalBlocked),
+    kernelRestrictedCount: kernelCount,
+    accommodationsPreserved: policy.accessibilityAccommodationsAllowed,
+    conflicts: raw.conflicts.map((c) => c.description),
+  }
 }
 
 /** Validate and save navigation policy. */
@@ -169,28 +232,39 @@ export function validateAndSaveNavigationPolicy(
 }
 
 /** Apply approved navigation policy to system and candidate registry. */
-export function applyNavigationPolicy(
-  adminApprovalSignature: string,
+export async function applyNavigationPolicy(
+  _adminApprovalSignature: string,
+  policy?: NavigationControlPolicyConfig,
 ): Promise<{ success: boolean; state: string; error?: string }> {
   if (!isTauri()) {
     return Promise.resolve({ success: true, state: 'Active' })
   }
-  return invoke<{ success: boolean; state: string; error?: string }>(
-    'apply_navigation_policy',
-    { adminApprovalSignature },
-  )
+  try {
+    const applied = await invoke<NavigationControlPolicyConfig>('apply_navigation_policy', {
+      policy: policy ?? null,
+      adminApproved: true,
+    })
+    return { success: true, state: applied.state }
+  } catch (err) {
+    return {
+      success: false,
+      state: 'VerificationFailed',
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
 }
 
 /** Rollback active navigation policy to baseline. */
-export function rollbackNavigationPolicy(): Promise<{ success: boolean; state: string }> {
+export async function rollbackNavigationPolicy(): Promise<{ success: boolean; state: string }> {
   if (!isTauri()) {
     return Promise.resolve({ success: true, state: 'RolledBack' })
   }
-  return invoke<{ success: boolean; state: string }>('rollback_navigation_policy')
+  await invoke<NavigationControlPolicyConfig>('revert_navigation_policy')
+  return { success: true, state: 'RolledBack' }
 }
 
 /** Inspect current window focus and foreground target class. */
-export function inspectWindowFocus(): Promise<WindowFocusReport> {
+export async function inspectWindowFocus(): Promise<WindowFocusReport> {
   if (!isTauri()) {
     return Promise.resolve({
       activeForegroundTitle: 'AssessX Administrator Portal',
@@ -203,11 +277,29 @@ export function inspectWindowFocus(): Promise<WindowFocusReport> {
       isExamWindowForeground: true,
     })
   }
-  return invoke<WindowFocusReport>('inspect_window_focus')
+  const raw = await invoke<{
+    isAssessxForeground: boolean
+    isMinimized: boolean
+    activeForegroundTitle: string
+    activeForegroundProcess: string
+    focusClassification: WindowFocusReport['targetClass']
+    recoveryAttemptsCount: number
+    timestamp: string
+  }>('inspect_window_focus')
+  return {
+    activeForegroundTitle: raw.activeForegroundTitle,
+    activeForegroundProcess: raw.activeForegroundProcess,
+    activeForegroundClass: raw.focusClassification,
+    targetClass: raw.focusClassification,
+    isMinimised: raw.isMinimized,
+    lossOfFocusCount: raw.recoveryAttemptsCount,
+    lastFocusLossTimestamp: raw.isAssessxForeground ? null : raw.timestamp,
+    isExamWindowForeground: raw.isAssessxForeground,
+  }
 }
 
 /** Inspect Windows Explorer navigation restriction registry state. */
-export function inspectNavigationStatus(): Promise<NavigationStatusReport> {
+export async function inspectNavigationStatus(): Promise<NavigationStatusReport> {
   if (!isTauri()) {
     return Promise.resolve({
       windowsKeysBlocked: true,
@@ -221,7 +313,33 @@ export function inspectNavigationStatus(): Promise<NavigationStatusReport> {
       lastVerifiedAt: new Date().toISOString(),
     })
   }
-  return invoke<NavigationStatusReport>('inspect_navigation_status')
+  const raw = await invoke<{
+    windowsKeysDisabled: boolean
+    runDialogDisabled: boolean
+    searchInterfaceDisabled: boolean
+    taskbarContextMenuDisabled: boolean
+    taskbarSettingsDisabled: boolean
+    desktopSurfaceDisabled: boolean
+    candidateAccountScoped: boolean
+    lastVerifiedAt: string | null
+  }>('inspect_navigation_status')
+  const taskbar = raw.taskbarContextMenuDisabled || raw.taskbarSettingsDisabled
+  return {
+    windowsKeysBlocked: raw.windowsKeysDisabled,
+    runDialogBlocked: raw.runDialogDisabled,
+    searchInterfaceBlocked: raw.searchInterfaceDisabled,
+    taskbarNavigationBlocked: taskbar,
+    desktopSurfaceBlocked: raw.desktopSurfaceDisabled,
+    taskViewBlocked: raw.windowsKeysDisabled,
+    allShellPoliciesEnforced:
+      raw.windowsKeysDisabled &&
+      raw.runDialogDisabled &&
+      raw.searchInterfaceDisabled &&
+      taskbar &&
+      raw.desktopSurfaceDisabled,
+    candidateAccountScoped: raw.candidateAccountScoped,
+    lastVerifiedAt: raw.lastVerifiedAt,
+  }
 }
 
 /** Inspect Windows accessibility subsystem accommodation status. */
@@ -241,7 +359,7 @@ export function inspectAccessibilityStatus(): Promise<AccessibilityStatusReport>
 }
 
 /** Run comprehensive navigation and shortcut violation scan. */
-export function scanNavigationViolations(): Promise<NavigationScanSummary> {
+export async function scanNavigationViolations(): Promise<NavigationScanSummary> {
   if (!isTauri()) {
     return Promise.resolve({
       isEnvironmentCompliant: true,
@@ -259,6 +377,32 @@ export function scanNavigationViolations(): Promise<NavigationScanSummary> {
       violations: [],
     })
   }
-  return invoke<NavigationScanSummary>('scan_navigation_violations')
+  const [raw, focusState] = await Promise.all([
+    invoke<{
+      isEnvironmentCompliant: boolean
+      violationsCount: number
+      violations: {
+        targetWindowTitle: string
+        targetProcessName: string
+        classification: string
+        actionTaken: string
+        policyRule: string
+      }[]
+    }>('scan_navigation_violations'),
+    inspectWindowFocus(),
+  ])
+  const now = new Date().toISOString()
+  return {
+    isEnvironmentCompliant: raw.isEnvironmentCompliant,
+    violationsCount: raw.violationsCount,
+    focusState,
+    violations: raw.violations.map((v) => ({
+      violationType: v.classification,
+      severity: v.actionTaken === 'RECLAIM_TRIGGERED' ? 'HIGH' : 'WARNING',
+      description: `${v.policyRule}: ${v.targetWindowTitle || v.targetProcessName}`,
+      targetComponent: v.targetProcessName || 'WindowsShell',
+      timestamp: now,
+    })),
+  }
 }
 

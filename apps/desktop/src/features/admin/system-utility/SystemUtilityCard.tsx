@@ -186,19 +186,19 @@ export function SystemUtilityCard() {
       />
       <CardBody>
         {actionMessage && (
-          <div className="mb-4 rounded-md bg-slate-900/40 border border-slate-800 p-3 text-xs text-sky-300">
+          <div className="mb-4 rounded-md border border-accent/30 bg-accent-soft p-3 text-xs text-ink">
             {actionMessage}
           </div>
         )}
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-800 mb-6 gap-2">
+        <div className="flex border-b border-line mb-6 gap-2">
           <button
             type="button"
             className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'shells'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
             onClick={() => setActiveTab('shells')}
           >
@@ -208,8 +208,8 @@ export function SystemUtilityCard() {
             type="button"
             className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'inventory'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
             onClick={() => setActiveTab('inventory')}
           >
@@ -219,8 +219,8 @@ export function SystemUtilityCard() {
             type="button"
             className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'policy'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
             onClick={() => setActiveTab('policy')}
           >
@@ -230,8 +230,8 @@ export function SystemUtilityCard() {
             type="button"
             className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors ${
               activeTab === 'violations'
-                ? 'border-sky-500 text-sky-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-accent text-accent font-semibold'
+                : 'border-transparent text-ink-subtle hover:text-ink'
             }`}
             onClick={() => setActiveTab('violations')}
           >
@@ -244,9 +244,9 @@ export function SystemUtilityCard() {
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
               {/* PowerShell Card */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+              <div className="rounded-lg border border-line bg-card-muted/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-200">Windows PowerShell</h4>
+                  <h4 className="text-sm font-semibold text-ink">Windows PowerShell</h4>
                   <StatusBadge
                     tone={
                       powershell?.currentState === 'BlockedByPolicy'
@@ -259,17 +259,17 @@ export function SystemUtilityCard() {
                     {powershell?.currentState ?? 'Unknown'}
                   </StatusBadge>
                 </div>
-                <div className="text-xs text-slate-400 space-y-1">
-                  <div>Version: {powershell?.winPowershellVersion ?? 'Not Detected'}</div>
+                <div className="text-xs text-ink-muted space-y-1">
+                  <div>Version: {powershell?.winPowershellVersion ?? 'Detected'}</div>
                   <div>Running Instances: {powershell?.runningInstancesCount ?? 0}</div>
                   <div>PowerShell 7 Core: {powershell?.pwsh7Installed ? 'Installed' : 'None'}</div>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80">
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <div className="pt-2 border-t border-line">
+                  <label className="block text-[11px] font-medium text-ink-subtle mb-1">
                     Enforcement Mode
                   </label>
                   <select
-                    className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+                    className="w-full bg-surface border border-line rounded px-2 py-1.5 text-xs text-ink"
                     value={psMode}
                     onChange={(e) => setPsMode(e.target.value as PowerShellRestrictionMode)}
                   >
@@ -282,9 +282,9 @@ export function SystemUtilityCard() {
               </div>
 
               {/* Command Prompt Card */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+              <div className="rounded-lg border border-line bg-card-muted/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-200">Command Prompt (cmd.exe)</h4>
+                  <h4 className="text-sm font-semibold text-ink">Command Prompt (cmd.exe)</h4>
                   <StatusBadge
                     tone={
                       cmd?.currentState === 'BlockedByPolicy'
@@ -297,17 +297,17 @@ export function SystemUtilityCard() {
                     {cmd?.currentState ?? 'Unknown'}
                   </StatusBadge>
                 </div>
-                <div className="text-xs text-slate-400 space-y-1">
+                <div className="text-xs text-ink-muted space-y-1">
                   <div>DisableCMD Value: {cmd?.disableCmdRegistryValue ?? 'None (0)'}</div>
                   <div>Running Instances: {cmd?.runningInstancesCount ?? 0}</div>
                   <div>Executable Path: System32\cmd.exe</div>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80">
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <div className="pt-2 border-t border-line">
+                  <label className="block text-[11px] font-medium text-ink-subtle mb-1">
                     Enforcement Mode
                   </label>
                   <select
-                    className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+                    className="w-full bg-surface border border-line rounded px-2 py-1.5 text-xs text-ink"
                     value={cmdMode}
                     onChange={(e) => setCmdMode(e.target.value as CmdRestrictionMode)}
                   >
@@ -320,24 +320,24 @@ export function SystemUtilityCard() {
               </div>
 
               {/* Task Manager Card */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+              <div className="rounded-lg border border-line bg-card-muted/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-200">Windows Task Manager</h4>
+                  <h4 className="text-sm font-semibold text-ink">Windows Task Manager</h4>
                   <StatusBadge tone={taskManager?.currentState === 'BlockedByPolicy' ? 'danger' : 'ok'}>
                     {taskManager?.currentState ?? 'Unknown'}
                   </StatusBadge>
                 </div>
-                <div className="text-xs text-slate-400 space-y-1">
+                <div className="text-xs text-ink-muted space-y-1">
                   <div>DisableTaskMgr: {taskManager?.disableTaskmgrRegistryValue ? 'Enabled (1)' : 'None (0)'}</div>
                   <div>Running Instances: {taskManager?.runningInstancesCount ?? 0}</div>
                   <div>Admin Recovery: Preserved</div>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80">
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <div className="pt-2 border-t border-line">
+                  <label className="block text-[11px] font-medium text-ink-subtle mb-1">
                     Enforcement Mode
                   </label>
                   <select
-                    className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+                    className="w-full bg-surface border border-line rounded px-2 py-1.5 text-xs text-ink"
                     value={tmMode}
                     onChange={(e) => setTmMode(e.target.value as TaskManagerRestrictionMode)}
                   >
@@ -349,9 +349,9 @@ export function SystemUtilityCard() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-slate-800">
-              <span className="text-xs text-slate-400">
-                Restrictions will target the <strong>AssessXCandidate</strong> local profile.
+            <div className="flex justify-between items-center pt-3 border-t border-line">
+              <span className="text-xs text-ink-muted">
+                Restrictions target the <strong className="text-ink">AssessXCandidate</strong> local profile or active session.
               </span>
               <Button size="sm" onClick={() => void handleUpdateShellsDirect()} disabled={loading}>
                 Apply Shell Restrictions
@@ -367,18 +367,18 @@ export function SystemUtilityCard() {
               <input
                 type="text"
                 placeholder="Search utilities by name or category..."
-                className="bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-200 w-72"
+                className="bg-surface border border-line rounded px-3 py-1.5 text-xs text-ink w-72 focus:outline-none focus:border-accent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-ink-subtle">
                 Displaying {filteredInventory.length} of {inventory.length} utilities
               </span>
             </div>
 
-            <div className="overflow-x-auto border border-slate-800 rounded-lg">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+            <div className="overflow-x-auto border border-line rounded-lg">
+              <table className="w-full text-left text-xs text-ink-muted">
+                <thead className="bg-card-muted/60 text-ink-subtle border-b border-line">
                   <tr>
                     <th className="py-2.5 px-3">Utility Name</th>
                     <th className="py-2.5 px-3">Executable</th>
@@ -388,40 +388,40 @@ export function SystemUtilityCard() {
                     <th className="py-2.5 px-3">SHA-256 Digest</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line bg-surface">
                   {filteredInventory.map((item) => (
-                    <tr key={item.utilityId} className="hover:bg-slate-900/40">
-                      <td className="py-2.5 px-3 font-medium text-slate-200">
+                    <tr key={item.utilityId} className="hover:bg-card-muted/40">
+                      <td className="py-2.5 px-3 font-medium text-ink">
                         {item.displayName}
                         {item.isCriticalProtected && (
-                          <span className="ml-2 text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">
+                          <span className="ml-2 text-[10px] bg-ok/10 text-ok border border-ok/30 px-1.5 py-0.5 rounded">
                             Protected OS
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400">{item.executableName}</td>
-                      <td className="py-2.5 px-3 text-slate-400">{item.category}</td>
+                      <td className="py-2.5 px-3 font-mono text-ink-subtle">{item.executableName}</td>
+                      <td className="py-2.5 px-3 text-ink-subtle">{item.category}</td>
                       <td className="py-2.5 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        <StatusBadge
+                          tone={
                             item.criticality === 'CriticalProtected'
-                              ? 'bg-emerald-900/60 text-emerald-300'
+                              ? 'ok'
                               : item.criticality === 'HighRisk'
-                              ? 'bg-rose-900/60 text-rose-300'
-                              : 'bg-amber-900/60 text-amber-300'
-                          }`}
+                              ? 'danger'
+                              : 'warn'
+                          }
                         >
                           {item.criticality}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td className="py-2.5 px-3">
                         {item.isInstalled ? (
-                          <span className="text-emerald-400 text-[11px]">Installed</span>
+                          <span className="text-ok text-[11px] font-medium">Installed</span>
                         ) : (
-                          <span className="text-slate-500 text-[11px]">Not Found</span>
+                          <span className="text-ink-subtle text-[11px]">Not Found</span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400 truncate max-w-[140px]">
+                      <td className="py-2.5 px-3 font-mono text-ink-subtle truncate max-w-[140px]">
                         {item.fileHash ? item.fileHash.slice(0, 16) + '...' : 'N/A'}
                       </td>
                     </tr>
@@ -435,11 +435,11 @@ export function SystemUtilityCard() {
         {/* TAB 3: Policy Engine & Approval */}
         {activeTab === 'policy' && (
           <div className="space-y-6">
-            <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+            <div className="rounded-lg border border-line bg-card-muted/30 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-200">System Utility Policy Lifecycle</h4>
-                  <p className="text-xs text-slate-400">
+                  <h4 className="text-sm font-semibold text-ink">System Utility Policy Lifecycle</h4>
+                  <p className="text-xs text-ink-subtle">
                     Version: {policy?.version} &middot; Target Account: {policy?.candidateAccount ?? 'Current User'}
                   </p>
                 </div>
@@ -449,13 +449,13 @@ export function SystemUtilityCard() {
               </div>
 
               {preview && (
-                <div className="rounded border border-slate-800 bg-slate-950 p-3 text-xs space-y-2">
-                  <div className="font-semibold text-slate-300">Safety &amp; Conflict Preview:</div>
-                  <div className="text-slate-400">{preview.safetySummary}</div>
+                <div className="rounded border border-line bg-surface p-3 text-xs space-y-2">
+                  <div className="font-semibold text-ink">Safety &amp; Conflict Preview:</div>
+                  <div className="text-ink-muted">{preview.safetySummary}</div>
                   {preview.affectedRegistryKeys.length > 0 && (
                     <div>
-                      <span className="text-slate-500">Registry Keys Targeted:</span>
-                      <ul className="list-disc list-inside text-slate-400 font-mono text-[11px] mt-1">
+                      <span className="text-ink-subtle">Registry Keys Targeted:</span>
+                      <ul className="list-disc list-inside text-ink-muted font-mono text-[11px] mt-1">
                         {preview.affectedRegistryKeys.map((k) => (
                           <li key={k}>{k}</li>
                         ))}
@@ -463,7 +463,7 @@ export function SystemUtilityCard() {
                     </div>
                   )}
                   {preview.conflicts.length > 0 && (
-                    <div className="text-rose-400 space-y-1">
+                    <div className="text-danger space-y-1">
                       {preview.conflicts.map((c, idx) => (
                         <div key={idx}>
                           [{c.severity}] {c.executableName}: {c.description}
@@ -480,23 +480,23 @@ export function SystemUtilityCard() {
                   id="regTools"
                   checked={regToolsBlocked}
                   onChange={(e) => setRegToolsBlocked(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-sky-500"
+                  className="rounded border-line text-accent"
                 />
-                <label htmlFor="regTools" className="text-xs text-slate-300 font-medium">
+                <label htmlFor="regTools" className="text-xs text-ink font-medium">
                   Block Registry Tools (regedit.exe) &amp; MMC Consoles
                 </label>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 space-y-3">
+              <div className="pt-4 border-t border-line space-y-3">
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="confirmApply"
                     checked={confirmApply}
                     onChange={(e) => setConfirmApply(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-sky-500"
+                    className="rounded border-line text-accent"
                   />
-                  <label htmlFor="confirmApply" className="text-xs text-slate-300">
+                  <label htmlFor="confirmApply" className="text-xs text-ink-muted">
                     I confirm administrator authorization to apply these system utility restrictions.
                   </label>
                 </div>
@@ -531,8 +531,8 @@ export function SystemUtilityCard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-semibold text-slate-200">Active Process Scan &amp; Tamper Verification</h4>
-                <p className="text-xs text-slate-400">
+                <h4 className="text-sm font-semibold text-ink">Active Process Scan &amp; Tamper Verification</h4>
+                <p className="text-xs text-ink-subtle">
                   Inspects running processes against active PowerShell, CMD, and Utility policies.
                 </p>
               </div>
@@ -544,36 +544,36 @@ export function SystemUtilityCard() {
             {scanSummary && (
               <div className="space-y-3">
                 <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-                  <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-center">
-                    <div className="text-xs text-slate-400">Processes Checked</div>
-                    <div className="text-xl font-bold text-slate-200">{scanSummary.totalProcessesChecked}</div>
+                  <div className="rounded border border-line bg-card-muted/30 p-3 text-center">
+                    <div className="text-xs text-ink-subtle">Processes Checked</div>
+                    <div className="text-xl font-bold text-ink">{scanSummary.totalProcessesChecked}</div>
                   </div>
-                  <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-center">
-                    <div className="text-xs text-slate-400">Violations Found</div>
+                  <div className="rounded border border-line bg-card-muted/30 p-3 text-center">
+                    <div className="text-xs text-ink-subtle">Violations Found</div>
                     <div
                       className={`text-xl font-bold ${
-                        scanSummary.violationsCount > 0 ? 'text-rose-400' : 'text-emerald-400'
+                        scanSummary.violationsCount > 0 ? 'text-danger' : 'text-ok'
                       }`}
                     >
                       {scanSummary.violationsCount}
                     </div>
                   </div>
-                  <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-center">
-                    <div className="text-xs text-slate-400">Environment State</div>
-                    <div className="text-sm font-semibold text-slate-200">
+                  <div className="rounded border border-line bg-card-muted/30 p-3 text-center">
+                    <div className="text-xs text-ink-subtle">Environment State</div>
+                    <div className="text-sm font-semibold text-ink">
                       {scanSummary.hasViolations ? 'Compromised' : 'Secured'}
                     </div>
                   </div>
-                  <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-center">
-                    <div className="text-xs text-slate-400">Security Agent</div>
-                    <div className="text-sm font-semibold text-emerald-400">Monitoring Active</div>
+                  <div className="rounded border border-line bg-card-muted/30 p-3 text-center">
+                    <div className="text-xs text-ink-subtle">Security Agent</div>
+                    <div className="text-sm font-semibold text-ok">Monitoring Active</div>
                   </div>
                 </div>
 
                 {scanSummary.violations.length > 0 ? (
-                  <div className="overflow-x-auto border border-rose-900/50 rounded-lg">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-rose-950/40 text-rose-300 border-b border-rose-900/50">
+                  <div className="overflow-x-auto border border-danger/30 rounded-lg">
+                    <table className="w-full text-left text-xs text-ink-muted">
+                      <thead className="bg-danger/10 text-danger border-b border-danger/20">
                         <tr>
                           <th className="py-2 px-3">Executable</th>
                           <th className="py-2 px-3">Process ID</th>
@@ -582,21 +582,21 @@ export function SystemUtilityCard() {
                           <th className="py-2 px-3">Rule Reference</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60">
+                      <tbody className="divide-y divide-line bg-surface">
                         {scanSummary.violations.map((v, i) => (
-                          <tr key={i} className="hover:bg-slate-900/40">
-                            <td className="py-2 px-3 font-semibold text-slate-200">{v.executableName}</td>
-                            <td className="py-2 px-3 font-mono text-slate-400">{v.processId}</td>
-                            <td className="py-2 px-3 text-rose-400">{v.classification}</td>
+                          <tr key={i} className="hover:bg-card-muted/40">
+                            <td className="py-2 px-3 font-semibold text-ink">{v.executableName}</td>
+                            <td className="py-2 px-3 font-mono text-ink-subtle">{v.processId}</td>
+                            <td className="py-2 px-3 text-danger">{v.classification}</td>
                             <td className="py-2 px-3 font-semibold">{v.actionTaken}</td>
-                            <td className="py-2 px-3 text-slate-400">{v.policyRule}</td>
+                            <td className="py-2 px-3 text-ink-subtle">{v.policyRule}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <div className="rounded border border-emerald-900/40 bg-emerald-950/20 p-4 text-center text-xs text-emerald-300">
+                  <div className="rounded border border-ok/30 bg-ok/10 p-4 text-center text-xs text-ok">
                     No system utility violations detected. Examination workstation is compliant.
                   </div>
                 )}

@@ -174,7 +174,7 @@ pub fn detect_kiosk_capabilities() -> KioskCapabilityReport {
         (
             "UNSUPPORTED",
             "UNSUPPORTED",
-            "Windows Home edition detected. Operating system kiosk mechanisms are not supported on Windows Home. Please upgrade to Windows Pro or Enterprise for secure kiosk provisioning."
+            "Windows Home edition detected. OS-boot Assigned Access / Shell Launcher requires Windows Pro or Enterprise, while AssessX Automatic In-App Exam Lockdown protects candidates automatically during active exams."
         )
     };
 

@@ -38,11 +38,24 @@ pub fn preview_navigation_policy(
 }
 
 #[tauri::command]
-pub fn apply_navigation_policy(
+pub fn validate_and_save_navigation_policy(
     policy: NavigationControlPolicyConfig,
-    admin_approved: bool,
+) -> Result<serde_json::Value, String> {
+    let saved = NavigationPolicyEngine::set_policy(policy)?;
+    Ok(serde_json::json!({
+        "success": true,
+        "state": format!("{:?}", saved.state),
+        "policy": saved
+    }))
+}
+
+#[tauri::command]
+pub fn apply_navigation_policy(
+    policy: Option<NavigationControlPolicyConfig>,
+    admin_approved: Option<bool>,
 ) -> Result<NavigationControlPolicyConfig, String> {
-    NavigationPolicyEngine::apply_policy(policy, admin_approved)
+    let target = policy.unwrap_or_else(NavigationPolicyEngine::get_policy);
+    NavigationPolicyEngine::apply_policy(target, admin_approved.unwrap_or(false))
 }
 
 #[tauri::command]

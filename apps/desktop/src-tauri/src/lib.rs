@@ -110,6 +110,7 @@ pub fn run() {
             navigation_control::get_shortcut_inventory,
             navigation_control::get_navigation_policy,
             navigation_control::preview_navigation_policy,
+            navigation_control::validate_and_save_navigation_policy,
             navigation_control::apply_navigation_policy,
             navigation_control::revert_navigation_policy,
             navigation_control::inspect_navigation_status,

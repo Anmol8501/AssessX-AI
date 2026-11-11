@@ -91,15 +91,16 @@ class SecondaryCameraService:
 
         self.db.flush()
 
-        # Build pairing URL that the phone will open
-        # Replace localhost/127.0.0.1 with LAN IP so phone on local WiFi can connect directly
+        # Build pairing URL that the phone will open on the backend HTTPS origin (`/mobile-camera`),
+        # ensuring getUserMedia runs in a Secure Context and connects same-origin to API + WSS signaling.
         lan_ip = get_lan_ip()
         mobile_host = host
         if "localhost" in mobile_host or "127.0.0.1" in mobile_host:
             mobile_host = mobile_host.replace("localhost", lan_ip).replace("127.0.0.1", lan_ip)
 
-        scheme = "https" if "assessx" in host.lower() and not host.startswith("localhost") else "http"
-        pairing_url = f"{scheme}://{mobile_host}/#/mobile-camera?session_id={session.id}&token={raw_token}"
+        is_remote_https = "assessx" in host.lower() and not host.startswith(("localhost", "127.0.0.1"))
+        scheme = "https" if is_remote_https else "http"
+        pairing_url = f"{scheme}://{mobile_host}/mobile-camera?session_id={session.id}&token={raw_token}"
 
         return session, raw_token, pairing_url
 

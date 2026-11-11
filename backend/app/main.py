@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.dev import router as dev_router
+from app.api.mobile_camera import router as mobile_camera_router
 from app.api.v1.router import api_v1
 from app.core.config import get_settings
 from app.core.database import DatabaseSessionMiddleware, check_database
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID", "X-Next-Offset"],
     )
     register_exception_handlers(app)
+    app.include_router(mobile_camera_router)
     app.include_router(api_v1)
     if not settings.is_production:
         app.include_router(dev_router, prefix="/api/v1")
